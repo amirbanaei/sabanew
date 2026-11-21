@@ -1,0 +1,325 @@
+@using System
+@using System.Collections.Generic
+@using System.Web.Mvc
+@using SaabWebProject.Areas
+
+@{
+    Response.ContentEncoding = System.Text.Encoding.UTF8;
+    Response.Charset = "utf-8";
+    Response.ContentType = "text/html; charset=utf-8";
+
+    var pageTitle = "\u0646\u06AF\u0627\u0634\u062A \u0645\u0623\u0645\u0648\u0631\u0627\u0646 \u062E\u0631\u0627\u0633\u0627\u0646 \u062C\u0646\u0648\u0628\u06CC";
+
+    ViewBag.Title = pageTitle;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var mappings =
+        ViewBag.AgentMappings as List<setting_orderController.SouthAgentMapRow>
+        ?? new List<setting_orderController.SouthAgentMapRow>();
+
+    var uploadTitle = "\u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC / \u0628\u0647\u200C\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0641\u0647\u0631\u0633\u062A \u0645\u0623\u0645\u0648\u0631\u0627\u0646";
+    var personnelLabel = "\u06A9\u062F \u067E\u0631\u0633\u0646\u0644\u06CC";
+    var fileLabel = "\u0641\u0627\u06CC\u0644 \u0627\u06A9\u0633\u0644 \u0645\u0623\u0645\u0648\u0631\u0627\u0646";
+    var submitLabel = "\u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC \u0648 \u0630\u062E\u06CC\u0631\u0647";
+    var activeLabel = "\u0645\u0623\u0645\u0648\u0631\u0627\u0646 \u0641\u0639\u0627\u0644";
+    var rowLabel = "\u0631\u062F\u06CC\u0641";
+    var internalIdLabel = "\u0634\u0646\u0627\u0633\u0647 \u062F\u0627\u062E\u0644\u06CC";
+    var nameLabel = "\u0646\u0627\u0645";
+    var cityLabel = "\u0634\u0647\u0631";
+    var emptyLabel = "\u0647\u0646\u0648\u0632 \u0641\u0647\u0631\u0633\u062A\u06CC \u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC \u0646\u0634\u062F\u0647 \u0627\u0633\u062A.";
+    var headersLabel = "\u0633\u0631\u0633\u062A\u0648\u0646\u200C\u0647\u0627\u06CC \u0644\u0627\u0632\u0645";
+    var optionalLabel = "\u0633\u062A\u0648\u0646\u200C\u0647\u0627\u06CC \u0646\u0645\u0627\u06CC\u0634\u06CC";
+    var description = "\u06A9\u062F \u067E\u0631\u0633\u0646\u0644\u06CC \u0645\u0623\u0645\u0648\u0631 \u0628\u0627 \u0641\u0627\u06CC\u0644 \u0627\u06A9\u0633\u0644 \u062A\u0637\u0628\u06CC\u0642 \u062F\u0627\u062F\u0647 \u0645\u06CC\u200C\u0634\u0648\u062F.";
+    var outputDescription = "\u0645\u0642\u062F\u0627\u0631 id \u0627\u06A9\u0633\u0644 \u062F\u0631 \u0633\u062A\u0648\u0646 officer_id \u062E\u0631\u0648\u062C\u06CC sample2 \u0642\u0631\u0627\u0631 \u0645\u06CC\u200C\u06AF\u06CC\u0631\u062F.";
+    var replaceDescription = "\u0628\u0627\u0631\u06AF\u0630\u0627\u0631\u06CC \u062C\u062F\u06CC\u062F\u060C \u0641\u0647\u0631\u0633\u062A \u0642\u0628\u0644\u06CC \u0631\u0627 \u063A\u06CC\u0631\u0641\u0639\u0627\u0644 \u0648 \u0641\u0647\u0631\u0633\u062A \u062C\u062F\u06CC\u062F \u0631\u0627 \u0641\u0639\u0627\u0644 \u0645\u06CC\u200C\u06A9\u0646\u062F.";
+}
+
+<style>
+    .south-map-page {
+        direction: rtl;
+        text-align: right;
+        color: #eaf7ff;
+        max-width: 1250px;
+        margin: 24px auto;
+        padding: 24px;
+        background: linear-gradient(140deg, #0c2034, #0f1430);
+        border: 1px solid rgba(34,211,238,.35);
+        border-radius: 22px;
+        box-shadow: 0 0 36px rgba(34,211,238,.12);
+    }
+
+        .south-map-page,
+        .south-map-page * {
+            box-sizing: border-box;
+        }
+
+            .south-map-page h1 {
+                margin: 0 0 12px;
+                font-size: 23px;
+                line-height: 1.9;
+                color: #a5f3fc;
+            }
+
+            .south-map-page h3 {
+                margin: 0 0 15px;
+                font-size: 18px;
+                line-height: 1.9;
+                color: #eaf7ff;
+            }
+
+            .south-map-sub,
+            .south-map-page p {
+                color: #b5c8da;
+                line-height: 2;
+                overflow-wrap: anywhere;
+            }
+
+    .south-map-sub {
+        margin-bottom: 22px;
+    }
+
+    .south-map-box {
+        padding: 18px;
+        margin: 16px 0;
+        background: rgba(5,15,30,.52);
+        border: 1px solid rgba(125,211,252,.2);
+        border-radius: 16px;
+    }
+
+    .south-map-upload {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .south-map-file {
+        flex: 1 1 280px;
+        min-width: 0;
+    }
+
+    .south-map-upload label {
+        display: block;
+        margin-bottom: 7px;
+        color: #c6e9f4;
+    }
+
+    .south-map-upload input[type=file] {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        padding: 10px;
+        border: 1px solid rgba(125,211,252,.3);
+        border-radius: 10px;
+        background: #0c1b2b;
+        color: #dff7ff;
+    }
+
+    .south-map-btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 12px 20px;
+        color: #04212b;
+        background: linear-gradient(100deg,#22d3ee,#67e8f9);
+        font-family: inherit;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .south-map-alert {
+        padding: 12px 14px;
+        border-radius: 10px;
+        margin: 12px 0;
+        line-height: 2;
+        overflow-wrap: anywhere;
+    }
+
+    .south-map-ok {
+        background: rgba(16,185,129,.14);
+        border: 1px solid rgba(52,211,153,.4);
+    }
+
+    .south-map-error {
+        background: rgba(244,63,94,.12);
+        border: 1px solid rgba(251,113,133,.45);
+    }
+
+    .south-map-table-wrap {
+        overflow: auto;
+        max-height: 58vh;
+        border-radius: 12px;
+    }
+
+    .south-map-table {
+        width: 100%;
+        border-collapse: collapse;
+        white-space: nowrap;
+    }
+
+        .south-map-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #123249;
+            color: #8be9f5;
+        }
+
+        .south-map-table th,
+        .south-map-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(148,163,184,.15);
+            text-align: right;
+        }
+
+        .south-map-table tr:hover td {
+            background: rgba(34,211,238,.06);
+        }
+
+    .south-map-code {
+        direction: ltr;
+        unicode-bidi: isolate;
+        display: inline-block;
+    }
+
+    @@media (max-width: 650px) {
+        .south-map-page {
+            margin: 12px;
+            padding: 14px;
+        }
+
+        .south-map-box {
+            padding: 12px;
+        }
+
+        .south-map-page h1 {
+            font-size: 19px;
+        }
+
+        .south-map-btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<main class="south-map-page" lang="fa" dir="rtl">
+
+    <h1>
+        @pageTitle
+        <span class="south-map-code">/ officer_id</span>
+    </h1>
+
+    <div class="south-map-sub">
+        @description
+        <br />
+        @outputDescription
+    </div>
+
+    @if (TempData["SouthMappingMessage"] != null)
+    {
+        <div class="south-map-alert south-map-ok">
+            @TempData["SouthMappingMessage"]
+        </div>
+    }
+
+    @if (TempData["SouthMappingError"] != null)
+    {
+        <div class="south-map-alert south-map-error">
+            @TempData["SouthMappingError"]
+        </div>
+    }
+
+    @if (ViewBag.MappingError != null)
+    {
+        <div class="south-map-alert south-map-error">
+            @ViewBag.MappingError
+        </div>
+    }
+
+    <section class="south-map-box">
+        <h3>@uploadTitle</h3>
+
+        <p>
+            @headersLabel:
+            <b class="south-map-code">id</b>
+            /
+            <b>@personnelLabel</b>
+            <br />
+            @optionalLabel:
+            <b class="south-map-code">name / city</b>
+            <br />
+            @replaceDescription
+        </p>
+
+        @using (Html.BeginForm(
+            "ImportSouthAgentMappings",
+            "setting_order",
+            FormMethod.Post,
+            new { enctype = "multipart/form-data" }))
+        {
+            @Html.AntiForgeryToken()
+
+            <div class="south-map-upload">
+                <div class="south-map-file">
+                    <label for="southAgentFile">
+                        @fileLabel
+                        <span class="south-map-code">(.xlsx)</span>
+                    </label>
+
+                    <input id="southAgentFile"
+                           name="file"
+                           type="file"
+                           accept=".xlsx"
+                           required="required" />
+                </div>
+
+                <button class="south-map-btn" type="submit">
+                    @submitLabel
+                </button>
+            </div>
+        }
+    </section>
+
+    <section class="south-map-box">
+        <h3>@activeLabel: @mappings.Count</h3>
+
+        <div class="south-map-table-wrap">
+            <table class="south-map-table">
+                <thead>
+                    <tr>
+                        <th>@rowLabel</th>
+                        <th>@internalIdLabel</th>
+                        <th><span class="south-map-code">FKusr</span></th>
+                        <th><span class="south-map-code">id / officer_id</span></th>
+                        <th>@nameLabel</th>
+                        <th>@cityLabel</th>
+                        <th>@personnelLabel <span class="south-map-code">(codeusrsystem)</span></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (mappings.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7">@emptyLabel</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        for (int i = 0; i < mappings.Count; i++)
+                        {
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td>@mappings[i].ID</td>
+                                <td>@mappings[i].UserId</td>
+                                <td>@mappings[i].OfficerId</td>
+                                <td>@mappings[i].Name</td>
+                                <td>@mappings[i].City</td>
+                                <td>@mappings[i].PersonnelCode</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
