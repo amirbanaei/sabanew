@@ -1,0 +1,311 @@
+﻿@model IEnumerable<SaabWebProject.Models.DomainModels.JBP_Cases>
+
+@{
+    ViewBag.Title = "پرونده‌های من";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var statuses = ViewBag.Statuses;
+}
+
+<style>
+    .justice-list-page {
+        direction: rtl;
+        min-height: calc(100vh - 70px);
+        padding: 28px;
+        background: radial-gradient(circle at 10% 10%, rgba(0,220,255,.15), transparent 28%), radial-gradient(circle at 90% 18%, rgba(132,72,255,.16), transparent 30%), linear-gradient(135deg, #06111f, #0b1930, #08111f);
+        color: white;
+    }
+
+    .justice-list-container {
+        max-width: 1450px;
+        margin: auto;
+    }
+
+    .justice-glass {
+        background: linear-gradient( 135deg, rgba(255,255,255,.09), rgba(255,255,255,.045) );
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 22px;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 20px 55px rgba(0,0,0,.28);
+    }
+
+    .justice-list-head {
+        padding: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+        .justice-list-head h2 {
+            margin: 0;
+        }
+
+    .justice-back {
+        color: white;
+        text-decoration: none;
+        padding: 10px 15px;
+        border-radius: 13px;
+        background: rgba(255,255,255,.07);
+        border: 1px solid rgba(255,255,255,.12);
+    }
+
+    .justice-filter {
+        padding: 18px;
+        display: grid;
+        grid-template-columns: 2fr 1fr auto;
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .justice-control {
+        min-height: 45px;
+        padding: 10px 13px;
+        border-radius: 13px;
+        border: 1px solid rgba(255,255,255,.13);
+        background: rgba(255,255,255,.065);
+        color: white;
+        outline: none;
+    }
+
+        .justice-control:focus {
+            border-color: #00d8ff;
+            box-shadow: 0 0 0 4px rgba(0,216,255,.08);
+        }
+
+        .justice-control option {
+            color: #111;
+        }
+
+    .justice-search-btn {
+        border: 0;
+        border-radius: 13px;
+        padding: 10px 20px;
+        color: white;
+        cursor: pointer;
+        background: linear-gradient(135deg, #00bfd8, #087cff);
+        box-shadow: 0 0 25px rgba(0,200,255,.22);
+    }
+
+    .justice-table-card {
+        padding: 20px;
+        overflow: hidden;
+    }
+
+    .justice-table-wrap {
+        overflow-x: auto;
+        border-radius: 16px;
+    }
+
+    .justice-table {
+        width: 100%;
+        min-width: 800px;
+        border-collapse: collapse;
+    }
+
+        .justice-table th {
+            text-align: right;
+            padding: 14px;
+            color: #80eaff;
+            font-size: 12px;
+            background: rgba(0,210,255,.05);
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+
+        .justice-table td {
+            padding: 15px 14px;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+
+        .justice-table tbody tr {
+            transition: .2s;
+        }
+
+            .justice-table tbody tr:hover {
+                background: rgba(255,255,255,.035);
+            }
+
+    .justice-number {
+        color: #70e9ff;
+        font-weight: 800;
+    }
+
+    .justice-view {
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+        padding: 8px 13px;
+        border-radius: 11px;
+        background: rgba(0,210,255,.10);
+        border: 1px solid rgba(0,210,255,.20);
+    }
+
+    .justice-empty {
+        text-align: center;
+        padding: 35px;
+        color: rgba(255,255,255,.55);
+    }
+
+    @@media(max-width: 760px) {
+        .justice-list-page {
+            padding: 14px;
+        }
+
+        .justice-filter {
+            grid-template-columns: 1fr;
+        }
+
+        .justice-list-head {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
+
+
+<div class="justice-list-page">
+
+    <div class="justice-list-container">
+
+
+        <div class="justice-glass justice-list-head">
+
+            <div>
+                <h2>
+                    📁 پرونده‌های من
+                </h2>
+
+                <div style="margin-top:6px;color:rgba(255,255,255,.6);font-size:12px;">
+                    مشاهده، جستجو و پیگیری درخواست‌های ثبت شده
+                </div>
+            </div>
+
+            <a href="@Url.Action("JusticeDashboard", "Orders")"
+               class="justice-back">
+                ← بازگشت
+            </a>
+
+        </div>
+
+
+        <form method="get"
+              class="justice-glass justice-filter">
+
+            <input type="text"
+                   name="search"
+                   value="@ViewBag.Search"
+                   class="justice-control"
+                   placeholder="شماره پرونده یا عنوان درخواست..." />
+
+            <select name="status"
+                    class="justice-control">
+
+                <option value="">
+                    همه وضعیت‌ها
+                </option>
+
+                @if (statuses != null)
+                {
+                    foreach (var item in statuses)
+                    {
+                        <option value="@item.StatusCode">
+                            @item.Title
+                        </option>
+                    }
+                }
+
+            </select>
+
+            <button type="submit"
+                    class="justice-search-btn">
+                🔎 جستجو
+            </button>
+
+        </form>
+
+
+        <div class="justice-glass justice-table-card">
+
+            <div class="justice-table-wrap">
+
+                <table class="justice-table">
+
+                    <thead>
+                        <tr>
+                            <th>شماره پرونده</th>
+                            <th>عنوان</th>
+                            <th>وضعیت</th>
+                            <th>اولویت</th>
+                            <th>تاریخ ثبت</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var item in Model)
+                            {
+                                <tr>
+
+                                    <td>
+                                        <span class="justice-number">
+                                            @item.CaseNumber
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        @item.Title
+                                    </td>
+
+                                    <td>
+                                        @item.StatusCode
+                                    </td>
+
+                                    <td>
+                                        @item.Priority
+                                    </td>
+
+                                    <td>
+                                        @item.CreatedAt.ToString("yyyy/MM/dd HH:mm")
+                                    </td>
+
+                                    <td>
+
+                                        <a class="justice-view"
+                                           href="@Url.Action(
+                                                "JusticeCaseDetails",
+                                                "Orders",
+                                                new { id = item.CaseID }
+                                            )">
+                                            مشاهده پرونده
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6"
+                                    class="justice-empty">
+                                    پرونده‌ای پیدا نشد.
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

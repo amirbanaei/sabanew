@@ -1,0 +1,562 @@
+﻿@using SaabWebProject.Models.DomainModels
+@using System.Globalization
+@using System.Linq
+@using System.Collections.Generic
+
+@model IEnumerable<JBP_Cases>
+
+@{
+    ViewBag.Title = "کارتابل رسیدگی";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+
+    var statuses =
+        ViewBag.Statuses as
+        List<JBP_CaseStatuses>
+        ??
+        new List<JBP_CaseStatuses>();
+
+
+    var categories =
+        ViewBag.Categories as
+        List<JBP_CaseCategories>
+        ??
+        new List<JBP_CaseCategories>();
+
+
+    var stages =
+        ViewBag.Stages as
+        List<JBP_WorkflowStages>
+        ??
+        new List<JBP_WorkflowStages>();
+
+
+    PersianCalendar pc =
+        new PersianCalendar();
+}
+
+
+<style>
+
+    .review-inbox-page {
+        direction: rtl;
+        min-height: calc(100vh - 70px);
+        padding: 20px;
+        color: white;
+        background: radial-gradient( circle at 12% 10%, rgba(0,220,255,.16), transparent 30% ), radial-gradient( circle at 88% 18%, rgba(135,75,255,.16), transparent 30% ), linear-gradient( 135deg, #06111e, #0c1930, #07111f );
+    }
+
+
+    .review-container {
+        max-width: 1500px;
+        margin: auto;
+    }
+
+
+    .review-glass {
+        background: linear-gradient( 135deg, rgba(255,255,255,.095), rgba(255,255,255,.04) );
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 20px;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 20px 55px rgba(0,0,0,.28);
+    }
+
+
+    .review-head {
+        padding: 14px 16px;
+        margin-bottom: 9px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+
+        .review-head h2 {
+            margin: 0;
+            font-size: 19px;
+        }
+
+
+        .review-head p {
+            margin: 4px 0 0;
+            color: rgba(255,255,255,.50);
+            font-size: 10px;
+        }
+
+
+    .review-back {
+        color: white;
+        text-decoration: none;
+        padding: 8px 13px;
+        border-radius: 10px;
+        background: rgba(255,255,255,.07);
+        border: 1px solid rgba(255,255,255,.12);
+    }
+
+
+    .review-search-box {
+        margin-bottom: 9px;
+        padding: 9px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 7px;
+    }
+
+
+    .review-search {
+        width: 100%;
+        height: 39px;
+        box-sizing: border-box;
+        padding: 7px 11px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.12);
+        outline: none;
+        background: rgba(255,255,255,.055);
+        color: white;
+    }
+
+
+        .review-search:focus {
+            border-color: #00d5ff;
+            box-shadow: 0 0 0 3px rgba(0,210,255,.07);
+        }
+
+
+    .clear-search {
+        min-width: 90px;
+        border: 0;
+        border-radius: 10px;
+        color: white;
+        cursor: pointer;
+        background: linear-gradient( 135deg, #7659ff, #ab4cff );
+    }
+
+
+    .review-table-card {
+        padding: 10px;
+    }
+
+
+    .review-table-wrap {
+        overflow-x: auto;
+    }
+
+
+    .review-table {
+        width: 100%;
+        min-width: 1050px;
+        border-collapse: collapse;
+    }
+
+
+        .review-table th {
+            text-align: right;
+            padding: 10px 8px;
+            color: #7ceaff;
+            font-size: 9px;
+            background: rgba(0,210,255,.05);
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+
+
+        .review-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            font-size: 9px;
+        }
+
+
+        .review-table tbody tr:hover {
+            background: rgba(255,255,255,.035);
+        }
+
+
+    .review-number {
+        color: #70e8ff;
+        font-weight: 900;
+    }
+
+
+    .review-link {
+        color: white;
+        text-decoration: none;
+        display: inline-flex;
+        padding: 7px 11px;
+        border-radius: 9px;
+        background: linear-gradient( 135deg, #00bfd9, #087cff );
+    }
+
+
+    .badge {
+        display: inline-block;
+        padding: 4px 7px;
+        border-radius: 11px;
+        color: #8beaff;
+        background: rgba(0,210,255,.07);
+    }
+
+
+    .review-empty {
+        text-align: center;
+        padding: 30px !important;
+        color: rgba(255,255,255,.45);
+    }
+
+
+    @@media(max-width:700px) {
+
+        .review-inbox-page {
+            padding: 10px;
+        }
+
+
+        .review-head {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+
+        .review-search-box {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+
+<div class="review-inbox-page">
+
+    <div class="review-container">
+
+
+        <div class="review-glass review-head">
+
+            <div>
+
+                <h2>
+                    🗂 کارتابل رسیدگی من
+                </h2>
+
+                <p>
+                    پرونده‌هایی که در مرحله جاری به شما ارجاع شده‌اند.
+                </p>
+
+            </div>
+
+
+            <a href="@Url.Action(
+                     "JusticeDashboard",
+                     "Orders",
+                     new { area = "Setting" }
+                 )"
+               class="review-back">
+
+                ← داشبورد
+
+            </a>
+
+        </div>
+
+
+
+        <div class="review-glass review-search-box">
+
+            <input type="text"
+                   id="reviewSearch"
+                   class="review-search"
+                   placeholder="جستجو بر اساس شماره پرونده، عنوان، موضوع، مرحله یا وضعیت..." />
+
+
+            <button type="button"
+                    id="clearReviewSearch"
+                    class="clear-search">
+
+                پاک کردن
+
+            </button>
+
+        </div>
+
+
+
+        <div class="review-glass review-table-card">
+
+            <div class="review-table-wrap">
+
+                <table class="review-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>شماره پرونده</th>
+
+                            <th>عنوان</th>
+
+                            <th>موضوع</th>
+
+                            <th>مرحله</th>
+
+                            <th>وضعیت</th>
+
+                            <th>تاریخ ثبت</th>
+
+                            <th>عملیات</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="reviewTableBody">
+
+                        @if (
+                            Model != null
+                            &&
+                            Model.Any()
+                        )
+                        {
+                            foreach (
+                                var item
+                                in Model
+                            )
+                            {
+                                var status =
+                                    statuses.FirstOrDefault(x =>
+                                        x.StatusCode ==
+                                        item.StatusCode
+                                    );
+
+
+                                var category =
+                                    categories.FirstOrDefault(x =>
+                                        x.CategoryID ==
+                                        item.FK_Category
+                                    );
+
+
+                                var stage =
+                                    item.CurrentStageID.HasValue
+                                        ?
+                                        stages.FirstOrDefault(x =>
+                                            x.StageID ==
+                                            item.CurrentStageID.Value
+                                        )
+                                        :
+                                        null;
+
+
+                                string persianDate =
+                                    pc.GetYear(
+                                        item.CreatedAt
+                                    ).ToString("0000")
+                                    +
+                                    "/"
+                                    +
+                                    pc.GetMonth(
+                                        item.CreatedAt
+                                    ).ToString("00")
+                                    +
+                                    "/"
+                                    +
+                                    pc.GetDayOfMonth(
+                                        item.CreatedAt
+                                    ).ToString("00")
+                                    +
+                                    " "
+                                    +
+                                    item.CreatedAt
+                                    .ToString("HH:mm");
+
+
+                                <tr class="review-row">
+
+                                    <td>
+
+                                        <span class="review-number">
+                                            @item.CaseNumber
+                                        </span>
+
+                                    </td>
+
+
+                                    <td>
+                                        @item.Title
+                                    </td>
+
+
+                                    <td>
+
+                                        @(category != null
+                                    ?
+                                    category.Title
+                                    :
+                                    "-")
+
+                                    </td>
+
+
+                                    <td>
+
+                                        @(stage != null
+                                    ?
+                                    stage.Title
+                                    :
+                                    "-")
+
+                                    </td>
+
+
+                                    <td>
+
+                                        <span class="badge">
+
+                                            @(status != null
+                                        ?
+                                        status.Title
+                                        :
+                                        item.StatusCode.ToString())
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <td style="direction:ltr;">
+                                        @persianDate
+                                    </td>
+
+
+                                    <td>
+
+                                        <a class="review-link"
+                                           href="@Url.Action(
+                                       "ReviewJusticeCase",
+                                       "Orders",
+                                       new
+                                       {
+                                           area = "Setting",
+                                           id = item.CaseID
+                                       }
+                                   )">
+
+                                            رسیدگی پرونده
+
+                                        </a>
+
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+
+                                <td colspan="7"
+                                    class="review-empty">
+
+                                    پرونده‌ای در کارتابل شما وجود ندارد.
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<script>
+
+    var search =
+        document.getElementById(
+            "reviewSearch"
+        );
+
+
+    function normalizeReviewText(value) {
+
+        return (value || "")
+            .toString()
+            .replace(
+                /[۰-۹]/g,
+                function (c) {
+                    return "۰۱۲۳۴۵۶۷۸۹"
+                        .indexOf(c);
+                }
+            )
+            .toLowerCase()
+            .trim();
+    }
+
+
+    function filterReviewTable() {
+
+        var q =
+            normalizeReviewText(
+                search.value
+            );
+
+
+        document
+            .querySelectorAll(
+                ".review-row"
+            )
+            .forEach(
+                function (row) {
+
+                    var text =
+                        normalizeReviewText(
+                            row.innerText
+                        );
+
+
+                    row.style.display =
+                        !q
+                        ||
+                        text.indexOf(q) >= 0
+                            ?
+                            ""
+                            :
+                            "none";
+
+                }
+            );
+
+    }
+
+
+    search.addEventListener(
+        "input",
+        filterReviewTable
+    );
+
+
+    document.getElementById(
+        "clearReviewSearch"
+    ).addEventListener(
+        "click",
+        function () {
+
+            search.value =
+                "";
+
+            filterReviewTable();
+
+            search.focus();
+
+        }
+    );
+
+</script>

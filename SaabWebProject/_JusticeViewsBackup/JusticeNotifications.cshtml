@@ -1,0 +1,227 @@
+﻿@model IEnumerable<SaabWebProject.Models.DomainModels.JBP_Notifications>
+
+@{
+    ViewBag.Title = "اعلان‌های من";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .notification-page {
+        direction: rtl;
+        min-height: calc(100vh - 70px);
+        padding: 28px;
+        color: white;
+        background: radial-gradient(circle at 12% 10%, rgba(0,220,255,.15), transparent 28%), radial-gradient(circle at 88% 15%, rgba(132,72,255,.16), transparent 30%), linear-gradient(135deg, #06111f, #0b1930, #07111f);
+    }
+
+    .notification-container {
+        max-width: 1050px;
+        margin: auto;
+    }
+
+    .notification-glass {
+        background: linear-gradient( 135deg, rgba(255,255,255,.09), rgba(255,255,255,.04) );
+        border: 1px solid rgba(255,255,255,.14);
+        border-radius: 22px;
+        backdrop-filter: blur(20px);
+        box-shadow: 0 20px 55px rgba(0,0,0,.28);
+    }
+
+    .notification-head {
+        padding: 22px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+        .notification-head h2 {
+            margin: 0;
+        }
+
+    .notification-back {
+        color: white;
+        text-decoration: none;
+        padding: 10px 15px;
+        border-radius: 13px;
+        background: rgba(255,255,255,.07);
+        border: 1px solid rgba(255,255,255,.12);
+    }
+
+    .notification-item {
+        padding: 18px;
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+        transition: .25s;
+    }
+
+        .notification-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .notification-item.unread {
+            border-color: rgba(0,220,255,.30);
+            box-shadow: 0 18px 45px rgba(0,0,0,.22), 0 0 25px rgba(0,210,255,.08);
+        }
+
+            .notification-item.unread:before {
+                content: "";
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 3px;
+                background: linear-gradient(#00d6ff, #087cff);
+                box-shadow: 0 0 15px rgba(0,210,255,.45);
+            }
+
+    .notification-title {
+        font-size: 15px;
+        font-weight: 800;
+    }
+
+    .notification-message {
+        margin-top: 7px;
+        color: rgba(255,255,255,.62);
+        line-height: 1.9;
+    }
+
+    .notification-footer {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .notification-date {
+        color: #71e8ff;
+        font-size: 11px;
+    }
+
+    .notification-link {
+        color: white;
+        text-decoration: none;
+        padding: 7px 12px;
+        border-radius: 10px;
+        background: rgba(0,210,255,.08);
+        border: 1px solid rgba(0,210,255,.18);
+    }
+
+    .notification-empty {
+        text-align: center;
+        padding: 45px;
+        color: rgba(255,255,255,.50);
+    }
+
+    @@media(max-width: 650px) {
+        .notification-page {
+            padding: 14px;
+        }
+
+        .notification-head {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .notification-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .notification-link {
+            text-align: center;
+        }
+    }
+</style>
+
+
+<div class="notification-page">
+
+    <div class="notification-container">
+
+
+        <div class="notification-glass notification-head">
+
+            <div>
+
+                <h2>
+                    🔔 اعلان‌های من
+                </h2>
+
+                <div style="margin-top:7px;color:rgba(255,255,255,.55);font-size:12px;">
+                    پیام‌ها و تغییرات مرتبط با پرونده‌های شما
+                </div>
+
+            </div>
+
+
+            <a href="@Url.Action("JusticeDashboard", "Orders")"
+               class="notification-back">
+                ← بازگشت
+            </a>
+
+        </div>
+
+
+        @if (Model != null && Model.Any())
+        {
+            foreach (var item in Model)
+            {
+                <div class="notification-glass notification-item @(item.IsRead ? "" : "unread")">
+
+                    <div class="notification-title">
+
+                        @if (!item.IsRead)
+                        {
+                            <span style="color:#75e9ff;">
+                                ●
+                            </span>
+                        }
+
+                        @item.Title
+
+                    </div>
+
+
+                    <div class="notification-message">
+                        @item.Message
+                    </div>
+
+
+                    <div class="notification-footer">
+
+                        <div class="notification-date">
+                            @item.CreatedAt.ToString("yyyy/MM/dd HH:mm")
+                        </div>
+
+
+                        @if (item.FK_Case.HasValue)
+                        {
+                            <a class="notification-link"
+                               href="@Url.Action(
+                                    "JusticeCaseDetails",
+                                    "Orders",
+                                    new { id = item.FK_Case.Value }
+                                )">
+                                مشاهده پرونده
+                            </a>
+                        }
+
+                    </div>
+
+                </div>
+            }
+        }
+        else
+        {
+            <div class="notification-glass notification-empty">
+                اعلان جدیدی وجود ندارد.
+            </div>
+        }
+
+    </div>
+
+</div>

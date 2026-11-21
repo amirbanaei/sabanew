@@ -1,0 +1,1768 @@
+﻿@using SaabWebProject.Models.DomainModels
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+
+@model IEnumerable<JBP_Cases>
+
+@{
+    ViewBag.Title = "پنل عدالت و بهبود عملکرد";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+
+    var statuses =
+        ViewBag.Statuses as
+        List<JBP_CaseStatuses>
+        ??
+        new List<JBP_CaseStatuses>();
+
+
+    PersianCalendar pc =
+        new PersianCalendar();
+}
+
+
+<style>
+
+    /* =========================================================
+       PAGE
+       ========================================================= */
+
+    .jbp-shell {
+        direction: rtl;
+        min-height: calc(100vh - 70px);
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+        background: radial-gradient( circle at 10% 10%, rgba(0,225,255,.16), transparent 28% ), radial-gradient( circle at 88% 16%, rgba(121,73,255,.18), transparent 28% ), radial-gradient( circle at 50% 100%, rgba(0,255,170,.08), transparent 32% ), linear-gradient( 135deg, #06111d 0%, #0b1830 45%, #09111f 100% );
+        color: #fff;
+    }
+
+
+    .jbp-orb {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(70px);
+        opacity: .28;
+        pointer-events: none;
+    }
+
+
+        .jbp-orb.one {
+            width: 260px;
+            height: 260px;
+            top: 80px;
+            right: -100px;
+            background: #15d7ff;
+        }
+
+
+        .jbp-orb.two {
+            width: 260px;
+            height: 260px;
+            left: -90px;
+            bottom: 40px;
+            background: #8756ff;
+        }
+
+
+    .jbp-container {
+        max-width: 1450px;
+        margin: auto;
+        position: relative;
+        z-index: 2;
+    }
+
+
+    /* =========================================================
+       GLASS
+       ========================================================= */
+
+    .jbp-glass {
+        background: linear-gradient( 135deg, rgba(255,255,255,.10), rgba(255,255,255,.045) );
+        border: 1px solid rgba(255,255,255,.14);
+        box-shadow: 0 20px 55px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 22px;
+    }
+
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .jbp-header {
+        padding: 18px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+
+
+    .jbp-brand {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+    }
+
+
+    .jbp-logo {
+        width: 52px;
+        height: 52px;
+        flex: 0 0 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        background: linear-gradient( 135deg, #00d4ff, #3c7cff );
+        box-shadow: 0 0 30px rgba(0,212,255,.35);
+    }
+
+
+    .jbp-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 900;
+        letter-spacing: -.4px;
+    }
+
+
+    .jbp-subtitle {
+        margin-top: 5px;
+        color: rgba(255,255,255,.60);
+        font-size: 11px;
+    }
+
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+
+    .jbp-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+
+    .jbp-btn {
+        border: 1px solid rgba(255,255,255,.13);
+        background: rgba(255,255,255,.07);
+        color: white;
+        min-height: 38px;
+        padding: 0 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: .25s;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 10px;
+    }
+
+
+        .jbp-btn:hover {
+            color: white;
+            transform: translateY(-2px);
+            border-color: rgba(0,220,255,.40);
+            box-shadow: 0 10px 25px rgba(0,210,255,.10);
+        }
+
+
+        .jbp-btn.primary {
+            border: 0;
+            background: linear-gradient( 135deg, #02c6df, #087cff );
+            box-shadow: 0 0 28px rgba(0,195,255,.30);
+        }
+
+
+    /* =========================================================
+       STATS
+       ========================================================= */
+
+    .jbp-stats {
+        margin-top: 12px;
+        display: grid;
+        grid-template-columns: repeat(5,minmax(0,1fr));
+        gap: 10px;
+    }
+
+
+    .jbp-stat {
+        padding: 14px;
+        position: relative;
+        overflow: hidden;
+        transition: .25s;
+    }
+
+
+        .jbp-stat:hover {
+            transform: translateY(-3px);
+            border-color: rgba(0,220,255,.28);
+        }
+
+
+        .jbp-stat::before {
+            content: "";
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            top: -30px;
+            left: -20px;
+            background: rgba(0,210,255,.11);
+        }
+
+
+    .jbp-stat-label {
+        color: rgba(255,255,255,.60);
+        font-size: 9px;
+    }
+
+
+    .jbp-stat-value {
+        margin-top: 5px;
+        font-size: 25px;
+        font-weight: 900;
+    }
+
+
+    .jbp-stat-icon {
+        position: absolute;
+        left: 12px;
+        bottom: 9px;
+        font-size: 21px;
+        opacity: .30;
+    }
+
+
+    /* =========================================================
+       SECTION
+       ========================================================= */
+
+    .jbp-section {
+        margin-top: 12px;
+        padding: 13px;
+    }
+
+
+    .jbp-section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+
+    .jbp-section-title {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 900;
+    }
+
+
+    /* =========================================================
+       GLOBAL SEARCH
+       ========================================================= */
+
+    .jbp-search-bar {
+        margin-bottom: 8px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 7px;
+    }
+
+
+    .jbp-search {
+        width: 100%;
+        height: 36px;
+        box-sizing: border-box;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.11);
+        background: rgba(255,255,255,.045);
+        color: white;
+        outline: none;
+        font-family: inherit;
+        font-size: 9px;
+    }
+
+
+        .jbp-search::placeholder {
+            color: rgba(255,255,255,.30);
+        }
+
+
+        .jbp-search:focus {
+            border-color: rgba(0,220,255,.60);
+            box-shadow: 0 0 0 3px rgba(0,210,255,.06);
+        }
+
+
+    .jbp-clear {
+        border: 0;
+        min-width: 90px;
+        border-radius: 10px;
+        color: white;
+        cursor: pointer;
+        background: linear-gradient( 135deg, #785bff, #a747ff );
+        font-family: inherit;
+        font-size: 9px;
+    }
+
+
+    /* =========================================================
+       TABLE
+       ========================================================= */
+
+    .jbp-table-wrap {
+        overflow-x: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,.05);
+    }
+
+
+    .jbp-table {
+        width: 100%;
+        min-width: 900px;
+        border-collapse: collapse;
+    }
+
+
+        .jbp-table th {
+            padding: 9px 8px;
+            color: #85ecff;
+            font-size: 9px;
+            font-weight: 700;
+            background: rgba(0,210,255,.05);
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            text-align: right;
+        }
+
+
+        .jbp-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            vertical-align: middle;
+            font-size: 9px;
+        }
+
+
+        .jbp-table tbody tr {
+            transition: .2s;
+        }
+
+
+            .jbp-table tbody tr:hover {
+                background: rgba(255,255,255,.035);
+            }
+
+
+    /* =========================================================
+       COLUMN FILTERS
+       ========================================================= */
+
+    .jbp-filter-row th {
+        padding: 4px 5px 7px;
+    }
+
+
+    .jbp-column-filter {
+        width: 100%;
+        height: 28px;
+        box-sizing: border-box;
+        padding: 3px 6px;
+        border-radius: 7px;
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(4,17,32,.55);
+        color: white;
+        outline: none;
+        font-family: inherit;
+        font-size: 7px;
+    }
+
+
+        .jbp-column-filter:focus {
+            border-color: rgba(0,215,255,.45);
+        }
+
+
+        .jbp-column-filter::placeholder {
+            color: rgba(255,255,255,.25);
+        }
+
+
+    select.jbp-column-filter option {
+        background: #102039;
+    }
+
+
+    /* =========================================================
+       CASE NUMBER
+       ========================================================= */
+
+    .jbp-case-number {
+        color: #70e9ff;
+        font-weight: 900;
+    }
+
+
+    /* =========================================================
+       STATUS
+       ========================================================= */
+
+    .jbp-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 12px;
+        color: #86ebff;
+        background: rgba(0,210,255,.075);
+        border: 1px solid rgba(0,210,255,.12);
+        white-space: nowrap;
+    }
+
+
+    .status-closed {
+        color: #71eab5;
+        background: rgba(0,210,140,.08);
+        border-color: rgba(0,210,140,.14);
+    }
+
+
+    .status-action {
+        color: #ffd884;
+        background: rgba(255,190,60,.07);
+        border-color: rgba(255,190,60,.13);
+    }
+
+
+    /* =========================================================
+       VIEW BUTTON
+       ========================================================= */
+
+    .jbp-view-link {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 9px;
+        text-decoration: none;
+        color: #fff;
+        background: rgba(0,200,255,.10);
+        border: 1px solid rgba(0,210,255,.22);
+        transition: .2s;
+    }
+
+
+        .jbp-view-link:hover {
+            color: white;
+            background: rgba(0,200,255,.18);
+            box-shadow: 0 0 20px rgba(0,200,255,.12);
+        }
+
+
+    .jbp-empty {
+        text-align: center;
+        padding: 30px !important;
+        color: rgba(255,255,255,.50);
+    }
+
+
+    .jbp-no-result {
+        display: none;
+        text-align: center;
+        padding: 15px;
+        color: rgba(255,255,255,.45);
+        font-size: 9px;
+    }
+
+
+    /* =========================================================
+       RAHAM MODAL
+       ========================================================= */
+
+    .raham-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(2,8,18,.72);
+        backdrop-filter: blur(10px);
+    }
+
+
+        .raham-modal.show {
+            display: flex;
+        }
+
+
+    .raham-card {
+        direction: rtl;
+        width: 100%;
+        max-width: 500px;
+        padding: 22px;
+        position: relative;
+        overflow: hidden;
+        color: white;
+        border-radius: 22px;
+        border: 1px solid rgba(0,220,255,.22);
+        background: linear-gradient( 145deg, rgba(12,32,55,.95), rgba(15,18,45,.95) );
+        box-shadow: 0 30px 80px rgba(0,0,0,.50), 0 0 45px rgba(0,210,255,.10);
+    }
+
+
+        .raham-card::before {
+            content: "";
+            position: absolute;
+            width: 170px;
+            height: 170px;
+            border-radius: 50%;
+            right: -70px;
+            top: -80px;
+            background: rgba(0,220,255,.14);
+            filter: blur(20px);
+        }
+
+
+    .raham-icon {
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 13px;
+        border-radius: 15px;
+        font-size: 25px;
+        background: linear-gradient( 135deg, #00d0e9, #7759ff );
+        box-shadow: 0 0 26px rgba(0,210,255,.22);
+    }
+
+
+    .raham-card h3 {
+        position: relative;
+        margin: 0 0 9px;
+        font-size: 17px;
+    }
+
+
+    .raham-text {
+        position: relative;
+        line-height: 2;
+        color: rgba(255,255,255,.72);
+        font-size: 10px;
+    }
+
+
+    .raham-question {
+        position: relative;
+        margin-top: 13px;
+        padding: 11px;
+        border-radius: 12px;
+        color: #a4efff;
+        background: rgba(0,210,255,.055);
+        border: 1px solid rgba(0,210,255,.12);
+        font-weight: 800;
+        line-height: 1.9;
+    }
+
+
+    .raham-actions {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+
+    .raham-btn {
+        min-height: 40px;
+        border: 0;
+        border-radius: 11px;
+        color: white;
+        cursor: pointer;
+        font-family: inherit;
+        transition: .2s;
+    }
+
+
+        .raham-btn:hover {
+            transform: translateY(-1px);
+        }
+
+
+        .raham-btn.yes {
+            background: linear-gradient( 135deg, #00bdce, #087cff );
+        }
+
+
+        .raham-btn.no {
+            background: rgba(255,255,255,.07);
+            border: 1px solid rgba(255,255,255,.12);
+        }
+
+
+    /* =========================================================
+       WARNING
+       ========================================================= */
+
+    .raham-warning {
+        display: none;
+        position: relative;
+        margin-top: 13px;
+        padding: 11px;
+        border-radius: 11px;
+        line-height: 1.9;
+        color: #ffd2d9;
+        background: rgba(255,72,100,.08);
+        border: 1px solid rgba(255,72,100,.15);
+        font-size: 10px;
+    }
+
+
+        .raham-warning.show {
+            display: block;
+        }
+
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @@media(max-width:1100px) {
+
+        .jbp-stats {
+            grid-template-columns: repeat(2,1fr);
+        }
+    }
+
+
+    @@media(max-width:720px) {
+
+        .jbp-shell {
+            padding: 10px;
+        }
+
+
+        .jbp-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+
+        .jbp-stats {
+            grid-template-columns: 1fr;
+        }
+
+
+        .jbp-actions {
+            width: 100%;
+        }
+
+
+        .jbp-btn {
+            flex: 1;
+            justify-content: center;
+        }
+
+
+        .jbp-title {
+            font-size: 20px;
+        }
+
+
+        .jbp-search-bar {
+            grid-template-columns: 1fr;
+        }
+
+
+        .raham-actions {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+
+
+<div class="jbp-shell">
+
+
+    <div class="jbp-orb one"></div>
+
+    <div class="jbp-orb two"></div>
+
+
+    <div class="jbp-container">
+
+
+        <!-- =====================================================
+             HEADER
+             ===================================================== -->
+
+        <div class="jbp-glass jbp-header">
+
+
+            <div class="jbp-brand">
+
+
+                <div class="jbp-logo">
+                    ⚖
+                </div>
+
+
+                <div>
+
+                    <h1 class="jbp-title">
+
+                        پنل عدالت و بهبود عملکرد
+
+                    </h1>
+
+
+                    <div class="jbp-subtitle">
+
+                        شفاف‌سازی، عدالت، پاسخگویی و بهبود مستمر فرآیندهای کاری
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="jbp-actions">
+
+
+                <!--
+                    دیگر مستقیماً به CreateJusticeCase نمی‌رود.
+                -->
+
+                <button type="button"
+                        class="jbp-btn primary"
+                        id="btnNewJusticeCase">
+
+                    ✚ ثبت درخواست جدید
+
+                </button>
+
+
+                <a class="jbp-btn"
+                   href="@Url.Action(
+                       "MyJusticeCases",
+                       "Orders",
+                       new { area = "Setting" }
+                   )">
+
+                    📁 پرونده‌های من
+
+                </a>
+
+
+                <a class="jbp-btn"
+                   href="@Url.Action(
+                       "MyJusticeMeetings",
+                       "Orders",
+                       new { area = "Setting" }
+                   )">
+
+                    📅 جلسات من
+
+                </a>
+
+
+                <a class="jbp-btn"
+                   href="@Url.Action(
+                       "JusticeNotifications",
+                       "Orders",
+                       new { area = "Setting" }
+                   )">
+
+                    🔔 اعلان‌ها
+
+                    (@ViewBag.NotificationCount)
+
+                </a>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================================
+             STATISTICS
+             ===================================================== -->
+
+        <div class="jbp-stats">
+
+
+            <div class="jbp-glass jbp-stat">
+
+                <div class="jbp-stat-label">
+                    کل درخواست‌ها
+                </div>
+
+                <div class="jbp-stat-value">
+                    @ViewBag.TotalCount
+                </div>
+
+                <div class="jbp-stat-icon">
+                    📂
+                </div>
+
+            </div>
+
+
+
+            <div class="jbp-glass jbp-stat">
+
+                <div class="jbp-stat-label">
+                    در حال رسیدگی
+                </div>
+
+                <div class="jbp-stat-value">
+                    @ViewBag.OpenCount
+                </div>
+
+                <div class="jbp-stat-icon">
+                    🔎
+                </div>
+
+            </div>
+
+
+
+            <div class="jbp-glass jbp-stat">
+
+                <div class="jbp-stat-label">
+                    نیازمند اقدام
+                </div>
+
+                <div class="jbp-stat-value">
+                    @ViewBag.NeedActionCount
+                </div>
+
+                <div class="jbp-stat-icon">
+                    ⚡
+                </div>
+
+            </div>
+
+
+
+            <div class="jbp-glass jbp-stat">
+
+                <div class="jbp-stat-label">
+                    بازنگری
+                </div>
+
+                <div class="jbp-stat-value">
+                    @ViewBag.AppealCount
+                </div>
+
+                <div class="jbp-stat-icon">
+                    ↻
+                </div>
+
+            </div>
+
+
+
+            <div class="jbp-glass jbp-stat">
+
+                <div class="jbp-stat-label">
+                    مختومه
+                </div>
+
+                <div class="jbp-stat-value">
+                    @ViewBag.ClosedCount
+                </div>
+
+                <div class="jbp-stat-icon">
+                    ✓
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================================
+             TABLE
+             ===================================================== -->
+
+        <div class="jbp-glass jbp-section">
+
+
+            <div class="jbp-section-head">
+
+
+                <h3 class="jbp-section-title">
+                    آخرین پرونده‌های من
+                </h3>
+
+
+                <a class="jbp-btn"
+                   href="@Url.Action(
+                       "MyJusticeCases",
+                       "Orders",
+                       new { area = "Setting" }
+                   )">
+
+                    مشاهده همه
+
+                </a>
+
+
+            </div>
+
+
+
+            <!-- GLOBAL SEARCH -->
+
+            <div class="jbp-search-bar">
+
+
+                <input type="text"
+                       class="jbp-search"
+                       id="justiceGlobalSearch"
+                       placeholder="جستجو در شماره پرونده، عنوان، تاریخ و وضعیت..." />
+
+
+                <button type="button"
+                        class="jbp-clear"
+                        id="clearJusticeSearch">
+
+                    پاک کردن فیلترها
+
+                </button>
+
+
+            </div>
+
+
+
+            <div class="jbp-table-wrap">
+
+
+                <table class="jbp-table"
+                       id="justiceCasesTable">
+
+
+                    <thead>
+
+
+                        <!-- TITLES -->
+
+                        <tr>
+
+                            <th>
+                                شماره پرونده
+                            </th>
+
+                            <th>
+                                عنوان
+                            </th>
+
+                            <th>
+                                تاریخ ثبت
+                            </th>
+
+                            <th>
+                                وضعیت
+                            </th>
+
+                            <th>
+                                عملیات
+                            </th>
+
+                        </tr>
+
+
+
+                        <!-- COLUMN FILTERS -->
+
+                        <tr class="jbp-filter-row">
+
+
+                            <th>
+
+                                <input type="text"
+                                       class="jbp-column-filter"
+                                       data-column="0"
+                                       placeholder="شماره..." />
+
+                            </th>
+
+
+                            <th>
+
+                                <input type="text"
+                                       class="jbp-column-filter"
+                                       data-column="1"
+                                       placeholder="عنوان..." />
+
+                            </th>
+
+
+                            <th>
+
+                                <input type="text"
+                                       class="jbp-column-filter"
+                                       data-column="2"
+                                       placeholder="تاریخ..." />
+
+                            </th>
+
+
+                            <th>
+
+                                <select class="jbp-column-filter"
+                                        data-column="3">
+
+                                    <option value="">
+                                        همه وضعیت‌ها
+                                    </option>
+
+                                    @foreach (
+                                        var status
+                                        in statuses
+                                    )
+                                    {
+                                        <option value="@status.Title">
+                                            @status.Title
+                                        </option>
+                                    }
+
+                                </select>
+
+                            </th>
+
+
+                            <th>
+                            </th>
+
+
+                        </tr>
+
+
+                    </thead>
+
+
+
+                    <tbody id="justiceCasesBody">
+
+
+                        @if (
+                            Model != null
+                            &&
+                            Model.Any()
+                        )
+                        {
+                            foreach (
+                                var item
+                                in Model
+                            )
+                            {
+                                /* =====================================
+                                   STATUS NAME
+                                   ===================================== */
+
+                                var status =
+                                    statuses
+                                    .FirstOrDefault(x =>
+                                        x.StatusCode ==
+                                        item.StatusCode
+                                    );
+
+
+                                string statusTitle =
+                                    status != null
+                                        ?
+                                        status.Title
+                                        :
+                                        "نامشخص";
+
+
+                                string statusClass =
+                                    "";
+
+
+                                if (
+                                    item.StatusCode == 90
+                                )
+                                {
+                                    statusClass =
+                                        "status-closed";
+                                }
+                                else if (
+                                    item.StatusCode == 30
+                                    ||
+                                    item.StatusCode == 40
+                                )
+                                {
+                                    statusClass =
+                                        "status-action";
+                                }
+
+
+                                /* =====================================
+                                   PERSIAN CREATED DATE
+                                   ===================================== */
+
+                                string createdDate =
+                                    pc.GetYear(
+                                        item.CreatedAt
+                                    ).ToString("0000")
+                                    +
+                                    "/"
+                                    +
+                                    pc.GetMonth(
+                                        item.CreatedAt
+                                    ).ToString("00")
+                                    +
+                                    "/"
+                                    +
+                                    pc.GetDayOfMonth(
+                                        item.CreatedAt
+                                    ).ToString("00")
+                                    +
+                                    " "
+                                    +
+                                    item.CreatedAt
+                                    .ToString("HH:mm");
+
+
+                                <tr class="justice-case-row">
+
+
+                                    <!-- CASE NUMBER -->
+
+                                    <td>
+
+                                        <span class="jbp-case-number">
+
+                                            @item.CaseNumber
+
+                                        </span>
+
+                                    </td>
+
+
+
+                                    <!-- TITLE -->
+
+                                    <td>
+
+                                        @item.Title
+
+                                    </td>
+
+
+
+                                    <!-- DATE -->
+
+                                    <td style="
+                                    direction:ltr;
+                                    text-align:right;
+                                ">
+
+                                        @createdDate
+
+                                    </td>
+
+
+
+                                    <!-- STATUS NAME -->
+
+                                    <td>
+
+                                        <span class="
+                                        jbp-status
+                                        @statusClass
+                                    ">
+
+                                            @statusTitle
+
+                                        </span>
+
+                                    </td>
+
+
+
+                                    <!-- ACTION -->
+
+                                    <td>
+
+                                        <a class="jbp-view-link"
+                                           href="@Url.Action(
+                                           "JusticeCaseDetails",
+                                           "Orders",
+                                           new
+                                           {
+                                               area = "Setting",
+                                               id = item.CaseID
+                                           }
+                                       )">
+
+                                            مشاهده
+
+                                        </a>
+
+                                    </td>
+
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+
+                                <td colspan="5"
+                                    class="jbp-empty">
+
+                                    هنوز پرونده‌ای ثبت نشده است.
+
+                                </td>
+
+                            </tr>
+                        }
+
+
+                    </tbody>
+
+
+                </table>
+
+
+
+                <div class="jbp-no-result"
+                     id="justiceNoResult">
+
+                    موردی مطابق فیلترهای انتخاب‌شده پیدا نشد.
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+
+
+<!-- =========================================================
+     RAHAM SABA CONFIRMATION MODAL
+     ========================================================= -->
+
+<div class="raham-modal"
+     id="rahamModal">
+
+
+    <div class="raham-card">
+
+
+        <div class="raham-icon">
+            🤖
+        </div>
+
+
+        <h3>
+
+            قبل از ثبت درخواست
+
+        </h3>
+
+
+        <div class="raham-text">
+
+            برای جلوگیری از ثبت درخواست‌های تکراری یا پرسش‌هایی
+            که امکان پاسخ فوری به آن‌ها وجود دارد، لطفاً ابتدا
+            موضوع خود را با دستیار هوشمند رهام سبا مطرح کنید.
+
+        </div>
+
+
+        <div class="raham-question">
+
+            آیا درخواست یا سؤال خود را از
+            <strong>دستیار هوشمند رهام سبا</strong>
+            مطرح کرده‌اید؟
+
+        </div>
+
+
+        <div class="raham-warning"
+             id="rahamWarning">
+
+            ⚠ لطفاً ابتدا سؤال یا درخواست خود را از
+            <strong>هوش مصنوعی رهام سبا</strong>
+            مطرح کنید و در صورتی که پاسخ مناسب دریافت نکردید،
+            برای ثبت درخواست رسمی به این بخش بازگردید.
+
+        </div>
+
+
+        <div class="raham-actions">
+
+
+            <button type="button"
+                    class="raham-btn yes"
+                    id="rahamYes">
+
+                ✓ بله، مطرح کرده‌ام
+
+            </button>
+
+
+            <button type="button"
+                    class="raham-btn no"
+                    id="rahamNo">
+
+                خیر، هنوز مطرح نکرده‌ام
+
+            </button>
+
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+
+
+<script>
+
+    /* =========================================================
+       TEXT NORMALIZER
+       ========================================================= */
+
+    function normalizeJusticeText(value) {
+
+        return (value || "")
+
+            .toString()
+
+            .replace(
+                /[۰-۹]/g,
+                function (c) {
+
+                    return "۰۱۲۳۴۵۶۷۸۹"
+                        .indexOf(c);
+
+                }
+            )
+
+            .replace(
+                /[٠-٩]/g,
+                function (c) {
+
+                    return "٠١٢٣٤٥٦٧٨٩"
+                        .indexOf(c);
+
+                }
+            )
+
+            .replace(
+                /\s+/g,
+                " "
+            )
+
+            .trim()
+
+            .toLowerCase();
+
+    }
+
+
+
+    /* =========================================================
+       SEARCH
+       ========================================================= */
+
+    var globalSearch =
+        document.getElementById(
+            "justiceGlobalSearch"
+        );
+
+
+    var filters =
+        document.querySelectorAll(
+            ".jbp-column-filter"
+        );
+
+
+    var rows =
+        document.querySelectorAll(
+            ".justice-case-row"
+        );
+
+
+    var noResult =
+        document.getElementById(
+            "justiceNoResult"
+        );
+
+
+
+    function filterJusticeCases() {
+
+        var globalValue =
+            normalizeJusticeText(
+                globalSearch.value
+            );
+
+
+        var visibleCount =
+            0;
+
+
+        rows.forEach(
+            function (row) {
+
+                var visible =
+                    true;
+
+
+                var cells =
+                    row.querySelectorAll(
+                        "td"
+                    );
+
+
+                /* =========================================
+                   GLOBAL
+                   ========================================= */
+
+                if (globalValue) {
+
+                    var rowText =
+                        normalizeJusticeText(
+                            row.innerText
+                        );
+
+
+                    if (
+                        rowText.indexOf(
+                            globalValue
+                        ) === -1
+                    ) {
+                        visible =
+                            false;
+                    }
+
+                }
+
+
+                /* =========================================
+                   COLUMN FILTERS
+                   ========================================= */
+
+                if (visible) {
+
+                    filters.forEach(
+                        function (filter) {
+
+                            if (!visible)
+                                return;
+
+
+                            var filterValue =
+                                normalizeJusticeText(
+                                    filter.value
+                                );
+
+
+                            if (!filterValue)
+                                return;
+
+
+                            var column =
+                                parseInt(
+                                    filter.getAttribute(
+                                        "data-column"
+                                    )
+                                );
+
+
+                            if (
+                                isNaN(
+                                    column
+                                )
+                                ||
+                                !cells[column]
+                            ) {
+                                return;
+                            }
+
+
+                            var cellValue =
+                                normalizeJusticeText(
+                                    cells[column]
+                                    .innerText
+                                );
+
+
+                            if (
+                                cellValue.indexOf(
+                                    filterValue
+                                ) === -1
+                            ) {
+                                visible =
+                                    false;
+                            }
+
+                        }
+                    );
+
+                }
+
+
+                row.style.display =
+                    visible
+                        ?
+                        ""
+                        :
+                        "none";
+
+
+                if (visible) {
+                    visibleCount++;
+                }
+
+            }
+        );
+
+
+        if (
+            rows.length > 0
+            &&
+            visibleCount === 0
+        ) {
+
+            noResult.style.display =
+                "block";
+
+        }
+        else {
+
+            noResult.style.display =
+                "none";
+
+        }
+
+    }
+
+
+
+    globalSearch.addEventListener(
+        "input",
+        filterJusticeCases
+    );
+
+
+    filters.forEach(
+        function (filter) {
+
+            filter.addEventListener(
+                "input",
+                filterJusticeCases
+            );
+
+
+            filter.addEventListener(
+                "change",
+                filterJusticeCases
+            );
+
+        }
+    );
+
+
+
+    document.getElementById(
+        "clearJusticeSearch"
+    ).addEventListener(
+        "click",
+        function () {
+
+            globalSearch.value =
+                "";
+
+
+            filters.forEach(
+                function (filter) {
+
+                    filter.value =
+                        "";
+
+                }
+            );
+
+
+            filterJusticeCases();
+
+        }
+    );
+
+
+
+    /* =========================================================
+       RAHAM MODAL
+       ========================================================= */
+
+    var rahamModal =
+        document.getElementById(
+            "rahamModal"
+        );
+
+
+    var rahamWarning =
+        document.getElementById(
+            "rahamWarning"
+        );
+
+
+
+    document.getElementById(
+        "btnNewJusticeCase"
+    ).addEventListener(
+        "click",
+        function () {
+
+            rahamWarning
+                .classList
+                .remove(
+                    "show"
+                );
+
+
+            rahamModal
+                .classList
+                .add(
+                    "show"
+                );
+
+        }
+    );
+
+
+
+    /* =========================================================
+       YES
+       ========================================================= */
+
+    document.getElementById(
+        "rahamYes"
+    ).addEventListener(
+        "click",
+        function () {
+
+            window.location.href =
+                '@Url.Action(
+                    "CreateJusticeCase",
+                    "Orders",
+                    new { area = "Setting" }
+                )';
+
+        }
+    );
+
+
+
+    /* =========================================================
+       NO
+       ========================================================= */
+
+    document.getElementById(
+        "rahamNo"
+    ).addEventListener(
+        "click",
+        function () {
+
+            rahamWarning
+                .classList
+                .add(
+                    "show"
+                );
+
+        }
+    );
+
+
+
+    /* =========================================================
+       CLICK OUTSIDE TO CLOSE
+       ========================================================= */
+
+    rahamModal.addEventListener(
+        "click",
+        function (e) {
+
+            if (
+                e.target ===
+                rahamModal
+            ) {
+
+                rahamModal
+                    .classList
+                    .remove(
+                        "show"
+                    );
+
+            }
+
+        }
+    );
+
+
+
+    /* =========================================================
+       ESC TO CLOSE
+       ========================================================= */
+
+    document.addEventListener(
+        "keydown",
+        function (e) {
+
+            if (
+                e.key ===
+                "Escape"
+            ) {
+
+                rahamModal
+                    .classList
+                    .remove(
+                        "show"
+                    );
+
+            }
+
+        }
+    );
+
+</script>

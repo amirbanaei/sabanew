@@ -1,0 +1,3815 @@
+﻿@using SaabWebProject.Models.DomainModels
+@using System.Globalization
+@using System.Linq
+@using System.Collections.Generic
+
+@{
+    ViewBag.Title =
+        "مدیریت اعضا و جلسات";
+
+    Layout =
+        "~/Views/Shared/_Layout.cshtml";
+
+
+    var workflows =
+        ViewBag.Workflows as List<JBP_WorkflowDefinitions>
+        ??
+        new List<JBP_WorkflowDefinitions>();
+
+
+    var stages =
+        ViewBag.Stages as List<JBP_WorkflowStages>
+        ??
+        new List<JBP_WorkflowStages>();
+
+
+    var members =
+        ViewBag.Members as List<JBP_StageDefaultMembers>
+        ??
+        new List<JBP_StageDefaultMembers>();
+
+
+    var users =
+        ViewBag.Users as List<tbUsers>
+        ??
+        new List<tbUsers>();
+
+
+    var categories =
+        ViewBag.Categories as List<JBP_CaseCategories>
+        ??
+        new List<JBP_CaseCategories>();
+
+
+    var memberCategories =
+        ViewBag.MemberCategories as List<JBP_StageMemberCategories>
+        ??
+        new List<JBP_StageMemberCategories>();
+
+
+    var cases =
+        ViewBag.Cases as List<JBP_Cases>
+        ??
+        new List<JBP_Cases>();
+
+
+    var meetings =
+        ViewBag.Meetings as List<JBP_CaseMeetings>
+        ??
+        new List<JBP_CaseMeetings>();
+
+
+    var meetingParticipants =
+        ViewBag.MeetingParticipants as
+        List<JBP_CaseMeetingParticipants>
+        ??
+        new List<JBP_CaseMeetingParticipants>();
+
+
+    var selectedStageEntity =
+        ViewBag.SelectedStageEntity
+        as
+        JBP_WorkflowStages;
+
+
+    long? selectedWorkflow =
+        ViewBag.WorkflowId != null
+            ?
+            Convert.ToInt64(
+                ViewBag.WorkflowId
+            )
+            :
+            (long?)null;
+
+
+    long? selectedStage =
+        ViewBag.StageId != null
+            ?
+            Convert.ToInt64(
+                ViewBag.StageId
+            )
+            :
+            (long?)null;
+
+
+    var pc =
+        new PersianCalendar();
+}
+
+
+<style>
+
+    .jbp-page {
+        direction: rtl;
+        min-height: calc(100vh - 70px);
+        padding: 12px;
+        color: #fff;
+        background: radial-gradient( circle at 8% 5%, rgba(0,220,255,.13), transparent 28% ), radial-gradient( circle at 90% 12%, rgba(126,72,255,.15), transparent 30% ), linear-gradient( 135deg, #06101d, #0a1930 50%, #07111f );
+    }
+
+
+    .jbp-container {
+        max-width: 1580px;
+        margin: auto;
+    }
+
+
+    .glass {
+        background: linear-gradient( 135deg, rgba(255,255,255,.085), rgba(255,255,255,.03) );
+        border: 1px solid rgba(255,255,255,.11);
+        border-radius: 17px;
+        backdrop-filter: blur(18px);
+        box-shadow: 0 15px 40px rgba(0,0,0,.24);
+    }
+
+
+    .page-head {
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+
+    .page-head-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+
+    .page-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: linear-gradient( 135deg, #00bfd9, #087cff );
+    }
+
+
+    .page-head h2 {
+        margin: 0;
+        font-size: 18px;
+    }
+
+
+    .page-head p {
+        margin: 3px 0 0;
+        color: rgba(255,255,255,.45);
+        font-size: 9px;
+    }
+
+
+    .stage-badge {
+        display: inline-flex;
+        margin-top: 5px;
+        padding: 4px 8px;
+        border-radius: 15px;
+        color: #82ebff;
+        background: rgba(0,210,255,.06);
+        font-size: 8px;
+    }
+
+
+    .control {
+        width: 100%;
+        height: 37px;
+        box-sizing: border-box;
+        padding: 6px 9px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 10px;
+        background: rgba(255,255,255,.052);
+        color: #fff;
+        outline: none;
+        font-size: 9px;
+    }
+
+
+        .control:focus {
+            border-color: rgba(0,215,255,.70);
+            box-shadow: 0 0 0 3px rgba(0,210,255,.06);
+        }
+
+
+        .control::placeholder {
+            color: rgba(255,255,255,.28);
+        }
+
+
+    select.control option {
+        color: white;
+        background: #102039;
+    }
+
+
+    textarea.control {
+        min-height: 62px;
+        height: 62px;
+        resize: vertical;
+    }
+
+
+    .field > label {
+        display: block;
+        margin-bottom: 4px;
+        color: #8cecff;
+        font-size: 8px;
+        font-weight: bold;
+    }
+
+
+    .btn-jbp {
+        min-height: 36px;
+        padding: 0 13px;
+        border: 0;
+        border-radius: 10px;
+        color: white;
+        cursor: pointer;
+        font-size: 9px;
+        text-decoration: none;
+    }
+
+
+    .btn-blue {
+        background: linear-gradient( 135deg, #00bfd9, #087cff );
+    }
+
+
+    .btn-dark {
+        background: rgba(255,255,255,.06);
+        border: 1px solid rgba(255,255,255,.10);
+    }
+
+
+    .btn-red {
+        background: linear-gradient( 135deg, #e44b64, #bd2346 );
+    }
+
+
+    .btn-green {
+        background: linear-gradient( 135deg, #00ac78, #00cf97 );
+    }
+
+
+    .btn-purple {
+        background: linear-gradient( 135deg, #755bff, #ad4cff );
+    }
+
+
+    .workflow-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 7px;
+        padding: 8px;
+        margin-bottom: 8px;
+    }
+
+
+    .section-title {
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+
+    .section-subtitle {
+        margin-top: 2px;
+        color: rgba(255,255,255,.40);
+        font-size: 8px;
+    }
+
+
+    .member-card {
+        padding: 11px;
+        margin-bottom: 8px;
+    }
+
+
+    .member-grid {
+        display: grid;
+        grid-template-columns: 300px 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+
+    .mini-panel {
+        padding: 9px;
+        border-radius: 13px;
+        background: rgba(255,255,255,.024);
+        border: 1px solid rgba(255,255,255,.055);
+    }
+
+
+    .panel-title {
+        margin-bottom: 7px;
+        color: #88ecff;
+        font-size: 9px;
+        font-weight: bold;
+    }
+
+
+    .user-results {
+        height: 145px;
+        overflow-y: auto;
+        margin-top: 5px;
+        padding: 4px;
+        border-radius: 10px;
+        background: rgba(2,12,23,.34);
+    }
+
+
+    .user-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 33px;
+        padding: 5px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+
+        .user-item:hover,
+        .user-item.active {
+            background: rgba(0,210,255,.08);
+        }
+
+
+    .user-avatar {
+        width: 27px;
+        height: 27px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: linear-gradient( 135deg, #00bfd8, #087cff );
+        font-size: 9px;
+        font-weight: bold;
+    }
+
+
+    .user-name {
+        font-size: 8px;
+        font-weight: bold;
+    }
+
+
+    .user-meta {
+        margin-top: 2px;
+        color: rgba(255,255,255,.40);
+        font-size: 7px;
+    }
+
+
+    .selected-user {
+        display: none;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 5px;
+        padding: 6px;
+        border-radius: 9px;
+        background: rgba(0,210,255,.07);
+    }
+
+
+    .category-grid {
+        height: 145px;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 4px;
+        margin-top: 5px;
+    }
+
+
+    .category-item,
+    .permission-item {
+        min-height: 29px;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: 7px;
+        background: rgba(255,255,255,.025);
+        font-size: 7px;
+    }
+
+
+    .all-category {
+        display: block;
+        padding: 6px;
+        border-radius: 8px;
+        color: #75eaff;
+        background: rgba(0,210,255,.05);
+        font-size: 8px;
+    }
+
+
+    .permission-grid {
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 5px;
+    }
+
+
+    .member-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 5px;
+        margin-top: 8px;
+    }
+
+
+    input[type="checkbox"] {
+        accent-color: #00caec;
+    }
+
+
+    .table-card {
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+
+
+    .table-wrap {
+        overflow-x: auto;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.05);
+    }
+
+
+    .data-table {
+        width: 100%;
+        min-width: 1050px;
+        border-collapse: collapse;
+    }
+
+
+        .data-table th {
+            padding: 8px 6px;
+            text-align: right;
+            color: #80eaff;
+            background: rgba(0,210,255,.035);
+            font-size: 7px;
+        }
+
+
+        .data-table td {
+            padding: 7px 6px;
+            border-bottom: 1px solid rgba(255,255,255,.045);
+            font-size: 8px;
+        }
+
+
+    .category-badge {
+        display: inline-block;
+        margin: 1px;
+        padding: 3px 5px;
+        border-radius: 9px;
+        color: #80eaff;
+        background: rgba(0,210,255,.06);
+        font-size: 6px;
+    }
+
+
+    .small-btn {
+        min-height: 25px;
+        padding: 0 7px;
+        border: 0;
+        border-radius: 7px;
+        color: white;
+        cursor: pointer;
+        font-size: 7px;
+    }
+
+
+    /* =========================================================
+       MEETING
+       ========================================================= */
+
+    .meeting-card {
+        padding: 11px;
+    }
+
+
+    .meeting-grid {
+        display: grid;
+        grid-template-columns: minmax(0,1.4fr) minmax(250px,.6fr);
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+
+    .meeting-fields {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 7px;
+    }
+
+
+    .span-2 {
+        grid-column: span 2;
+    }
+
+
+    .span-4 {
+        grid-column: 1 / -1;
+    }
+
+
+    .stage-info {
+        grid-column: 1 / -1;
+        padding: 7px 9px;
+        border-radius: 9px;
+        color: rgba(255,255,255,.65);
+        background: rgba(0,210,255,.045);
+        font-size: 8px;
+    }
+
+
+        .stage-info strong {
+            color: #83eaff;
+        }
+
+
+    .case-box {
+        grid-column: 1 / -1;
+        padding: 9px;
+        border-radius: 12px;
+        background: rgba(0,180,255,.035);
+        border: 1px solid rgba(0,210,255,.10);
+    }
+
+
+    .case-box-title {
+        margin-bottom: 6px;
+        color: #80eaff;
+        font-size: 9px;
+        font-weight: bold;
+    }
+
+
+    .case-select-grid {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 6px;
+    }
+
+
+    .participant-panel {
+        padding: 8px;
+        border-radius: 12px;
+        background: rgba(255,255,255,.024);
+    }
+
+
+    .participant-list {
+        height: 200px;
+        overflow-y: auto;
+        margin-top: 5px;
+    }
+
+
+    .participant-item {
+        min-height: 28px;
+        padding: 4px 5px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        border-radius: 7px;
+        font-size: 7px;
+    }
+
+
+        .participant-item:hover {
+            background: rgba(0,210,255,.05);
+        }
+
+
+    /* =========================================================
+       DATE
+       ========================================================= */
+
+    .date-field {
+        position: relative;
+    }
+
+
+    .date-wrap {
+        position: relative;
+    }
+
+
+        .date-wrap input {
+            direction: ltr;
+            text-align: center;
+            cursor: pointer;
+        }
+
+
+    .date-icon {
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+
+    .jalali-picker {
+        display: none;
+        position: absolute;
+        z-index: 99999;
+        top: calc(100% + 5px);
+        right: 0;
+        width: 275px;
+        padding: 9px;
+        border-radius: 14px;
+        background: rgba(7,22,40,.99);
+        border: 1px solid rgba(0,210,255,.20);
+        box-shadow: 0 22px 55px rgba(0,0,0,.55);
+    }
+
+
+        .jalali-picker.open {
+            display: block;
+        }
+
+
+    .calendar-head {
+        display: grid;
+        grid-template-columns: 30px 1fr 30px;
+        gap: 4px;
+    }
+
+
+    .cal-title {
+        text-align: center;
+        color: #84edff;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+
+    .cal-nav {
+        border: 0;
+        border-radius: 8px;
+        color: white;
+        background: rgba(255,255,255,.06);
+    }
+
+
+    .cal-week,
+    .cal-days {
+        display: grid;
+        grid-template-columns: repeat(7,1fr);
+        gap: 2px;
+        margin-top: 5px;
+    }
+
+
+        .cal-week span {
+            text-align: center;
+            color: rgba(255,255,255,.4);
+            font-size: 7px;
+        }
+
+
+    .cal-day {
+        height: 29px;
+        border: 0;
+        border-radius: 7px;
+        color: white;
+        background: transparent;
+        cursor: pointer;
+    }
+
+
+        .cal-day:hover {
+            background: rgba(0,210,255,.10);
+        }
+
+
+        .cal-day.today {
+            border: 1px solid rgba(0,210,255,.40);
+        }
+
+
+    .calendar-footer {
+        margin-top: 6px;
+        padding-top: 6px;
+        display: flex;
+        justify-content: space-between;
+        border-top: 1px solid rgba(255,255,255,.05);
+    }
+
+
+    .cal-mini-btn {
+        padding: 5px 8px;
+        border: 0;
+        border-radius: 7px;
+        color: white;
+        background: rgba(255,255,255,.06);
+    }
+
+
+    .meeting-status {
+        display: inline-block;
+        padding: 3px 6px;
+        border-radius: 9px;
+        font-size: 7px;
+    }
+
+
+        .meeting-status.plan {
+            color: #7eeaff;
+            background: rgba(0,210,255,.07);
+        }
+
+
+        .meeting-status.done {
+            color: #5fedb8;
+            background: rgba(0,210,150,.07);
+        }
+
+
+        .meeting-status.cancel {
+            color: #ff8092;
+            background: rgba(255,80,100,.07);
+        }
+
+
+    .case-number {
+        color: #7eeaff;
+        font-weight: bold;
+    }
+
+
+    .case-title {
+        margin-top: 2px;
+        color: rgba(255,255,255,.55);
+        font-size: 7px;
+    }
+
+
+    @@media(max-width:900px) {
+
+        .member-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .meeting-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+
+    @@media(max-width:650px) {
+
+        .workflow-bar {
+            grid-template-columns: 1fr;
+        }
+
+        .meeting-fields {
+            grid-template-columns: repeat(2,1fr);
+        }
+
+        .case-select-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+
+    @@media(max-width:480px) {
+
+        .meeting-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .span-2,
+        .span-4 {
+            grid-column: auto;
+        }
+    }
+</style>
+
+
+<div class="jbp-page">
+
+    <div class="jbp-container">
+
+
+        <!-- HEADER -->
+
+        <div class="glass page-head">
+
+            <div class="page-head-main">
+
+                <div class="page-icon">
+                    ⚙
+                </div>
+
+                <div>
+
+                    <h2>
+                        مدیریت اعضا و جلسات رسیدگی
+                    </h2>
+
+                    <p>
+                        اعضای مراحل، حوزه دسترسی و جلسات مرتبط با درخواست‌ها
+                    </p>
+
+
+                    @if (selectedStageEntity != null)
+                    {
+                        <div class="stage-badge">
+
+                            مرحله:
+
+                            @selectedStageEntity.StageOrder
+
+                            -
+
+                            @selectedStageEntity.Title
+
+                        </div>
+                    }
+
+                </div>
+
+            </div>
+
+
+            <a href="@Url.Action(
+                     "JusticeDashboard",
+                     "Orders",
+                     new { area = "Setting" }
+                 )"
+               class="btn-jbp btn-dark">
+
+                بازگشت
+
+            </a>
+
+        </div>
+
+
+
+        <!-- WORKFLOW -->
+
+        <form method="get"
+              action="@Url.Action(
+                      "JusticeWorkflowMembers",
+                      "Orders",
+                      new { area = "Setting" }
+                  )"
+              class="glass workflow-bar">
+
+
+            <select name="workflowId"
+                    class="control">
+
+                @foreach (var item in workflows)
+                {
+                    <option value="@item.WorkflowID"
+                            @(selectedWorkflow == item.WorkflowID ? "selected" : "")>
+
+                        @item.Title
+
+                    </option>
+                }
+
+            </select>
+
+
+            <select name="stageId"
+                    class="control">
+
+                @foreach (var item in stages)
+                {
+                    <option value="@item.StageID"
+                            @(selectedStage == item.StageID ? "selected" : "")>
+
+                        @item.StageOrder
+                        -
+                        @item.Title
+
+                    </option>
+                }
+
+            </select>
+
+
+            <button type="submit"
+                    class="btn-jbp btn-blue">
+
+                نمایش مرحله
+
+            </button>
+
+        </form>
+
+
+
+        <!-- MEMBER -->
+
+        <div class="glass member-card">
+
+            <div class="section-title">
+                👤 تعریف عضو مرحله
+            </div>
+
+            <div class="section-subtitle">
+                کاربر، حوزه و دسترسی او را مشخص کنید.
+            </div>
+
+
+            <form id="memberForm">
+
+                @Html.AntiForgeryToken()
+
+
+                <input type="hidden"
+                       name="stageId"
+                       value="@selectedStage" />
+
+
+                <input type="hidden"
+                       name="userId"
+                       id="selectedUserId" />
+
+
+                <div class="member-grid">
+
+
+                    <div class="mini-panel">
+
+                        <div class="panel-title">
+                            👤 کاربر
+                        </div>
+
+
+                        <input type="text"
+                               id="userSearch"
+                               class="control"
+                               placeholder="جستجوی نام یا کد..." />
+
+
+                        <div id="selectedUserBox"
+                             class="selected-user">
+
+                            <div>
+
+                                <div id="selectedUserName"
+                                     class="user-name">
+                                </div>
+
+                                <div id="selectedUserCode"
+                                     class="user-meta">
+                                </div>
+
+                            </div>
+
+
+                            <button type="button"
+                                    onclick="clearSelectedUser()">
+
+                                ×
+
+                            </button>
+
+                        </div>
+
+
+                        <div class="user-results">
+
+                            @foreach (var user in users)
+                            {
+                                string fullName =
+                                    (
+                                        (user.usr_Name ?? "")
+                                        +
+                                        " "
+                                        +
+                                        (user.usr_Family ?? "")
+                                    ).Trim();
+
+
+                                string personnel =
+                                    user.usr_Personal_ID.HasValue
+                                        ?
+                                        user.usr_Personal_ID.Value.ToString()
+                                        :
+                                        "-";
+
+
+                                <div class="user-item"
+                                     data-id="@user.usr_ID"
+                                     data-name="@fullName"
+                                     data-personnel="@personnel"
+                                     data-search="@(fullName + " " + personnel)"
+                                     onclick="selectJusticeUser(this)">
+
+                                    <div class="user-avatar">
+
+                                        @(string.IsNullOrWhiteSpace(
+                                          user.usr_Name
+                                      )
+                                        ?
+                                        "?"
+                                        :
+                                        user.usr_Name.Substring(0,1))
+
+                                    </div>
+
+                                    <div>
+
+                                        <div class="user-name">
+                                            @fullName
+                                        </div>
+
+                                        <div class="user-meta">
+                                            @personnel
+                                        </div>
+
+                                    </div>
+
+                                </div>
+                            }
+
+                        </div>
+
+
+                        <div class="field"
+                             style="margin-top:6px;">
+
+                            <label>
+                                نقش
+                            </label>
+
+                            <input type="text"
+                                   id="memberRole"
+                                   name="memberRole"
+                                   value="عضو"
+                                   class="control" />
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="mini-panel">
+
+                        <div class="panel-title">
+                            📂 حوزه موضوعی
+                        </div>
+
+
+                        <label class="all-category">
+
+                            <input type="checkbox"
+                                   id="handlesAllCategories"
+                                   name="handlesAllCategories"
+                                   checked />
+
+                            همه موضوعات
+
+                        </label>
+
+
+                        <input type="text"
+                               id="categorySearch"
+                               class="control"
+                               placeholder="جستجوی موضوع..." />
+
+
+                        <div class="category-grid">
+
+                            @foreach (var cat in categories)
+                            {
+                                <label class="category-item"
+                                       data-search="@cat.Title">
+
+                                    <input type="checkbox"
+                                           class="category-check"
+                                           name="categoryIds"
+                                           value="@cat.CategoryID"
+                                           disabled />
+
+                                    @cat.Title
+
+                                </label>
+                            }
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="mini-panel">
+
+                        <div class="panel-title">
+                            🔐 دسترسی
+                        </div>
+
+
+                        <div class="permission-grid">
+
+                            <label class="permission-item">
+
+                                <input type="checkbox"
+                                       id="canView"
+                                       name="canView"
+                                       checked />
+
+                                مشاهده
+
+                            </label>
+
+
+                            <label class="permission-item">
+
+                                <input type="checkbox"
+                                       id="canRespond"
+                                       name="canRespond" />
+
+                                پاسخ
+
+                            </label>
+
+
+                            <label class="permission-item">
+
+                                <input type="checkbox"
+                                       id="canForward"
+                                       name="canForward" />
+
+                                ارجاع
+
+                            </label>
+
+
+                            <label class="permission-item">
+
+                                <input type="checkbox"
+                                       id="canDecide"
+                                       name="canDecide" />
+
+                                تصمیم
+
+                            </label>
+
+
+                            <label class="permission-item">
+
+                                <input type="checkbox"
+                                       id="canEditMembers"
+                                       name="canEditMembers" />
+
+                                مدیریت اعضا
+
+                            </label>
+
+
+                            <label class="permission-item">
+
+                                <input type="checkbox"
+                                       id="canChangeDue"
+                                       name="canChangeDue" />
+
+                                تغییر مهلت
+
+                            </label>
+
+
+                            <label class="permission-item">
+
+                                <input type="checkbox"
+                                       id="hasVote"
+                                       name="hasVote" />
+
+                                حق رأی
+
+                            </label>
+
+                        </div>
+
+
+                        <div class="member-actions">
+
+                            <button type="button"
+                                    class="btn-jbp btn-dark"
+                                    onclick="resetMemberForm()">
+
+                                پاک کردن
+
+                            </button>
+
+
+                            <button type="submit"
+                                    class="btn-jbp btn-blue">
+
+                                ذخیره عضو
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+
+
+        <!-- MEMBER TABLE -->
+
+        <div class="glass table-card">
+
+            <div class="section-title"
+                 style="margin-bottom:8px;">
+
+                👥 اعضای مرحله
+
+            </div>
+
+
+            <div class="table-wrap">
+
+                <table class="data-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>کاربر</th>
+                            <th>نقش</th>
+                            <th>موضوعات</th>
+                            <th>مشاهده</th>
+                            <th>پاسخ</th>
+                            <th>ارجاع</th>
+                            <th>تصمیم</th>
+                            <th>اعضا</th>
+                            <th>مهلت</th>
+                            <th>رأی</th>
+                            <th>وضعیت</th>
+                            <th>عملیات</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        @if (members.Any())
+                        {
+                            foreach (var member in members)
+                            {
+                                var u =
+                                    users.FirstOrDefault(
+                                        x =>
+                                            x.usr_ID ==
+                                            member.FK_User
+                                    );
+
+
+                                string fullName =
+                                    u == null
+                                        ?
+                                        "کاربر یافت نشد"
+                                        :
+                                        (
+                                            (u.usr_Name ?? "")
+                                            +
+                                            " "
+                                            +
+                                            (u.usr_Family ?? "")
+                                        ).Trim();
+
+
+                                var maps =
+                                    memberCategories
+                                    .Where(x =>
+                                        x.FK_Stage ==
+                                            member.FK_Stage
+                                        &&
+                                        x.FK_User ==
+                                            member.FK_User
+                                        &&
+                                        x.IsActive
+                                    )
+                                    .ToList();
+
+
+                                string categoryIds =
+                                    string.Join(
+                                        ",",
+                                        maps.Select(
+                                            x =>
+                                                x.FK_Category
+                                        )
+                                    );
+
+
+                                <tr>
+
+                                    <td>
+                                        @fullName
+                                    </td>
+
+                                    <td>
+                                        @member.MemberRole
+                                    </td>
+
+                                    <td>
+
+                                        @if (member.HandlesAllCategories)
+                                        {
+                                            <span class="category-badge">
+                                                همه موضوعات
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            foreach (var map in maps)
+                                            {
+                                                var cat =
+                                                    categories
+                                                    .FirstOrDefault(
+                                                        x =>
+                                                            x.CategoryID ==
+                                                            map.FK_Category
+                                                    );
+
+                                                <span class="category-badge">
+
+                                                    @(cat != null
+                                                ?
+                                                cat.Title
+                                                :
+                                                map.FK_Category.ToString())
+
+                                                </span>
+                                            }
+                                        }
+
+                                    </td>
+
+                                    <td>
+                                        @(member.CanView ? "✓" : "—")
+                                    </td>
+
+                                    <td>
+                                        @(member.CanRespond ? "✓" : "—")
+                                    </td>
+
+                                    <td>
+                                        @(member.CanForward ? "✓" : "—")
+                                    </td>
+
+                                    <td>
+                                        @(member.CanDecide ? "✓" : "—")
+                                    </td>
+
+                                    <td>
+                                        @(member.CanEditMembers ? "✓" : "—")
+                                    </td>
+
+                                    <td>
+                                        @(member.CanChangeDue ? "✓" : "—")
+                                    </td>
+
+                                    <td>
+                                        @(member.HasVote ? "✓" : "—")
+                                    </td>
+
+                                    <td>
+                                        @(member.IsActive ? "فعال" : "غیرفعال")
+                                    </td>
+
+                                    <td>
+
+                                        <button type="button"
+                                                class="small-btn btn-purple"
+                                                data-user-id="@member.FK_User"
+                                                data-user-name="@fullName"
+                                                data-role="@member.MemberRole"
+                                                data-vote="@member.HasVote.ToString().ToLower()"
+                                                data-view="@member.CanView.ToString().ToLower()"
+                                                data-respond="@member.CanRespond.ToString().ToLower()"
+                                                data-forward="@member.CanForward.ToString().ToLower()"
+                                                data-decide="@member.CanDecide.ToString().ToLower()"
+                                                data-edit="@member.CanEditMembers.ToString().ToLower()"
+                                                data-due="@member.CanChangeDue.ToString().ToLower()"
+                                                data-all="@member.HandlesAllCategories.ToString().ToLower()"
+                                                data-categories="@categoryIds"
+                                                onclick="editMember(this)">
+
+                                            ویرایش
+
+                                        </button>
+
+
+                                        @if (member.IsActive)
+                                        {
+                                            <button type="button"
+                                                    class="small-btn btn-red"
+                                                    onclick="changeMemberStatus(
+                                                @member.MemberID,
+                                                false
+                                            )">
+
+                                                غیرفعال
+
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button"
+                                                    class="small-btn btn-green"
+                                                    onclick="changeMemberStatus(
+                                                @member.MemberID,
+                                                true
+                                            )">
+
+                                                فعال
+
+                                            </button>
+                                        }
+
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+
+                                <td colspan="12"
+                                    style="text-align:center;padding:15px;">
+
+                                    عضوی ثبت نشده است.
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =====================================================
+             MEETING
+             ===================================================== -->
+
+        <div class="glass meeting-card">
+
+            <div class="section-title">
+                📅 ثبت جلسه
+            </div>
+
+            <div class="section-subtitle">
+                جلسه را به یکی از درخواست‌های ثبت‌شده متصل کنید؛ مرحله فعلی درخواست اهمیتی ندارد.
+            </div>
+
+
+            <form id="meetingForm">
+
+                @Html.AntiForgeryToken()
+
+
+                <input type="hidden"
+                       name="stageId"
+                       value="@selectedStage" />
+
+
+                <div class="meeting-grid">
+
+
+                    <div class="meeting-fields">
+
+
+                        <div class="stage-info">
+
+                            جلسه از مرحله:
+
+                            <strong>
+
+                                @(selectedStageEntity != null
+                                ?
+                                selectedStageEntity.StageOrder
+                                +
+                                " - "
+                                +
+                                selectedStageEntity.Title
+                                :
+                                "مرحله انتخاب نشده است")
+
+                            </strong>
+
+                        </div>
+
+
+
+                        <!-- CASE -->
+
+                        <div class="case-box">
+
+                            <div class="case-box-title">
+                                📁 درخواست مرتبط با جلسه
+                            </div>
+
+
+                            <div class="case-select-grid">
+
+                                <input type="text"
+                                       id="caseSearch"
+                                       class="control"
+                                       placeholder="جستجوی شماره یا عنوان درخواست..." />
+
+
+                                <select name="caseId"
+                                        id="meetingCaseId"
+                                        class="control"
+                                        required>
+
+                                    <option value="">
+                                        -- انتخاب درخواست --
+                                    </option>
+
+
+                                    @foreach (var item in cases)
+                                    {
+                                        <option value="@item.CaseID"
+                                                data-search="@(
+                                                (
+                                                    (item.CaseNumber ?? "")
+                                                    +
+                                                    " "
+                                                    +
+                                                    (item.Title ?? "")
+                                                ).ToLower()
+                                            )">
+
+                                            @item.CaseNumber
+                                            -
+                                            @item.Title
+
+                                        </option>
+                                    }
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="field span-2">
+
+                            <label>
+                                عنوان جلسه
+                            </label>
+
+                            <input type="text"
+                                   name="title"
+                                   class="control"
+                                   maxlength="300"
+                                   required />
+
+                        </div>
+
+
+
+                        <div class="field">
+
+                            <label>
+                                نوع جلسه
+                            </label>
+
+                            <select name="meetingType"
+                                    id="meetingType"
+                                    class="control">
+
+                                <option value="1">
+                                    حضوری
+                                </option>
+
+                                <option value="2">
+                                    آنلاین
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+
+                        <div class="field date-field"
+                             id="meetingDateField">
+
+                            <label>
+                                تاریخ جلسه
+                            </label>
+
+
+                            <div class="date-wrap">
+
+                                <input type="text"
+                                       name="meetingDatePersian"
+                                       id="meetingDatePersian"
+                                       class="control"
+                                       readonly
+                                       placeholder="انتخاب تاریخ"
+                                       required />
+
+                                <span class="date-icon">
+                                    📅
+                                </span>
+
+                            </div>
+
+
+                            <div id="jalaliPicker"
+                                 class="jalali-picker">
+
+
+                                <div class="calendar-head">
+
+                                    <button type="button"
+                                            id="nextMonth"
+                                            class="cal-nav">
+
+                                        ›
+
+                                    </button>
+
+
+                                    <div id="calendarTitle"
+                                         class="cal-title">
+                                    </div>
+
+
+                                    <button type="button"
+                                            id="prevMonth"
+                                            class="cal-nav">
+
+                                        ‹
+
+                                    </button>
+
+                                </div>
+
+
+                                <div class="cal-week">
+
+                                    <span>ش</span>
+                                    <span>ی</span>
+                                    <span>د</span>
+                                    <span>س</span>
+                                    <span>چ</span>
+                                    <span>پ</span>
+                                    <span>ج</span>
+
+                                </div>
+
+
+                                <div id="calendarDays"
+                                     class="cal-days">
+                                </div>
+
+
+                                <div class="calendar-footer">
+
+                                    <button type="button"
+                                            id="todayButton"
+                                            class="cal-mini-btn">
+
+                                        امروز
+
+                                    </button>
+
+
+                                    <button type="button"
+                                            id="clearDate"
+                                            class="cal-mini-btn">
+
+                                        پاک کردن
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="field">
+
+                            <label>
+                                ساعت
+                            </label>
+
+                            <input type="time"
+                                   name="meetingTime"
+                                   class="control"
+                                   required />
+
+                        </div>
+
+
+
+                        <div class="field"
+                             id="locationBox">
+
+                            <label>
+                                محل جلسه
+                            </label>
+
+                            <input type="text"
+                                   name="location"
+                                   class="control" />
+
+                        </div>
+
+
+
+                        <div class="field span-2"
+                             id="onlineLinkBox"
+                             style="display:none;">
+
+                            <label>
+                                لینک جلسه
+                            </label>
+
+                            <input type="text"
+                                   name="onlineLink"
+                                   class="control"
+                                   placeholder="https://..." />
+
+                        </div>
+
+
+
+                        <div class="field span-4">
+
+                            <label>
+                                توضیحات
+                            </label>
+
+                            <textarea name="description"
+                                      class="control"></textarea>
+
+                        </div>
+
+
+
+                        <div class="span-4"
+                             style="text-align:left;">
+
+                            <button type="submit"
+                                    class="btn-jbp btn-blue">
+
+                                ✓ ثبت جلسه
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- PARTICIPANTS -->
+
+                    <div class="participant-panel">
+
+                        <div class="panel-title">
+                            👥 شرکت‌کنندگان
+                        </div>
+
+
+                        <input type="text"
+                               id="participantSearch"
+                               class="control"
+                               placeholder="جستجوی کاربر..." />
+
+
+                        <div class="participant-list">
+
+                            @foreach (var user in users)
+                            {
+                                string fullName =
+                                    (
+                                        (user.usr_Name ?? "")
+                                        +
+                                        " "
+                                        +
+                                        (user.usr_Family ?? "")
+                                    ).Trim();
+
+
+                                string personnel =
+                                    user.usr_Personal_ID.HasValue
+                                        ?
+                                        user.usr_Personal_ID.Value.ToString()
+                                        :
+                                        "-";
+
+
+                                <label class="participant-item"
+                                       data-search="@(fullName + " " + personnel)">
+
+                                    <input type="checkbox"
+                                           name="participantUserIds"
+                                           value="@user.usr_ID" />
+
+                                    @fullName
+
+                                    <span style="
+                                    color:rgba(255,255,255,.35);
+                                ">
+                                        -
+                                        @personnel
+                                    </span>
+
+                                </label>
+                            }
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+
+
+            <!-- =====================================================
+                 MEETING TABLE
+                 ===================================================== -->
+
+            <div class="section-title"
+                 style="margin:14px 0 8px;">
+
+                📋 جلسات ثبت‌شده این مرحله
+
+            </div>
+
+
+            <div class="table-wrap">
+
+                <table class="data-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                درخواست
+                            </th>
+
+                            <th>
+                                عنوان جلسه
+                            </th>
+
+                            <th>
+                                تاریخ
+                            </th>
+
+                            <th>
+                                ساعت
+                            </th>
+
+                            <th>
+                                نوع
+                            </th>
+
+                            <th>
+                                محل / لینک
+                            </th>
+
+                            <th>
+                                شرکت‌کنندگان
+                            </th>
+
+                            <th>
+                                وضعیت
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        @if (meetings.Any())
+                        {
+                            foreach (var meeting in meetings)
+                            {
+                                var caseItem =
+                                    meeting.FK_Case.HasValue
+                                        ?
+                                        cases.FirstOrDefault(
+                                            x =>
+                                                x.CaseID ==
+                                                meeting.FK_Case.Value
+                                        )
+                                        :
+                                        null;
+
+
+                                var participants =
+                                    meetingParticipants
+                                    .Where(x =>
+                                        x.FK_Meeting ==
+                                        meeting.MeetingID
+                                    )
+                                    .ToList();
+
+
+                                string persianDate =
+                                    pc.GetYear(
+                                        meeting.MeetingDateTime
+                                    ).ToString("0000")
+                                    +
+                                    "/"
+                                    +
+                                    pc.GetMonth(
+                                        meeting.MeetingDateTime
+                                    ).ToString("00")
+                                    +
+                                    "/"
+                                    +
+                                    pc.GetDayOfMonth(
+                                        meeting.MeetingDateTime
+                                    ).ToString("00");
+
+
+                                <tr>
+
+                                    <!-- CASE -->
+
+                                    <td>
+
+                                        @if (caseItem != null)
+                                        {
+                                            <div class="case-number">
+                                                @caseItem.CaseNumber
+                                            </div>
+
+                                            <div class="case-title">
+                                                @caseItem.Title
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span style="
+                                        color:rgba(255,255,255,.35);
+                                    ">
+                                                بدون درخواست
+                                            </span>
+                                        }
+
+                                    </td>
+
+
+                                    <td>
+                                        @meeting.Title
+                                    </td>
+
+
+                                    <td style="
+                                direction:ltr;
+                                color:#7eeaff;
+                            ">
+                                        @persianDate
+                                    </td>
+
+
+                                    <td>
+                                        @meeting.MeetingDateTime
+                                        .ToString("HH:mm")
+                                    </td>
+
+
+                                    <td>
+
+                                        @(meeting.MeetingType == 1
+                                    ?
+                                    "حضوری"
+                                    :
+                                    "آنلاین")
+
+                                    </td>
+
+
+                                    <td>
+
+                                        @if (meeting.MeetingType == 1)
+                                        {
+                                            @meeting.Location
+                                        }
+                                        else
+                                        {
+                                            @meeting.OnlineLink
+                                        }
+
+                                    </td>
+
+
+                                    <td>
+                                        @participants.Count نفر
+                                    </td>
+
+
+                                    <td>
+
+                                        @if (meeting.StatusCode == 1)
+                                        {
+                                            <span class="meeting-status plan">
+                                                برنامه‌ریزی شده
+                                            </span>
+                                        }
+                                        else if (meeting.StatusCode == 2)
+                                        {
+                                            <span class="meeting-status done">
+                                                برگزار شده
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="meeting-status cancel">
+                                                لغو شده
+                                            </span>
+                                        }
+
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+
+                                <td colspan="8"
+                                    style="
+                                text-align:center;
+                                padding:15px;
+                                color:rgba(255,255,255,.35);
+                            ">
+
+                                    جلسه‌ای ثبت نشده است.
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    var currentWorkflowId =
+        '@(selectedWorkflow.HasValue
+            ? selectedWorkflow.Value.ToString()
+            : "")';
+
+
+    var currentStageId =
+        '@(selectedStage.HasValue
+            ? selectedStage.Value.ToString()
+            : "")';
+
+
+
+    /* =========================================================
+       NORMALIZE
+       ========================================================= */
+
+    function normalizeDigits(value) {
+
+        return (value || "")
+
+            .replace(
+                /[۰-۹]/g,
+                function (c) {
+
+                    return "۰۱۲۳۴۵۶۷۸۹"
+                        .indexOf(c);
+                }
+            )
+
+            .replace(
+                /[٠-٩]/g,
+                function (c) {
+
+                    return "٠١٢٣٤٥٦٧٨٩"
+                        .indexOf(c);
+                }
+            );
+    }
+
+
+
+    /* =========================================================
+       USERS
+       ========================================================= */
+
+    document.getElementById(
+        "userSearch"
+    ).addEventListener(
+        "input",
+        function () {
+
+            var q =
+                normalizeDigits(
+                    this.value
+                )
+                .toLowerCase();
+
+
+            document
+                .querySelectorAll(
+                    ".user-item"
+                )
+                .forEach(
+                    function (item) {
+
+                        var text =
+                            normalizeDigits(
+                                item.getAttribute(
+                                    "data-search"
+                                )
+                            )
+                            .toLowerCase();
+
+
+                        item.style.display =
+                            text.indexOf(q) >= 0
+                                ?
+                                "flex"
+                                :
+                                "none";
+
+                    }
+                );
+
+        }
+    );
+
+
+
+    function selectJusticeUser(item) {
+
+        document.getElementById(
+            "selectedUserId"
+        ).value =
+            item.getAttribute(
+                "data-id"
+            );
+
+
+        document.getElementById(
+            "selectedUserName"
+        ).innerText =
+            item.getAttribute(
+                "data-name"
+            );
+
+
+        document.getElementById(
+            "selectedUserCode"
+        ).innerText =
+            "کد: "
+            +
+            item.getAttribute(
+                "data-personnel"
+            );
+
+
+        document.getElementById(
+            "selectedUserBox"
+        ).style.display =
+            "flex";
+
+    }
+
+
+
+    function clearSelectedUser() {
+
+        document.getElementById(
+            "selectedUserId"
+        ).value =
+            "";
+
+
+        document.getElementById(
+            "selectedUserBox"
+        ).style.display =
+            "none";
+    }
+
+
+
+    /* =========================================================
+       CATEGORY
+       ========================================================= */
+
+    var allCategories =
+        document.getElementById(
+            "handlesAllCategories"
+        );
+
+
+    var categoryChecks =
+        document.querySelectorAll(
+            ".category-check"
+        );
+
+
+    function refreshCategories() {
+
+        categoryChecks.forEach(
+            function (item) {
+
+                item.disabled =
+                    allCategories.checked;
+
+
+                if (
+                    allCategories.checked
+                )
+                {
+                    item.checked =
+                        false;
+                }
+
+            }
+        );
+
+    }
+
+
+    allCategories.addEventListener(
+        "change",
+        refreshCategories
+    );
+
+
+    refreshCategories();
+
+
+
+    document.getElementById(
+        "categorySearch"
+    ).addEventListener(
+        "input",
+        function () {
+
+            var q =
+                this.value
+                .toLowerCase();
+
+
+            document
+                .querySelectorAll(
+                    ".category-item"
+                )
+                .forEach(
+                    function (item) {
+
+                        var text =
+                            (
+                                item.getAttribute(
+                                    "data-search"
+                                )
+                                ||
+                                ""
+                            )
+                            .toLowerCase();
+
+
+                        item.style.display =
+                            text.indexOf(q) >= 0
+                                ?
+                                "flex"
+                                :
+                                "none";
+
+                    }
+                );
+
+        }
+    );
+
+
+
+    /* =========================================================
+       MEMBER EDIT
+       ========================================================= */
+
+    function editMember(btn) {
+
+        document.getElementById(
+            "selectedUserId"
+        ).value =
+            btn.getAttribute(
+                "data-user-id"
+            );
+
+
+        document.getElementById(
+            "selectedUserName"
+        ).innerText =
+            btn.getAttribute(
+                "data-user-name"
+            );
+
+
+        document.getElementById(
+            "selectedUserBox"
+        ).style.display =
+            "flex";
+
+
+        document.getElementById(
+            "memberRole"
+        ).value =
+            btn.getAttribute(
+                "data-role"
+            );
+
+
+        function b(name) {
+
+            return btn.getAttribute(
+                name
+            ) === "true";
+        }
+
+
+        document.getElementById(
+            "hasVote"
+        ).checked =
+            b("data-vote");
+
+
+        document.getElementById(
+            "canView"
+        ).checked =
+            b("data-view");
+
+
+        document.getElementById(
+            "canRespond"
+        ).checked =
+            b("data-respond");
+
+
+        document.getElementById(
+            "canForward"
+        ).checked =
+            b("data-forward");
+
+
+        document.getElementById(
+            "canDecide"
+        ).checked =
+            b("data-decide");
+
+
+        document.getElementById(
+            "canEditMembers"
+        ).checked =
+            b("data-edit");
+
+
+        document.getElementById(
+            "canChangeDue"
+        ).checked =
+            b("data-due");
+
+
+        allCategories.checked =
+            b("data-all");
+
+
+        refreshCategories();
+
+
+        var ids =
+            (
+                btn.getAttribute(
+                    "data-categories"
+                )
+                ||
+                ""
+            )
+            .split(",");
+
+
+        if (!allCategories.checked)
+        {
+            categoryChecks.forEach(
+                function (item) {
+
+                    item.disabled =
+                        false;
+
+
+                    item.checked =
+                        ids.indexOf(
+                            item.value
+                        ) >= 0;
+
+                }
+            );
+        }
+
+    }
+
+
+
+    function resetMemberForm() {
+
+        document.getElementById(
+            "memberForm"
+        ).reset();
+
+
+        clearSelectedUser();
+
+
+        allCategories.checked =
+            true;
+
+
+        document.getElementById(
+            "canView"
+        ).checked =
+            true;
+
+
+        refreshCategories();
+
+    }
+
+
+
+    /* =========================================================
+       SAVE MEMBER
+       ========================================================= */
+
+    document.getElementById(
+        "memberForm"
+    ).addEventListener(
+        "submit",
+        function (e) {
+
+            e.preventDefault();
+
+
+            if (
+                !document.getElementById(
+                    "selectedUserId"
+                ).value
+            )
+            {
+                alert(
+                    "کاربر را انتخاب کنید."
+                );
+
+                return;
+            }
+
+
+            var fd =
+                new FormData(
+                    this
+                );
+
+
+            [
+                "hasVote",
+                "canView",
+                "canRespond",
+                "canForward",
+                "canDecide",
+                "canEditMembers",
+                "canChangeDue",
+                "handlesAllCategories"
+            ]
+            .forEach(
+                function (name) {
+
+                    var c =
+                        document.querySelector(
+                            '#memberForm [name="'
+                            +
+                            name
+                            +
+                            '"]'
+                        );
+
+
+                    fd.set(
+                        name,
+                        c &&
+                        c.checked
+                            ?
+                            "true"
+                            :
+                            "false"
+                    );
+
+                }
+            );
+
+
+            fetch(
+                '@Url.Action(
+                    "SaveJusticeStageMember",
+                    "Orders",
+                    new { area = "Setting" }
+                )',
+                {
+                    method: "POST",
+                    body: fd
+                }
+            )
+            .then(
+                function (r) {
+
+                    return r.json();
+
+                }
+            )
+            .then(
+                function (r) {
+
+                    alert(
+                        r.message
+                    );
+
+
+                    if (r.success)
+                    {
+                        location.reload();
+                    }
+
+                }
+            );
+
+        }
+    );
+
+
+
+    function changeMemberStatus(
+        memberId,
+        enabled
+    ) {
+
+        var fd =
+            new FormData();
+
+
+        fd.append(
+            "memberId",
+            memberId
+        );
+
+
+        fd.append(
+            "__RequestVerificationToken",
+            document.querySelector(
+                '#memberForm [name="__RequestVerificationToken"]'
+            ).value
+        );
+
+
+        var url =
+            enabled
+                ?
+                '@Url.Action(
+                    "EnableJusticeStageMember",
+                    "Orders",
+                    new { area = "Setting" }
+                )'
+                :
+                '@Url.Action(
+                    "DisableJusticeStageMember",
+                    "Orders",
+                    new { area = "Setting" }
+                )';
+
+
+        fetch(
+            url,
+            {
+                method: "POST",
+                body: fd
+            }
+        )
+        .then(
+            function (r) {
+
+                return r.json();
+
+            }
+        )
+        .then(
+            function (r) {
+
+                alert(
+                    r.message
+                );
+
+
+                if (r.success)
+                {
+                    location.reload();
+                }
+
+            }
+        );
+
+    }
+
+
+
+    /* =========================================================
+       CASE SEARCH
+       ========================================================= */
+
+    var caseSelect =
+        document.getElementById(
+            "meetingCaseId"
+        );
+
+
+    var allCaseOptions =
+        Array.prototype.slice.call(
+            caseSelect.options
+        )
+        .map(
+            function (option) {
+
+                return {
+                    value:
+                        option.value,
+
+                    text:
+                        option.text,
+
+                    search:
+                        option.getAttribute(
+                            "data-search"
+                        )
+                        ||
+                        ""
+                };
+            }
+        );
+
+
+
+    document.getElementById(
+        "caseSearch"
+    ).addEventListener(
+        "input",
+        function () {
+
+            var q =
+                normalizeDigits(
+                    this.value
+                )
+                .trim()
+                .toLowerCase();
+
+
+            var currentValue =
+                caseSelect.value;
+
+
+            caseSelect.innerHTML =
+                "";
+
+
+            var empty =
+                document.createElement(
+                    "option"
+                );
+
+
+            empty.value =
+                "";
+
+
+            empty.text =
+                "-- انتخاب درخواست --";
+
+
+            caseSelect.appendChild(
+                empty
+            );
+
+
+            allCaseOptions
+                .filter(
+                    function (x) {
+
+                        return x.value
+                            &&
+                            (
+                                !q
+                                ||
+                                normalizeDigits(
+                                    x.search
+                                )
+                                .toLowerCase()
+                                .indexOf(q)
+                                >=
+                                0
+                            );
+
+                    }
+                )
+                .forEach(
+                    function (x) {
+
+                        var option =
+                            document.createElement(
+                                "option"
+                            );
+
+
+                        option.value =
+                            x.value;
+
+
+                        option.text =
+                            x.text;
+
+
+                        caseSelect.appendChild(
+                            option
+                        );
+
+                    }
+                );
+
+
+            var found =
+                Array.prototype.some.call(
+                    caseSelect.options,
+                    function (x) {
+
+                        return x.value ==
+                            currentValue;
+
+                    }
+                );
+
+
+            if (found)
+            {
+                caseSelect.value =
+                    currentValue;
+            }
+
+        }
+    );
+
+
+
+    /* =========================================================
+       MEETING TYPE
+       ========================================================= */
+
+    document.getElementById(
+        "meetingType"
+    ).addEventListener(
+        "change",
+        function () {
+
+            var online =
+                this.value === "2";
+
+
+            document.getElementById(
+                "locationBox"
+            ).style.display =
+                online
+                    ?
+                    "none"
+                    :
+                    "block";
+
+
+            document.getElementById(
+                "onlineLinkBox"
+            ).style.display =
+                online
+                    ?
+                    "block"
+                    :
+                    "none";
+
+        }
+    );
+
+
+
+    /* =========================================================
+       PARTICIPANTS
+       ========================================================= */
+
+    document.getElementById(
+        "participantSearch"
+    ).addEventListener(
+        "input",
+        function () {
+
+            var q =
+                normalizeDigits(
+                    this.value
+                )
+                .toLowerCase();
+
+
+            document
+                .querySelectorAll(
+                    ".participant-item"
+                )
+                .forEach(
+                    function (item) {
+
+                        var text =
+                            normalizeDigits(
+                                item.getAttribute(
+                                    "data-search"
+                                )
+                            )
+                            .toLowerCase();
+
+
+                        item.style.display =
+                            text.indexOf(q) >= 0
+                                ?
+                                "flex"
+                                :
+                                "none";
+
+                    }
+                );
+
+        }
+    );
+
+
+
+    /* =========================================================
+       JALALI
+       ========================================================= */
+
+    function div(a,b) {
+        return ~~(a/b);
+    }
+
+
+    function mod(a,b) {
+        return a - ~~(a/b)*b;
+    }
+
+
+    function jalCal(jy) {
+
+        var breaks = [
+            -61,9,38,199,426,
+            686,756,818,1111,
+            1181,1210,1635,
+            2060,2097,2192,
+            2262,2324,2394,
+            2456,3178
+        ];
+
+
+        var bl = breaks.length;
+        var gy = jy + 621;
+        var leapJ = -14;
+        var jp = breaks[0];
+        var jm;
+        var jump = 0;
+        var leap;
+        var leapG;
+        var march;
+        var n;
+        var i;
+
+
+        for (
+            i = 1;
+            i < bl;
+            i++
+        )
+        {
+            jm =
+                breaks[i];
+
+            jump =
+                jm - jp;
+
+
+            if (jy < jm)
+            {
+                break;
+            }
+
+
+            leapJ +=
+                div(jump,33)*8
+                +
+                div(
+                    mod(jump,33),
+                    4
+                );
+
+
+            jp =
+                jm;
+        }
+
+
+        n =
+            jy - jp;
+
+
+        leapJ +=
+            div(n,33)*8
+            +
+            div(
+                mod(n,33)+3,
+                4
+            );
+
+
+        if (
+            mod(jump,33) === 4
+            &&
+            jump - n === 4
+        )
+        {
+            leapJ++;
+        }
+
+
+        leapG =
+            div(gy,4)
+            -
+            div(
+                (
+                    div(gy,100)+1
+                )*3,
+                4
+            )
+            -
+            150;
+
+
+        march =
+            20
+            +
+            leapJ
+            -
+            leapG;
+
+
+        if (jump-n < 6)
+        {
+            n =
+                n
+                -
+                jump
+                +
+                div(
+                    jump+4,
+                    33
+                )*33;
+        }
+
+
+        leap =
+            mod(
+                mod(n+1,33)-1,
+                4
+            );
+
+
+        if (leap === -1)
+        {
+            leap =
+                4;
+        }
+
+
+        return {
+            leap: leap,
+            gy: gy,
+            march: march
+        };
+    }
+
+
+
+    function g2d(gy,gm,gd) {
+
+        var d =
+            div(
+                (
+                    gy
+                    +
+                    div(gm-8,6)
+                    +
+                    100100
+                )*1461,
+                4
+            )
+            +
+            div(
+                153*mod(gm+9,12)+2,
+                5
+            )
+            +
+            gd
+            -
+            34840408;
+
+
+        d =
+            d
+            -
+            div(
+                div(
+                    gy
+                    +
+                    100100
+                    +
+                    div(gm-8,6),
+                    100
+                )*3,
+                4
+            )
+            +
+            752;
+
+
+        return d;
+    }
+
+
+
+    function d2g(jdn) {
+
+        var j =
+            4*jdn
+            +
+            139361631;
+
+
+        j =
+            j
+            +
+            div(
+                div(
+                    4*jdn
+                    +
+                    183187720,
+                    146097
+                )*3,
+                4
+            )*4
+            -
+            3908;
+
+
+        var i =
+            div(
+                mod(j,1461),
+                4
+            )*5
+            +
+            308;
+
+
+        var gd =
+            div(
+                mod(i,153),
+                5
+            )
+            +
+            1;
+
+
+        var gm =
+            mod(
+                div(i,153),
+                12
+            )
+            +
+            1;
+
+
+        var gy =
+            div(j,1461)
+            -
+            100100
+            +
+            div(8-gm,6);
+
+
+        return {
+            gy:gy,
+            gm:gm,
+            gd:gd
+        };
+    }
+
+
+
+    function j2d(jy,jm,jd) {
+
+        var r =
+            jalCal(jy);
+
+
+        return g2d(
+            r.gy,
+            3,
+            r.march
+        )
+        +
+        (jm-1)*31
+        -
+        div(jm,7)*(jm-7)
+        +
+        jd
+        -
+        1;
+    }
+
+
+
+    function d2j(jdn) {
+
+        var g =
+            d2g(jdn);
+
+
+        var jy =
+            g.gy - 621;
+
+
+        var r =
+            jalCal(jy);
+
+
+        var jdn1f =
+            g2d(
+                g.gy,
+                3,
+                r.march
+            );
+
+
+        var k =
+            jdn - jdn1f;
+
+
+        var jd;
+        var jm;
+
+
+        if (k >= 0)
+        {
+            if (k <= 185)
+            {
+                jm =
+                    1
+                    +
+                    div(k,31);
+
+
+                jd =
+                    mod(k,31)
+                    +
+                    1;
+
+
+                return {
+                    jy:jy,
+                    jm:jm,
+                    jd:jd
+                };
+            }
+
+
+            k -=
+                186;
+        }
+        else
+        {
+            jy--;
+
+            k +=
+                179;
+
+
+            if (r.leap === 1)
+            {
+                k++;
+            }
+        }
+
+
+        jm =
+            7
+            +
+            div(k,30);
+
+
+        jd =
+            mod(k,30)
+            +
+            1;
+
+
+        return {
+            jy:jy,
+            jm:jm,
+            jd:jd
+        };
+    }
+
+
+
+    function gregorianToJalali(
+        y,m,d
+    )
+    {
+        return d2j(
+            g2d(y,m,d)
+        );
+    }
+
+
+
+    function jalaliToGregorian(
+        y,m,d
+    )
+    {
+        return d2g(
+            j2d(y,m,d)
+        );
+    }
+
+
+
+    var months = [
+        "فروردین",
+        "اردیبهشت",
+        "خرداد",
+        "تیر",
+        "مرداد",
+        "شهریور",
+        "مهر",
+        "آبان",
+        "آذر",
+        "دی",
+        "بهمن",
+        "اسفند"
+    ];
+
+
+    var dateInput =
+        document.getElementById(
+            "meetingDatePersian"
+        );
+
+
+    var picker =
+        document.getElementById(
+            "jalaliPicker"
+        );
+
+
+    var now =
+        new Date();
+
+
+    var today =
+        gregorianToJalali(
+            now.getFullYear(),
+            now.getMonth()+1,
+            now.getDate()
+        );
+
+
+    var py =
+        today.jy;
+
+
+    var pm =
+        today.jm;
+
+
+    function pad(v) {
+
+        return v < 10
+            ?
+            "0" + v
+            :
+            v;
+    }
+
+
+
+    function monthLength(y,m) {
+
+        if (m <= 6)
+        {
+            return 31;
+        }
+
+
+        if (m <= 11)
+        {
+            return 30;
+        }
+
+
+        return jalCal(y).leap === 0
+            ?
+            30
+            :
+            29;
+    }
+
+
+
+    function renderCalendar() {
+
+        document.getElementById(
+            "calendarTitle"
+        ).innerText =
+            months[pm-1]
+            +
+            " "
+            +
+            py;
+
+
+        var area =
+            document.getElementById(
+                "calendarDays"
+            );
+
+
+        area.innerHTML =
+            "";
+
+
+        var g =
+            jalaliToGregorian(
+                py,
+                pm,
+                1
+            );
+
+
+        var first =
+            new Date(
+                g.gy,
+                g.gm-1,
+                g.gd
+            );
+
+
+        var offset =
+            (
+                first.getDay()+1
+            ) % 7;
+
+
+        for (
+            var i=0;
+            i<offset;
+            i++
+        )
+        {
+            var empty =
+                document.createElement(
+                    "span"
+                );
+
+
+            area.appendChild(
+                empty
+            );
+        }
+
+
+        for (
+            let day=1;
+            day<=monthLength(py,pm);
+            day++
+        )
+        {
+            var btn =
+                document.createElement(
+                    "button"
+                );
+
+
+            btn.type =
+                "button";
+
+
+            btn.className =
+                "cal-day";
+
+
+            btn.innerText =
+                day;
+
+
+            if (
+                py === today.jy
+                &&
+                pm === today.jm
+                &&
+                day === today.jd
+            )
+            {
+                btn.classList.add(
+                    "today"
+                );
+            }
+
+
+            btn.onclick =
+                function () {
+
+                    dateInput.value =
+                        py
+                        +
+                        "/"
+                        +
+                        pad(pm)
+                        +
+                        "/"
+                        +
+                        pad(day);
+
+
+                    picker.classList.remove(
+                        "open"
+                    );
+                };
+
+
+            area.appendChild(
+                btn
+            );
+        }
+
+    }
+
+
+
+    dateInput.onclick =
+        function () {
+
+            renderCalendar();
+
+
+            picker.classList.toggle(
+                "open"
+            );
+        };
+
+
+
+    document.getElementById(
+        "prevMonth"
+    ).onclick =
+        function () {
+
+            pm--;
+
+
+            if (pm < 1)
+            {
+                pm =
+                    12;
+
+                py--;
+            }
+
+
+            renderCalendar();
+        };
+
+
+
+    document.getElementById(
+        "nextMonth"
+    ).onclick =
+        function () {
+
+            pm++;
+
+
+            if (pm > 12)
+            {
+                pm =
+                    1;
+
+                py++;
+            }
+
+
+            renderCalendar();
+        };
+
+
+
+    document.getElementById(
+        "todayButton"
+    ).onclick =
+        function () {
+
+            py =
+                today.jy;
+
+
+            pm =
+                today.jm;
+
+
+            dateInput.value =
+                today.jy
+                +
+                "/"
+                +
+                pad(today.jm)
+                +
+                "/"
+                +
+                pad(today.jd);
+
+
+            picker.classList.remove(
+                "open"
+            );
+        };
+
+
+
+    document.getElementById(
+        "clearDate"
+    ).onclick =
+        function () {
+
+            dateInput.value =
+                "";
+
+
+            picker.classList.remove(
+                "open"
+            );
+        };
+
+
+
+    /* =========================================================
+       SAVE MEETING
+       ========================================================= */
+
+    document.getElementById(
+        "meetingForm"
+    ).addEventListener(
+        "submit",
+        function (e) {
+
+            e.preventDefault();
+
+
+            if (!currentStageId)
+            {
+                alert(
+                    "مرحله انتخاب نشده است."
+                );
+
+                return;
+            }
+
+
+            var caseId =
+                document.getElementById(
+                    "meetingCaseId"
+                ).value;
+
+
+            if (!caseId)
+            {
+                alert(
+                    "درخواست مرتبط با جلسه را انتخاب کنید."
+                );
+
+                return;
+            }
+
+
+            if (!dateInput.value)
+            {
+                alert(
+                    "تاریخ جلسه را انتخاب کنید."
+                );
+
+                return;
+            }
+
+
+            var participants =
+                document.querySelectorAll(
+                    '#meetingForm input[name="participantUserIds"]:checked'
+                );
+
+
+            if (participants.length === 0)
+            {
+                alert(
+                    "حداقل یک شرکت‌کننده انتخاب کنید."
+                );
+
+                return;
+            }
+
+
+            var fd =
+                new FormData(
+                    this
+                );
+
+
+            fetch(
+                '@Url.Action(
+                    "SaveJusticeMeeting",
+                    "Orders",
+                    new { area = "Setting" }
+                )',
+                {
+                    method:
+                        "POST",
+
+                    body:
+                        fd
+                }
+            )
+            .then(
+                async function (response) {
+
+                    var raw =
+                        await response.text();
+
+
+                    var result;
+
+
+                    try
+                    {
+                        result =
+                            JSON.parse(raw);
+                    }
+                    catch (ex)
+                    {
+                        throw new Error(
+                            "پاسخ نامعتبر از سرور: "
+                            +
+                            raw.substring(
+                                0,
+                                500
+                            )
+                        );
+                    }
+
+
+                    return result;
+                }
+            )
+            .then(
+                function (result) {
+
+                    if (!result.success)
+                    {
+                        alert(
+                            result.message
+                            ||
+                            "ثبت جلسه انجام نشد."
+                        );
+
+                        return;
+                    }
+
+
+                    alert(
+                        result.message
+                        ||
+                        "جلسه با موفقیت ثبت شد."
+                    );
+
+
+                    /*
+                     * همان Stage مجدداً باز شود
+                     */
+                    window.location.href =
+                        '@Url.Action(
+                            "JusticeWorkflowMembers",
+                            "Orders",
+                            new { area = "Setting" }
+                        )'
+                        +
+                        "?workflowId="
+                        +
+                        encodeURIComponent(
+                            currentWorkflowId
+                        )
+                        +
+                        "&stageId="
+                        +
+                        encodeURIComponent(
+                            currentStageId
+                        );
+
+                }
+            )
+            .catch(
+                function (error) {
+
+                    console.error(
+                        error
+                    );
+
+
+                    alert(
+                        error.message
+                        ||
+                        "خطا در ارتباط با سرور."
+                    );
+
+                }
+            );
+
+        }
+    );
+
+</script>

@@ -1,0 +1,786 @@
+﻿@using SaabWebProject.Models.DomainModels
+@using System.Globalization
+@using System.Linq
+@using System.Collections.Generic
+
+@model JBP_Cases
+
+@{
+    ViewBag.Title = "بررسی پرونده";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+
+    var stage =
+        ViewBag.Stage as
+        JBP_WorkflowStages;
+
+
+    string category =
+        ViewBag.Category as string;
+
+
+    var attachments =
+        ViewBag.Attachments as
+        List<JBP_CaseAttachments>
+        ??
+        new List<JBP_CaseAttachments>();
+
+
+    var responses =
+        ViewBag.Responses as
+        List<JBP_CaseResponses>
+        ??
+        new List<JBP_CaseResponses>();
+
+
+    var responseAttachments =
+        ViewBag.ResponseAttachments as
+        List<JBP_CaseAttachments>
+        ??
+        new List<JBP_CaseAttachments>();
+
+
+    var appeals =
+        ViewBag.Appeals as
+        List<JBP_CaseAppeals>
+        ??
+        new List<JBP_CaseAppeals>();
+
+
+    var appealAttachments =
+        ViewBag.AppealAttachments as
+        List<JBP_CaseAttachments>
+        ??
+        new List<JBP_CaseAttachments>();
+
+
+    var users =
+        ViewBag.RelatedUsers as
+        List<tbUsers>
+        ??
+        new List<tbUsers>();
+
+
+    PersianCalendar pc =
+        new PersianCalendar();
+}
+
+
+<style>
+
+    .rc-page {
+        direction: rtl;
+        min-height: calc(100vh - 70px);
+        padding: 15px;
+        color: white;
+        background: radial-gradient(circle at 10% 5%,rgba(0,220,255,.13),transparent 28%), radial-gradient(circle at 90% 10%,rgba(130,70,255,.15),transparent 30%), linear-gradient(135deg,#06101d,#0a1930,#07111f);
+    }
+
+
+    .rc-container {
+        max-width: 1450px;
+        margin: auto;
+    }
+
+
+    .glass {
+        background: linear-gradient( 135deg, rgba(255,255,255,.09), rgba(255,255,255,.035) );
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 18px;
+        backdrop-filter: blur(18px);
+        box-shadow: 0 18px 45px rgba(0,0,0,.25);
+    }
+
+
+    .rc-head {
+        padding: 13px 16px;
+        margin-bottom: 9px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+
+        .rc-head h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+
+    .rc-sub {
+        margin-top: 4px;
+        color: rgba(255,255,255,.48);
+        font-size: 9px;
+    }
+
+
+    .rc-back {
+        padding: 8px 12px;
+        border-radius: 10px;
+        color: white;
+        text-decoration: none;
+        background: rgba(255,255,255,.06);
+    }
+
+
+    .rc-grid {
+        display: grid;
+        grid-template-columns: repeat(4,minmax(0,1fr));
+        gap: 7px;
+        padding: 11px;
+        margin-bottom: 9px;
+    }
+
+
+    .rc-info {
+        padding: 8px;
+        border-radius: 10px;
+        background: rgba(255,255,255,.025);
+    }
+
+
+    .rc-label {
+        color: #83eaff;
+        font-size: 8px;
+    }
+
+
+    .rc-value {
+        margin-top: 4px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+
+    .span-4 {
+        grid-column: 1 / -1;
+    }
+
+
+    .rc-section {
+        padding: 12px;
+        margin-bottom: 9px;
+    }
+
+
+    .rc-title {
+        margin-bottom: 9px;
+        color: #83eaff;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+
+    .file-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+
+    .file-link {
+        padding: 6px 9px;
+        border-radius: 9px;
+        color: #8deaff;
+        text-decoration: none;
+        background: rgba(0,210,255,.06);
+        border: 1px solid rgba(0,210,255,.12);
+        font-size: 8px;
+    }
+
+
+    .response-card {
+        padding: 10px;
+        margin-bottom: 7px;
+        border-radius: 12px;
+        background: rgba(255,255,255,.025);
+        border: 1px solid rgba(255,255,255,.055);
+    }
+
+
+    .response-meta {
+        margin-bottom: 6px;
+        color: rgba(255,255,255,.42);
+        font-size: 8px;
+    }
+
+
+    .response-text {
+        line-height: 2;
+        white-space: pre-wrap;
+        font-size: 10px;
+    }
+
+
+    .form-control {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.05);
+        color: white;
+        outline: none;
+    }
+
+
+    textarea.form-control {
+        min-height: 130px;
+        resize: vertical;
+    }
+
+
+    .upload {
+        margin-top: 8px;
+        padding: 10px;
+        border-radius: 11px;
+        border: 1px dashed rgba(0,210,255,.25);
+        background: rgba(0,210,255,.035);
+    }
+
+
+    .btn-submit {
+        margin-top: 9px;
+        border: 0;
+        border-radius: 10px;
+        min-height: 38px;
+        padding: 0 16px;
+        color: white;
+        cursor: pointer;
+        background: linear-gradient( 135deg, #00bfd9, #087cff );
+    }
+
+
+    @@media(max-width:800px) {
+
+        .rc-grid {
+            grid-template-columns: repeat(2,1fr);
+        }
+    }
+
+
+    @@media(max-width:500px) {
+
+        .rc-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .span-4 {
+            grid-column: auto;
+        }
+    }
+</style>
+
+
+<div class="rc-page">
+
+    <div class="rc-container">
+
+
+        <div class="glass rc-head">
+
+            <div>
+
+                <h2>
+                    ⚖ بررسی پرونده
+                    @Model.CaseNumber
+                </h2>
+
+                <div class="rc-sub">
+                    بررسی مستندات، سوابق و ثبت پاسخ
+                </div>
+
+            </div>
+
+
+            <a href="@Url.Action(
+                     "JusticeReviewInbox",
+                     "Orders",
+                     new { area = "Setting" }
+                 )"
+               class="rc-back">
+
+                ← کارتابل
+
+            </a>
+
+        </div>
+
+
+
+        <!-- INFO -->
+
+        <div class="glass rc-grid">
+
+            <div class="rc-info">
+
+                <div class="rc-label">
+                    شماره پرونده
+                </div>
+
+                <div class="rc-value">
+                    @Model.CaseNumber
+                </div>
+
+            </div>
+
+
+            <div class="rc-info">
+
+                <div class="rc-label">
+                    موضوع
+                </div>
+
+                <div class="rc-value">
+                    @category
+                </div>
+
+            </div>
+
+
+            <div class="rc-info">
+
+                <div class="rc-label">
+                    مرحله
+                </div>
+
+                <div class="rc-value">
+
+                    @(stage != null
+                    ?
+                    stage.Title
+                    :
+                    "-")
+
+                </div>
+
+            </div>
+
+
+            <div class="rc-info">
+
+                <div class="rc-label">
+                    مبلغ مورد اختلاف
+                </div>
+
+                <div class="rc-value">
+
+                    @(Model.DisputedAmount.HasValue
+                    ?
+                    Model.DisputedAmount.Value.ToString("N0")
+                    :
+                    "-")
+
+                </div>
+
+            </div>
+
+
+            <div class="rc-info span-4">
+
+                <div class="rc-label">
+                    عنوان
+                </div>
+
+                <div class="rc-value">
+                    @Model.Title
+                </div>
+
+            </div>
+
+
+            <div class="rc-info span-4">
+
+                <div class="rc-label">
+                    شرح درخواست
+                </div>
+
+                <div class="rc-value"
+                     style="line-height:2;">
+
+                    @Model.Description
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ORIGINAL FILES -->
+
+        <div class="glass rc-section">
+
+            <div class="rc-title">
+                📎 مستندات اولیه درخواست
+            </div>
+
+
+            <div class="file-list">
+
+                @if (attachments.Any())
+                {
+                    foreach (var file in attachments)
+                    {
+                        <a class="file-link"
+                           href="@Url.Action(
+                           "DownloadJusticeAttachment",
+                           "Orders",
+                           new
+                           {
+                               area = "Setting",
+                               id = file.AttachmentID
+                           }
+                       )">
+
+                            📄 @file.RealFileName
+
+                        </a>
+                    }
+                }
+                else
+                {
+                    <span>
+                        فایلی ثبت نشده است.
+                    </span>
+                }
+
+            </div>
+
+        </div>
+
+
+
+        <!-- RESPONSE HISTORY -->
+
+        <div class="glass rc-section">
+
+            <div class="rc-title">
+                💬 سوابق پاسخ‌ها
+            </div>
+
+
+            @if (responses.Any())
+            {
+                foreach (var response in responses)
+                {
+                    var responseUser =
+                        users.FirstOrDefault(x =>
+                            x.usr_ID ==
+                            response.FK_User
+                        );
+
+
+                    string fullName =
+                        responseUser == null
+                            ?
+                            response.FK_User.ToString()
+                            :
+                            (
+                                (responseUser.usr_Name ?? "")
+                                +
+                                " "
+                                +
+                                (responseUser.usr_Family ?? "")
+                            ).Trim();
+
+
+                    var files =
+                        response.AttachmentGroupID.HasValue
+                            ?
+                            responseAttachments
+                            .Where(x =>
+                                x.AttachmentGroupID ==
+                                response.AttachmentGroupID
+                            )
+                            .ToList()
+                            :
+                            new List<JBP_CaseAttachments>();
+
+
+                    <div class="response-card">
+
+                        <div class="response-meta">
+
+                            👤
+                            @fullName
+
+                            &nbsp; | &nbsp;
+
+                            @response.CreatedAt
+                            .ToString("yyyy/MM/dd HH:mm")
+
+                        </div>
+
+
+                        <div class="response-text">
+                            @response.ResponseText
+                        </div>
+
+
+                        @if (files.Any())
+                        {
+                            <div class="file-list"
+                                 style="margin-top:8px;">
+
+                                @foreach (var file in files)
+                                {
+                                    <a class="file-link"
+                                       href="@Url.Action(
+                                       "DownloadJusticeAttachment",
+                                       "Orders",
+                                       new
+                                       {
+                                           area = "Setting",
+                                           id = file.AttachmentID
+                                       }
+                                   )">
+
+                                        📎 @file.RealFileName
+
+                                    </a>
+                                }
+
+                            </div>
+                        }
+
+                    </div>
+                }
+            }
+            else
+            {
+                <div>
+                    هنوز پاسخی ثبت نشده است.
+                </div>
+            }
+
+        </div>
+
+
+
+        <!-- APPEAL HISTORY -->
+
+        @if (appeals.Any())
+        {
+            <div class="glass rc-section">
+
+                <div class="rc-title">
+                    🔄 سوابق عدم پذیرش / بازنگری
+                </div>
+
+
+                @foreach (var appeal in appeals)
+                {
+                    var files =
+                        appeal.AttachmentGroupID.HasValue
+                            ?
+                            appealAttachments
+                            .Where(x =>
+                                x.AttachmentGroupID ==
+                                appeal.AttachmentGroupID
+                            )
+                            .ToList()
+                            :
+                            new List<JBP_CaseAttachments>();
+
+
+                    <div class="response-card">
+
+                        <div class="response-meta">
+
+                            @appeal.CreatedAt
+                            .ToString("yyyy/MM/dd HH:mm")
+
+                        </div>
+
+
+                        <div class="response-text">
+                            @appeal.Reason
+                        </div>
+
+
+                        @if (files.Any())
+                        {
+                            <div class="file-list"
+                                 style="margin-top:8px;">
+
+                                @foreach (var file in files)
+                                {
+                                    <a class="file-link"
+                                       href="@Url.Action(
+                                       "DownloadJusticeAttachment",
+                                       "Orders",
+                                       new
+                                       {
+                                           area = "Setting",
+                                           id = file.AttachmentID
+                                       }
+                                   )">
+
+                                        📎 @file.RealFileName
+
+                                    </a>
+                                }
+
+                            </div>
+                        }
+
+                    </div>
+                }
+
+            </div>
+        }
+
+
+
+        <!-- NEW RESPONSE -->
+
+        <div class="glass rc-section">
+
+            <div class="rc-title">
+                ✍ ثبت پاسخ جدید
+            </div>
+
+
+            <form id="responseForm"
+                  enctype="multipart/form-data">
+
+                @Html.AntiForgeryToken()
+
+
+                <input type="hidden"
+                       name="caseId"
+                       value="@Model.CaseID" />
+
+
+                <textarea name="responseText"
+                          class="form-control"
+                          placeholder="متن پاسخ کارشناسی را وارد کنید..."
+                          required></textarea>
+
+
+                <div class="upload">
+
+                    <div style="margin-bottom:5px;">
+                        📎 مستندات پاسخ
+                    </div>
+
+
+                    <input type="file"
+                           name="files"
+                           id="responseFiles"
+                           multiple />
+
+
+                    <div style="
+                    margin-top:5px;
+                    color:rgba(255,255,255,.42);
+                    font-size:8px;
+                ">
+                        حداکثر 10 فایل، هر فایل حداکثر 20 مگابایت
+                    </div>
+
+                </div>
+
+
+                <button type="submit"
+                        class="btn-submit">
+
+                    ارسال پاسخ و مستندات
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<script>
+
+    document.getElementById(
+        "responseForm"
+    ).addEventListener(
+        "submit",
+        function (e) {
+
+            e.preventDefault();
+
+
+            var form =
+                this;
+
+
+            var files =
+                document.getElementById(
+                    "responseFiles"
+                ).files;
+
+
+            if (files.length > 10) {
+
+                alert(
+                    "حداکثر 10 فایل قابل ارسال است."
+                );
+
+                return;
+            }
+
+
+            var fd =
+                new FormData(
+                    form
+                );
+
+
+            fetch(
+                '@Url.Action(
+                    "SubmitJusticeResponse",
+                    "Orders",
+                    new { area = "Setting" }
+                )',
+                {
+                    method: "POST",
+                    body: fd
+                }
+            )
+            .then(
+                function (r) {
+                    return r.json();
+                }
+            )
+            .then(
+                function (r) {
+
+                    alert(
+                        r.message
+                        ||
+                        ""
+                    );
+
+
+                    if (r.success) {
+                        location.reload();
+                    }
+
+                }
+            )
+            .catch(
+                function () {
+
+                    alert(
+                        "خطا در ارتباط با سرور."
+                    );
+
+                }
+            );
+
+        }
+    );
+
+</script>

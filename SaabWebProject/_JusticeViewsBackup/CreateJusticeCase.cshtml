@@ -1,0 +1,2416 @@
+﻿@{
+    ViewBag.Title = "ثبت درخواست جدید";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var categories = ViewBag.Categories;
+}
+
+<style>
+
+    /* =========================================================
+       PAGE
+       ========================================================= */
+
+    .jbp-create-page {
+        direction: rtl;
+        min-height: calc(100vh - 65px);
+        padding: 14px;
+        background: radial-gradient( circle at 10% 8%, rgba(0, 216, 255, .13), transparent 26% ), radial-gradient( circle at 88% 14%, rgba(123, 73, 255, .14), transparent 27% ), linear-gradient( 135deg, #06101d 0%, #0a1930 50%, #07121f 100% );
+        color: #fff;
+        position: relative;
+        overflow: visible;
+    }
+
+
+    .jbp-create-container {
+        max-width: 1450px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+
+    /* =========================================================
+       GLASS
+       ========================================================= */
+
+    .jbp-glass {
+        background: linear-gradient( 135deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035) );
+        border: 1px solid rgba(255,255,255,.13);
+        border-radius: 20px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow: 0 18px 45px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .jbp-create-header {
+        min-height: 65px;
+        padding: 12px 17px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+
+
+    .jbp-create-title-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+
+    .jbp-create-icon {
+        width: 43px;
+        height: 43px;
+        flex: 0 0 43px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 13px;
+        font-size: 20px;
+        background: linear-gradient( 135deg, #00c5df, #087cff );
+        box-shadow: 0 0 23px rgba(0,200,255,.27);
+    }
+
+
+    .jbp-create-header h2 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+    }
+
+
+    .jbp-create-header p {
+        margin: 4px 0 0;
+        font-size: 11px;
+        color: rgba(255,255,255,.55);
+    }
+
+
+    .jbp-case-step {
+        padding: 7px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        color: #8fecff;
+        background: rgba(0,210,255,.07);
+        border: 1px solid rgba(0,210,255,.17);
+    }
+
+
+    /* =========================================================
+       FORM CARD
+       ========================================================= */
+
+    .jbp-form-card {
+        padding: 16px 17px;
+    }
+
+
+    /* =========================================================
+       4 COLUMN GRID
+       ========================================================= */
+
+    .jbp-form-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px 12px;
+    }
+
+
+    .jbp-span-2 {
+        grid-column: span 2;
+    }
+
+
+    .jbp-span-3 {
+        grid-column: span 3;
+    }
+
+
+    .jbp-span-4 {
+        grid-column: 1 / -1;
+    }
+
+
+    /* =========================================================
+       FIELDS
+       ========================================================= */
+
+    .jbp-field {
+        min-width: 0;
+        position: relative;
+    }
+
+
+        .jbp-field label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 5px;
+            min-height: 18px;
+            color: #99eaff;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+
+    .jbp-required {
+        color: #ff8296;
+    }
+
+
+    .jbp-control-wrap {
+        position: relative;
+    }
+
+
+    .jbp-control {
+        width: 100%;
+        height: 40px;
+        box-sizing: border-box;
+        border-radius: 11px;
+        border: 1px solid rgba(255,255,255,.12);
+        outline: none;
+        padding: 7px 11px;
+        background: rgba(255,255,255,.055);
+        color: #fff;
+        font-size: 12px;
+        transition: .2s;
+    }
+
+
+        .jbp-control:hover {
+            border-color: rgba(0,215,255,.25);
+        }
+
+
+        .jbp-control:focus {
+            border-color: rgba(0,215,255,.68);
+            background: rgba(255,255,255,.075);
+            box-shadow: 0 0 0 3px rgba(0,215,255,.07);
+        }
+
+
+        .jbp-control::placeholder {
+            color: rgba(255,255,255,.28);
+        }
+
+
+    select.jbp-control {
+        cursor: pointer;
+    }
+
+
+        select.jbp-control option {
+            background: #102039;
+            color: #fff;
+        }
+
+
+    /* =========================================================
+       ICON INSIDE INPUT
+       ========================================================= */
+
+    .jbp-with-icon {
+        padding-left: 38px;
+    }
+
+
+    .jbp-input-icon {
+        position: absolute;
+        left: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        color: #87eaff;
+        background: rgba(0,210,255,.07);
+        pointer-events: none;
+    }
+
+
+    /* =========================================================
+       DATE INPUT
+       ========================================================= */
+
+    #eventDatePersian {
+        cursor: pointer;
+        direction: ltr;
+        text-align: center;
+        font-weight: 700;
+        letter-spacing: .5px;
+    }
+
+
+    /* =========================================================
+       MONEY
+       ========================================================= */
+
+    #disputedAmountDisplay {
+        direction: ltr;
+        text-align: right;
+        font-weight: 700;
+    }
+
+
+    .jbp-money-unit {
+        position: absolute;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 3px 7px;
+        border-radius: 7px;
+        font-size: 9px;
+        color: rgba(255,255,255,.55);
+        background: rgba(255,255,255,.06);
+    }
+
+
+    /* =========================================================
+       DESCRIPTION
+       ========================================================= */
+
+    textarea.jbp-control {
+        height: 86px;
+        min-height: 86px;
+        max-height: 180px;
+        resize: vertical;
+        padding: 9px 11px;
+        line-height: 1.8;
+    }
+
+
+    /* =========================================================
+       FILE
+       ========================================================= */
+
+    .jbp-file-box {
+        height: 86px;
+        box-sizing: border-box;
+        border-radius: 12px;
+        border: 1px dashed rgba(0,210,255,.28);
+        background: rgba(0,210,255,.035);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+        transition: .2s;
+        text-align: center;
+        padding: 8px;
+    }
+
+
+        .jbp-file-box:hover {
+            background: rgba(0,210,255,.07);
+            border-color: rgba(0,210,255,.48);
+        }
+
+
+    .jbp-file-icon {
+        font-size: 20px;
+    }
+
+
+    .jbp-file-text {
+        font-size: 10px;
+        color: rgba(255,255,255,.66);
+    }
+
+
+    .jbp-file-count {
+        font-size: 9px;
+        color: #7ce9ff;
+    }
+
+
+    #justiceFiles {
+        display: none;
+    }
+
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    .jbp-form-footer {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255,255,255,.07);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+
+    .jbp-note {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: rgba(255,255,255,.50);
+        font-size: 10px;
+    }
+
+
+    .jbp-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+
+    .jbp-btn {
+        height: 38px;
+        padding: 0 17px;
+        border-radius: 11px;
+        border: 1px solid rgba(255,255,255,.11);
+        outline: none;
+        cursor: pointer;
+        color: white;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-decoration: none;
+        transition: .2s;
+    }
+
+
+        .jbp-btn:hover {
+            color: white;
+            transform: translateY(-1px);
+        }
+
+
+    .jbp-btn-primary {
+        border: none;
+        background: linear-gradient( 135deg, #00bfd9, #087cff );
+        box-shadow: 0 0 22px rgba(0,200,255,.22);
+    }
+
+
+    .jbp-btn-secondary {
+        background: rgba(255,255,255,.06);
+    }
+
+
+    .jbp-btn:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+
+    /* =========================================================
+       PERSIAN DATE PICKER
+       ========================================================= */
+
+    .jbp-datepicker {
+        display: none;
+        position: absolute;
+        z-index: 999999;
+        top: calc(100% + 6px);
+        right: 0;
+        width: 290px;
+        padding: 11px;
+        border-radius: 16px;
+        background: rgba(9, 25, 45, .98);
+        border: 1px solid rgba(0,210,255,.23);
+        box-shadow: 0 22px 60px rgba(0,0,0,.55);
+        backdrop-filter: blur(24px);
+    }
+
+
+        .jbp-datepicker.open {
+            display: block;
+            animation: jbpDateOpen .15s ease-out;
+        }
+
+
+    @@keyframes jbpDateOpen {
+
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+
+    .jbp-date-head {
+        display: grid;
+        grid-template-columns: 35px 1fr 35px;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 9px;
+    }
+
+
+    .jbp-date-nav {
+        width: 35px;
+        height: 34px;
+        border: 0;
+        border-radius: 9px;
+        color: white;
+        cursor: pointer;
+        background: rgba(255,255,255,.07);
+    }
+
+
+        .jbp-date-nav:hover {
+            background: rgba(0,210,255,.13);
+        }
+
+
+    .jbp-date-title {
+        text-align: center;
+        font-size: 12px;
+        font-weight: 800;
+        color: #89edff;
+    }
+
+
+    .jbp-week {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+        margin-bottom: 4px;
+    }
+
+
+        .jbp-week span {
+            text-align: center;
+            color: rgba(255,255,255,.42);
+            font-size: 9px;
+            padding: 3px;
+        }
+
+
+    .jbp-days {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+    }
+
+
+    .jbp-day {
+        height: 32px;
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        color: rgba(255,255,255,.82);
+        background: transparent;
+        font-size: 10px;
+    }
+
+
+        .jbp-day:hover {
+            background: rgba(0,210,255,.12);
+            color: #fff;
+        }
+
+
+        .jbp-day.today {
+            border: 1px solid rgba(0,210,255,.35);
+            color: #7eeaff;
+        }
+
+
+        .jbp-day.selected {
+            color: #fff;
+            background: linear-gradient( 135deg, #00bed8, #087cff );
+            box-shadow: 0 0 15px rgba(0,200,255,.25);
+        }
+
+
+        .jbp-day.empty {
+            cursor: default;
+            pointer-events: none;
+        }
+
+
+    .jbp-date-footer {
+        display: flex;
+        gap: 5px;
+        justify-content: space-between;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255,255,255,.06);
+    }
+
+
+    .jbp-date-mini-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 9px;
+        cursor: pointer;
+        color: white;
+        background: rgba(255,255,255,.07);
+    }
+
+
+        .jbp-date-mini-btn:hover {
+            background: rgba(0,210,255,.12);
+        }
+
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @@media(max-width: 1100px) {
+
+        .jbp-form-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+
+        .jbp-span-3 {
+            grid-column: span 2;
+        }
+    }
+
+
+    @@media(max-width: 850px) {
+
+        .jbp-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+
+        .jbp-span-3,
+        .jbp-span-2 {
+            grid-column: span 2;
+        }
+    }
+
+
+    @@media(max-width: 600px) {
+
+        .jbp-create-page {
+            padding: 8px;
+        }
+
+
+        .jbp-create-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+
+        .jbp-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+
+        .jbp-span-2,
+        .jbp-span-3,
+        .jbp-span-4 {
+            grid-column: auto;
+        }
+
+
+        .jbp-form-card {
+            padding: 12px;
+        }
+
+
+        .jbp-form-footer {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+
+        .jbp-actions {
+            width: 100%;
+        }
+
+
+        .jbp-btn {
+            flex: 1;
+        }
+
+
+        .jbp-datepicker {
+            position: fixed;
+            top: 50%;
+            right: 50%;
+            transform: translate(50%, -50%);
+            width: min(310px, calc(100vw - 25px));
+        }
+
+
+            .jbp-datepicker.open {
+                transform: translate(50%, -50%);
+            }
+    }
+</style>
+
+
+
+<div class="jbp-create-page">
+
+    <div class="jbp-create-container">
+
+
+        <!-- =====================================================
+             HEADER
+             ===================================================== -->
+
+        <div class="jbp-glass jbp-create-header">
+
+
+            <div class="jbp-create-title-box">
+
+                <div class="jbp-create-icon">
+                    ✦
+                </div>
+
+
+                <div>
+
+                    <h2>
+                        ثبت درخواست جدید
+                    </h2>
+
+                    <p>
+                        اطلاعات اصلی درخواست و مستندات مرتبط را ثبت نمایید.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="jbp-case-step">
+                مرحله ۱ از فرآیند • ثبت درخواست
+            </div>
+
+        </div>
+
+
+
+        <!-- =====================================================
+             FORM
+             ===================================================== -->
+
+        <div class="jbp-glass jbp-form-card">
+
+
+            <form id="justiceCreateForm"
+                  enctype="multipart/form-data"
+                  autocomplete="off">
+
+
+                @Html.AntiForgeryToken()
+
+
+
+                <div class="jbp-form-grid">
+
+
+                    <!-- =================================================
+                         ROW 1
+                         ================================================= -->
+                    <!-- عنوان - دو ستون -->
+
+                    <div class="jbp-field jbp-span-2">
+
+                        <label>
+                            عنوان درخواست
+                            <span class="jbp-required">*</span>
+                        </label>
+
+                        <input type="text"
+                               name="title"
+                               maxlength="300"
+                               class="jbp-control"
+                               placeholder="مثلاً اعتراض به محاسبه کارکرد شهریور"
+                               required />
+
+                    </div>
+
+
+
+                    <!-- دسته بندی -->
+
+                    <div class="jbp-field">
+
+                        <label>
+                            دسته‌بندی
+                            <span class="jbp-required">*</span>
+                        </label>
+
+                        <select name="categoryId"
+                                class="jbp-control"
+                                required>
+
+                            <option value="">
+                                انتخاب کنید
+                            </option>
+
+
+                            @if (categories != null)
+                            {
+                                foreach (var item in categories)
+                                {
+                                    <option value="@item.CategoryID">
+                                        @item.Title
+                                    </option>
+                                }
+                            }
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- اولویت -->
+
+                    <div class="jbp-field">
+
+                        <label>
+                            اولویت
+                        </label>
+
+                        <select name="priority"
+                                class="jbp-control">
+
+                            <option value="1">
+                                عادی
+                            </option>
+
+                            <option value="2">
+                                مهم
+                            </option>
+
+                            <option value="3">
+                                فوری
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         ROW 2
+                         ================================================= -->
+                    <!-- دوره -->
+
+                    <div class="jbp-field">
+
+                        <label>
+                            دوره / ماه مربوطه
+                        </label>
+
+                        <input type="text"
+                               name="relatedPeriod"
+                               maxlength="100"
+                               class="jbp-control"
+                               placeholder="مثلاً شهریور 1405" />
+
+                    </div>
+
+
+
+                    <!-- مبلغ -->
+
+                    <div class="jbp-field">
+
+                        <label>
+                            مبلغ مورد اختلاف
+                        </label>
+
+
+                        <div class="jbp-control-wrap">
+
+                            <input type="text"
+                                   id="disputedAmountDisplay"
+                                   class="jbp-control jbp-with-icon"
+                                   inputmode="numeric"
+                                   placeholder="0" />
+
+
+                            <input type="hidden"
+                                   id="disputedAmount"
+                                   name="disputedAmount" />
+
+
+                            <span class="jbp-money-unit">
+                                ریال
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- کد فعالیت -->
+
+                    <div class="jbp-field">
+
+                        <label>
+                            کد فعالیت / مأموریت
+                        </label>
+
+                        <input type="text"
+                               name="activityCode"
+                               maxlength="100"
+                               class="jbp-control"
+                               placeholder="در صورت وجود" />
+
+                    </div>
+
+
+
+                    <!-- تاریخ شمسی -->
+
+                    <div class="jbp-field"
+                         id="persianDateField">
+
+                        <label>
+                            تاریخ وقوع
+                        </label>
+
+
+                        <div class="jbp-control-wrap">
+
+                            <input type="text"
+                                   id="eventDatePersian"
+                                   name="eventDatePersian"
+                                   class="jbp-control jbp-with-icon"
+                                   placeholder="انتخاب تاریخ"
+                                   readonly />
+
+
+                            <span class="jbp-input-icon">
+                                📅
+                            </span>
+
+                        </div>
+
+
+
+                        <!-- PERSIAN DATE PICKER -->
+
+                        <div class="jbp-datepicker"
+                             id="jbpPersianDatePicker">
+
+
+                            <div class="jbp-date-head">
+
+                                <button type="button"
+                                        class="jbp-date-nav"
+                                        id="jbpNextMonth">
+                                    ›
+                                </button>
+
+
+                                <div class="jbp-date-title"
+                                     id="jbpDateTitle">
+                                </div>
+
+
+                                <button type="button"
+                                        class="jbp-date-nav"
+                                        id="jbpPrevMonth">
+                                    ‹
+                                </button>
+
+                            </div>
+
+
+
+                            <div class="jbp-week">
+
+                                <span>ش</span>
+                                <span>ی</span>
+                                <span>د</span>
+                                <span>س</span>
+                                <span>چ</span>
+                                <span>پ</span>
+                                <span>ج</span>
+
+                            </div>
+
+
+
+                            <div class="jbp-days"
+                                 id="jbpDays">
+                            </div>
+
+
+
+                            <div class="jbp-date-footer">
+
+                                <button type="button"
+                                        class="jbp-date-mini-btn"
+                                        id="jbpToday">
+
+                                    امروز
+
+                                </button>
+
+
+                                <button type="button"
+                                        class="jbp-date-mini-btn"
+                                        id="jbpClearDate">
+
+                                    پاک کردن
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         ROW 3
+                         ================================================= -->
+                    <!-- شرح درخواست -->
+
+                    <div class="jbp-field jbp-span-3">
+
+                        <label>
+                            شرح درخواست
+                            <span class="jbp-required">*</span>
+                        </label>
+
+                        <textarea name="description"
+                                  class="jbp-control"
+                                  maxlength="5000"
+                                  placeholder="موضوع، مغایرت، مستندات و انتظار خود از رسیدگی را به صورت روشن توضیح دهید..."
+                                  required></textarea>
+
+                    </div>
+
+
+
+                    <!-- فایل -->
+
+                    <div class="jbp-field">
+
+                        <label>
+                            مستندات و پیوست‌ها
+                        </label>
+
+
+                        <label for="justiceFiles"
+                               class="jbp-file-box">
+
+                            <span class="jbp-file-icon">
+                                📎
+                            </span>
+
+                            <span class="jbp-file-text">
+                                انتخاب فایل
+                            </span>
+
+                            <span class="jbp-file-count"
+                                  id="jbpFileCount">
+
+                                فایلی انتخاب نشده
+
+                            </span>
+
+                        </label>
+
+
+                        <input type="file"
+                               id="justiceFiles"
+                               name="files"
+                               multiple />
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- =================================================
+                     FOOTER
+                     ================================================= -->
+
+                <div class="jbp-form-footer">
+
+
+                    <div class="jbp-note">
+
+                        <span>
+                            🔐
+                        </span>
+
+                        <span>
+                            پس از ثبت، شماره پرونده یکتا صادر و درخواست وارد مرحله بررسی سطح اول می‌شود.
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="jbp-actions">
+
+
+                        <a href="@Url.Action("JusticeDashboard", "Orders")"
+                           class="jbp-btn jbp-btn-secondary">
+
+                            بازگشت
+
+                        </a>
+
+
+                        <button type="submit"
+                                id="btnCreateCase"
+                                class="jbp-btn jbp-btn-primary">
+
+                            ✓ ثبت نهایی درخواست
+
+                        </button>
+
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    /* =========================================================
+       ENGLISH/PERSIAN DIGITS
+       ========================================================= */
+
+    function jbpNormalizeDigits(value) {
+
+        if (!value) {
+            return "";
+        }
+
+        var fa =
+            "۰۱۲۳۴۵۶۷۸۹";
+
+        var ar =
+            "٠١٢٣٤٥٦٧٨٩";
+
+
+        return value
+            .replace(/[۰-۹]/g, function (c) {
+
+                return fa.indexOf(c);
+
+            })
+            .replace(/[٠-٩]/g, function (c) {
+
+                return ar.indexOf(c);
+
+            });
+    }
+
+
+
+    /* =========================================================
+       MONEY FORMAT
+       ========================================================= */
+
+    var jbpMoneyDisplay =
+        document.getElementById(
+            "disputedAmountDisplay"
+        );
+
+    var jbpMoneyValue =
+        document.getElementById(
+            "disputedAmount"
+        );
+
+
+    jbpMoneyDisplay
+        .addEventListener(
+            "input",
+            function () {
+
+                var value =
+                    jbpNormalizeDigits(
+                        this.value
+                    );
+
+                value =
+                    value.replace(
+                        /[^0-9]/g,
+                        ""
+                    );
+
+
+                // صفرهای اضافی ابتدای عدد
+
+                value =
+                    value.replace(
+                        /^0+(?=\d)/,
+                        ""
+                    );
+
+
+                jbpMoneyValue.value =
+                    value;
+
+
+                if (!value) {
+
+                    this.value =
+                        "";
+
+                    return;
+                }
+
+
+                this.value =
+                    value.replace(
+                        /\B(?=(\d{3})+(?!\d))/g,
+                        ","
+                    );
+            }
+        );
+
+
+
+    /* =========================================================
+       FILE COUNT
+       ========================================================= */
+
+    document.getElementById(
+        "justiceFiles"
+    ).addEventListener(
+        "change",
+        function () {
+
+            var count =
+                this.files
+                    ? this.files.length
+                    : 0;
+
+
+            var text =
+                document.getElementById(
+                    "jbpFileCount"
+                );
+
+
+            if (count === 0) {
+
+                text.innerText =
+                    "فایلی انتخاب نشده";
+
+            }
+            else if (count === 1) {
+
+                text.innerText =
+                    this.files[0].name;
+
+            }
+            else {
+
+                text.innerText =
+                    count +
+                    " فایل انتخاب شده";
+
+            }
+        }
+    );
+
+
+
+    /* =========================================================
+       PERSIAN CALENDAR
+       ========================================================= */
+
+    function jbpDiv(a, b) {
+
+        return ~~(a / b);
+    }
+
+
+    function jbpMod(a, b) {
+
+        return a -
+            ~~(a / b) * b;
+    }
+
+
+
+    function jbpJalCal(jy) {
+
+        var breaks =
+            [
+                -61, 9, 38, 199,
+                426, 686, 756,
+                818, 1111, 1181,
+                1210, 1635, 2060,
+                2097, 2192, 2262,
+                2324, 2394, 2456,
+                3178
+            ];
+
+
+        var bl =
+            breaks.length;
+
+        var gy =
+            jy + 621;
+
+        var leapJ =
+            -14;
+
+        var jp =
+            breaks[0];
+
+        var jm;
+
+        var jump =
+            0;
+
+        var leap;
+
+        var leapG;
+
+        var march;
+
+        var n;
+
+        var i;
+
+
+        if (
+            jy < jp ||
+            jy >= breaks[bl - 1]
+        ) {
+
+            throw new Error(
+                "Invalid Persian year"
+            );
+        }
+
+
+        for (
+            i = 1;
+            i < bl;
+            i++
+        ) {
+
+            jm =
+                breaks[i];
+
+            jump =
+                jm - jp;
+
+
+            if (jy < jm) {
+                break;
+            }
+
+
+            leapJ =
+                leapJ +
+                jbpDiv(
+                    jump,
+                    33
+                ) * 8 +
+                jbpDiv(
+                    jbpMod(
+                        jump,
+                        33
+                    ),
+                    4
+                );
+
+
+            jp =
+                jm;
+        }
+
+
+        n =
+            jy - jp;
+
+
+        leapJ =
+            leapJ +
+            jbpDiv(
+                n,
+                33
+            ) * 8 +
+            jbpDiv(
+                jbpMod(
+                    n,
+                    33
+                ) + 3,
+                4
+            );
+
+
+        if (
+            jbpMod(
+                jump,
+                33
+            ) === 4 &&
+            jump - n === 4
+        ) {
+
+            leapJ++;
+        }
+
+
+        leapG =
+            jbpDiv(
+                gy,
+                4
+            ) -
+            jbpDiv(
+                (
+                    jbpDiv(
+                        gy,
+                        100
+                    ) + 1
+                ) * 3,
+                4
+            ) -
+            150;
+
+
+        march =
+            20 +
+            leapJ -
+            leapG;
+
+
+        if (
+            jump - n < 6
+        ) {
+
+            n =
+                n -
+                jump +
+                jbpDiv(
+                    jump + 4,
+                    33
+                ) * 33;
+        }
+
+
+        leap =
+            jbpMod(
+                jbpMod(
+                    n + 1,
+                    33
+                ) - 1,
+                4
+            );
+
+
+        if (leap === -1) {
+            leap = 4;
+        }
+
+
+        return {
+
+            leap:
+                leap,
+
+            gy:
+                gy,
+
+            march:
+                march
+        };
+    }
+
+
+
+    function jbpG2D(
+        gy,
+        gm,
+        gd
+    ) {
+
+        var d =
+            jbpDiv(
+                (gy +
+                    jbpDiv(
+                        gm - 8,
+                        6
+                    ) +
+                    100100) *
+                1461,
+                4
+            ) +
+            jbpDiv(
+                153 *
+                jbpMod(
+                    gm + 9,
+                    12
+                ) +
+                2,
+                5
+            ) +
+            gd -
+            34840408;
+
+
+        d =
+            d -
+            jbpDiv(
+                jbpDiv(
+                    gy +
+                    100100 +
+                    jbpDiv(
+                        gm - 8,
+                        6
+                    ),
+                    100
+                ) *
+                3,
+                4
+            ) +
+            752;
+
+
+        return d;
+    }
+
+
+
+    function jbpD2G(jdn) {
+
+        var j =
+            4 * jdn +
+            139361631;
+
+
+        j =
+            j +
+            jbpDiv(
+                jbpDiv(
+                    4 * jdn +
+                    183187720,
+                    146097
+                ) *
+                3,
+                4
+            ) *
+            4 -
+            3908;
+
+
+        var i =
+            jbpDiv(
+                jbpMod(
+                    j,
+                    1461
+                ),
+                4
+            ) *
+            5 +
+            308;
+
+
+        var gd =
+            jbpDiv(
+                jbpMod(
+                    i,
+                    153
+                ),
+                5
+            ) +
+            1;
+
+
+        var gm =
+            jbpMod(
+                jbpDiv(
+                    i,
+                    153
+                ),
+                12
+            ) +
+            1;
+
+
+        var gy =
+            jbpDiv(
+                j,
+                1461
+            ) -
+            100100 +
+            jbpDiv(
+                8 - gm,
+                6
+            );
+
+
+        return {
+
+            gy:
+                gy,
+
+            gm:
+                gm,
+
+            gd:
+                gd
+        };
+    }
+
+
+
+    function jbpJ2D(
+        jy,
+        jm,
+        jd
+    ) {
+
+        var r =
+            jbpJalCal(jy);
+
+
+        return jbpG2D(
+            r.gy,
+            3,
+            r.march
+        ) +
+        (jm - 1) * 31 -
+        jbpDiv(
+            jm,
+            7
+        ) *
+        (jm - 7) +
+        jd -
+        1;
+    }
+
+
+
+    function jbpD2J(jdn) {
+
+        var g =
+            jbpD2G(jdn);
+
+        var jy =
+            g.gy - 621;
+
+        var r =
+            jbpJalCal(jy);
+
+        var jdn1f =
+            jbpG2D(
+                g.gy,
+                3,
+                r.march
+            );
+
+        var k =
+            jdn -
+            jdn1f;
+
+        var jd;
+
+        var jm;
+
+
+        if (k >= 0) {
+
+            if (k <= 185) {
+
+                jm =
+                    1 +
+                    jbpDiv(
+                        k,
+                        31
+                    );
+
+                jd =
+                    jbpMod(
+                        k,
+                        31
+                    ) +
+                    1;
+
+
+                return {
+                    jy: jy,
+                    jm: jm,
+                    jd: jd
+                };
+            }
+
+
+            k =
+                k - 186;
+        }
+        else {
+
+            jy =
+                jy - 1;
+
+            k =
+                k + 179;
+
+
+            if (r.leap === 1) {
+
+                k =
+                    k + 1;
+            }
+        }
+
+
+        jm =
+            7 +
+            jbpDiv(
+                k,
+                30
+            );
+
+        jd =
+            jbpMod(
+                k,
+                30
+            ) +
+            1;
+
+
+        return {
+
+            jy:
+                jy,
+
+            jm:
+                jm,
+
+            jd:
+                jd
+        };
+    }
+
+
+
+    function jbpGregorianToJalali(
+        gy,
+        gm,
+        gd
+    ) {
+
+        return jbpD2J(
+            jbpG2D(
+                gy,
+                gm,
+                gd
+            )
+        );
+    }
+
+
+
+    function jbpJalaliToGregorian(
+        jy,
+        jm,
+        jd
+    ) {
+
+        return jbpD2G(
+            jbpJ2D(
+                jy,
+                jm,
+                jd
+            )
+        );
+    }
+
+
+
+    /* =========================================================
+       DATE PICKER STATE
+       ========================================================= */
+
+    var jbpMonthNames =
+        [
+            "فروردین",
+            "اردیبهشت",
+            "خرداد",
+            "تیر",
+            "مرداد",
+            "شهریور",
+            "مهر",
+            "آبان",
+            "آذر",
+            "دی",
+            "بهمن",
+            "اسفند"
+        ];
+
+
+    var jbpDateInput =
+        document.getElementById(
+            "eventDatePersian"
+        );
+
+
+    var jbpPicker =
+        document.getElementById(
+            "jbpPersianDatePicker"
+        );
+
+
+    var jbpDaysContainer =
+        document.getElementById(
+            "jbpDays"
+        );
+
+
+    var jbpDateTitle =
+        document.getElementById(
+            "jbpDateTitle"
+        );
+
+
+    var jbpNow =
+        new Date();
+
+
+    var jbpTodayJ =
+        jbpGregorianToJalali(
+
+            jbpNow.getFullYear(),
+
+            jbpNow.getMonth() + 1,
+
+            jbpNow.getDate()
+        );
+
+
+    var jbpPickerYear =
+        jbpTodayJ.jy;
+
+
+    var jbpPickerMonth =
+        jbpTodayJ.jm;
+
+
+
+    function jbpPad2(value) {
+
+        return value < 10
+            ? "0" + value
+            : value.toString();
+    }
+
+
+
+    function jbpMonthLength(
+        year,
+        month
+    ) {
+
+        if (month <= 6) {
+            return 31;
+        }
+
+
+        if (month <= 11) {
+            return 30;
+        }
+
+
+        return jbpJalCal(year).leap === 0
+            ? 30
+            : 29;
+    }
+
+
+
+    function jbpSelectedDate() {
+
+        var value =
+            jbpDateInput.value;
+
+
+        if (!value) {
+            return null;
+        }
+
+
+        var parts =
+            jbpNormalizeDigits(
+                value
+            )
+            .replace(
+                /-/g,
+                "/"
+            )
+            .split("/");
+
+
+        if (parts.length !== 3) {
+            return null;
+        }
+
+
+        return {
+
+            jy:
+                parseInt(
+                    parts[0]
+                ),
+
+            jm:
+                parseInt(
+                    parts[1]
+                ),
+
+            jd:
+                parseInt(
+                    parts[2]
+                )
+        };
+    }
+
+
+
+    function jbpRenderCalendar() {
+
+        jbpDateTitle.innerText =
+            jbpMonthNames[
+                jbpPickerMonth - 1
+            ]
+            +
+            " "
+            +
+            jbpPickerYear;
+
+
+        jbpDaysContainer.innerHTML =
+            "";
+
+
+        var firstGregorian =
+            jbpJalaliToGregorian(
+                jbpPickerYear,
+                jbpPickerMonth,
+                1
+            );
+
+
+        var firstDate =
+            new Date(
+
+                firstGregorian.gy,
+
+                firstGregorian.gm - 1,
+
+                firstGregorian.gd
+            );
+
+
+        /*
+           JS:
+           Sunday = 0
+           ...
+           Saturday = 6
+
+           Persian grid:
+           Saturday = 0
+        */
+
+        var firstDayIndex =
+            (firstDate.getDay() + 1) % 7;
+
+
+        var i;
+
+
+        for (
+            i = 0;
+            i < firstDayIndex;
+            i++
+        ) {
+
+            var empty =
+                document.createElement(
+                    "button"
+                );
+
+            empty.type =
+                "button";
+
+            empty.className =
+                "jbp-day empty";
+
+            jbpDaysContainer.appendChild(
+                empty
+            );
+        }
+
+
+        var length =
+            jbpMonthLength(
+                jbpPickerYear,
+                jbpPickerMonth
+            );
+
+
+        var selected =
+            jbpSelectedDate();
+
+
+        for (
+            var day = 1;
+            day <= length;
+            day++
+        ) {
+
+            (function (
+                selectedDay
+            ) {
+
+                var btn =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                btn.type =
+                    "button";
+
+
+                btn.className =
+                    "jbp-day";
+
+
+                btn.innerText =
+                    selectedDay;
+
+
+                if (
+                    jbpPickerYear ===
+                    jbpTodayJ.jy &&
+                    jbpPickerMonth ===
+                    jbpTodayJ.jm &&
+                    selectedDay ===
+                    jbpTodayJ.jd
+                ) {
+
+                    btn.classList.add(
+                        "today"
+                    );
+                }
+
+
+                if (
+                    selected &&
+                    selected.jy ===
+                    jbpPickerYear &&
+                    selected.jm ===
+                    jbpPickerMonth &&
+                    selected.jd ===
+                    selectedDay
+                ) {
+
+                    btn.classList.add(
+                        "selected"
+                    );
+                }
+
+
+                btn.addEventListener(
+                    "click",
+                    function () {
+
+                        jbpDateInput.value =
+                            jbpPickerYear
+                            +
+                            "/"
+                            +
+                            jbpPad2(
+                                jbpPickerMonth
+                            )
+                            +
+                            "/"
+                            +
+                            jbpPad2(
+                                selectedDay
+                            );
+
+
+                        jbpPicker.classList.remove(
+                            "open"
+                        );
+
+
+                        jbpRenderCalendar();
+                    }
+                );
+
+
+                jbpDaysContainer.appendChild(
+                    btn
+                );
+
+            })(day);
+        }
+    }
+
+
+
+    /* =========================================================
+       OPEN DATE PICKER
+       ========================================================= */
+
+    jbpDateInput.addEventListener(
+        "click",
+        function () {
+
+            var selected =
+                jbpSelectedDate();
+
+
+            if (selected) {
+
+                jbpPickerYear =
+                    selected.jy;
+
+                jbpPickerMonth =
+                    selected.jm;
+            }
+
+
+            jbpRenderCalendar();
+
+
+            jbpPicker.classList.toggle(
+                "open"
+            );
+        }
+    );
+
+
+
+    /* =========================================================
+       PREVIOUS MONTH
+       ========================================================= */
+
+    document.getElementById(
+        "jbpPrevMonth"
+    ).addEventListener(
+        "click",
+        function () {
+
+            jbpPickerMonth--;
+
+
+            if (jbpPickerMonth < 1) {
+
+                jbpPickerMonth =
+                    12;
+
+                jbpPickerYear--;
+            }
+
+
+            jbpRenderCalendar();
+        }
+    );
+
+
+
+    /* =========================================================
+       NEXT MONTH
+       ========================================================= */
+
+    document.getElementById(
+        "jbpNextMonth"
+    ).addEventListener(
+        "click",
+        function () {
+
+            jbpPickerMonth++;
+
+
+            if (jbpPickerMonth > 12) {
+
+                jbpPickerMonth =
+                    1;
+
+                jbpPickerYear++;
+            }
+
+
+            jbpRenderCalendar();
+        }
+    );
+
+
+
+    /* =========================================================
+       TODAY
+       ========================================================= */
+
+    document.getElementById(
+        "jbpToday"
+    ).addEventListener(
+        "click",
+        function () {
+
+            jbpPickerYear =
+                jbpTodayJ.jy;
+
+
+            jbpPickerMonth =
+                jbpTodayJ.jm;
+
+
+            jbpDateInput.value =
+                jbpTodayJ.jy
+                +
+                "/"
+                +
+                jbpPad2(
+                    jbpTodayJ.jm
+                )
+                +
+                "/"
+                +
+                jbpPad2(
+                    jbpTodayJ.jd
+                );
+
+
+            jbpRenderCalendar();
+
+
+            jbpPicker.classList.remove(
+                "open"
+            );
+        }
+    );
+
+
+
+    /* =========================================================
+       CLEAR DATE
+       ========================================================= */
+
+    document.getElementById(
+        "jbpClearDate"
+    ).addEventListener(
+        "click",
+        function () {
+
+            jbpDateInput.value =
+                "";
+
+
+            jbpPicker.classList.remove(
+                "open"
+            );
+        }
+    );
+
+
+
+    /* =========================================================
+       CLICK OUTSIDE
+       ========================================================= */
+
+    document.addEventListener(
+        "click",
+        function (e) {
+
+            var field =
+                document.getElementById(
+                    "persianDateField"
+                );
+
+
+            if (
+                !field.contains(
+                    e.target
+                )
+            ) {
+
+                jbpPicker.classList.remove(
+                    "open"
+                );
+            }
+        }
+    );
+
+
+
+    /* =========================================================
+       FORM SUBMIT
+       ========================================================= */
+
+    document.getElementById(
+        "justiceCreateForm"
+    ).addEventListener(
+        "submit",
+        function (e) {
+
+            e.preventDefault();
+
+
+            var form =
+                this;
+
+
+            var btn =
+                document.getElementById(
+                    "btnCreateCase"
+                );
+
+
+            /*
+               مقدار عددی خام مبلغ
+               دوباره قبل از ارسال Sync شود.
+            */
+
+            var money =
+                jbpNormalizeDigits(
+                    jbpMoneyDisplay.value
+                )
+                .replace(
+                    /[^0-9]/g,
+                    ""
+                );
+
+
+            jbpMoneyValue.value =
+                money;
+
+
+            btn.disabled =
+                true;
+
+
+            btn.innerHTML =
+                "در حال ثبت...";
+
+
+            var data =
+                new FormData(
+                    form
+                );
+
+
+            fetch(
+                '@Url.Action("CreateJusticeCase", "Orders")',
+                {
+
+                    method:
+                        "POST",
+
+                    body:
+                        data
+                }
+            )
+            .then(
+                function (r) {
+
+                    return r.json();
+                }
+            )
+            .then(
+                function (result) {
+
+                    if (
+                        result.success
+                    ) {
+
+                        alert(
+                            "درخواست با موفقیت ثبت شد.\n"
+                            +
+                            "شماره پرونده: "
+                            +
+                            result.caseNumber
+                        );
+
+
+                        window.location.href =
+                            '@Url.Action("JusticeCaseDetails", "Orders")'
+                            +
+                            "?id="
+                            +
+                            result.caseId;
+
+                    }
+                    else {
+
+                        alert(
+                            result.message
+                            ||
+                            "خطا در ثبت درخواست."
+                        );
+
+
+                        btn.disabled =
+                            false;
+
+
+                        btn.innerHTML =
+                            "✓ ثبت نهایی درخواست";
+                    }
+                }
+            )
+            .catch(
+                function () {
+
+                    alert(
+                        "خطا در ارتباط با سرور."
+                    );
+
+
+                    btn.disabled =
+                        false;
+
+
+                    btn.innerHTML =
+                        "✓ ثبت نهایی درخواست";
+                }
+            );
+        }
+    );
+
+</script>
