@@ -1,0 +1,1033 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "ثبت مسئله";
+    bool isManager = ViewBag.IsManager == true;
+}
+
+<style>
+    /* ============ پایه (همه‌چیز با tk- اسکوپ شده تا با CSS لایه‌ی اصلی تداخل نکند) ============ */
+    .tk-scope {
+        --tk-off: 120px; /* ← ارتفاع هدر لایه‌ی خودت؛ اگر صفحه اسکرول کل‌صفحه گرفت این عدد را بیشتر کن */
+        --cyan: #22d3ee;
+        --pink: #f43f9e;
+        --violet: #8b5cf6;
+        --lime: #a3e635;
+        --amber: #fbbf24;
+        --red: #fb7185;
+        --text: #e9edff;
+        --muted: #9aa7d1;
+        --line: rgba(255,255,255,.16);
+        direction: rtl;
+        text-align: right;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text)
+    }
+
+        .tk-scope *, .tk-scope *::before, .tk-scope *::after {
+            box-sizing: border-box
+        }
+
+        .tk-scope h1, .tk-scope h2, .tk-scope h3 {
+            margin: 0;
+            font-family: inherit;
+            line-height: 1.4;
+            color: inherit
+        }
+
+        .tk-scope a {
+            text-decoration: none
+        }
+
+        .tk-scope button {
+            font-family: inherit
+        }
+
+    .tk-root {
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        border-radius: 20px;
+        padding: 12px;
+        height: calc(100vh - var(--tk-off));
+        height: calc(100dvh - var(--tk-off));
+        min-height: 440px;
+        display: flex;
+        flex-direction: column;
+        background: radial-gradient(800px 420px at 85% -10%,rgba(99,60,255,.5),transparent 60%), radial-gradient(700px 420px at -5% 105%,rgba(244,63,158,.36),transparent 60%), linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px) 0 0/32px 32px, linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px) 0 0/32px 32px, linear-gradient(160deg,#060818,#0c1030);
+        border: 1px solid rgba(255,255,255,.12);
+        box-shadow: 0 14px 44px rgba(0,0,0,.5),0 0 0 1px rgba(34,211,238,.12),0 0 56px rgba(139,92,246,.2)
+    }
+
+        .tk-root > * {
+            position: relative;
+            z-index: 1
+        }
+
+        .tk-root::before, .tk-root::after {
+            content: "";
+            position: absolute;
+            z-index: 0;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: .45;
+            pointer-events: none
+        }
+
+        .tk-root::before {
+            width: 300px;
+            height: 300px;
+            background: var(--cyan);
+            top: -120px;
+            left: -90px;
+            animation: tkFloat 14s ease-in-out infinite
+        }
+
+        .tk-root::after {
+            width: 340px;
+            height: 340px;
+            background: var(--pink);
+            bottom: -140px;
+            right: -100px;
+            animation: tkFloat 18s ease-in-out infinite reverse
+        }
+
+    @@keyframes tkFloat {
+        50% {
+            transform: translate(50px,30px) scale(1.12)
+        }
+    }
+
+    /* ناوبری */
+    .tk-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 10px;
+        flex: 0 0 auto
+    }
+
+    .tk-title {
+        margin-left: auto !important;
+        font-size: 16px !important;
+        font-weight: 800;
+        background: linear-gradient(90deg,var(--cyan),var(--pink));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent !important;
+        filter: drop-shadow(0 0 12px rgba(34,211,238,.45))
+    }
+
+    .tk-link {
+        display: inline-block;
+        color: var(--text);
+        padding: 5px 12px;
+        border-radius: 9px;
+        font-size: 12px;
+        cursor: pointer;
+        background: rgba(255,255,255,.07);
+        border: 1px solid var(--line);
+        backdrop-filter: blur(14px);
+        transition: .25s
+    }
+
+        .tk-link:hover, .tk-link.on {
+            color: #fff;
+            border-color: var(--cyan);
+            box-shadow: 0 0 16px rgba(34,211,238,.5),inset 0 0 10px rgba(34,211,238,.18)
+        }
+
+    /* کارت شیشه‌ای */
+    .tk-glass {
+        padding: 12px;
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        background: linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.03));
+        border: 1px solid var(--line);
+        backdrop-filter: blur(16px) saturate(150%);
+        -webkit-backdrop-filter: blur(16px) saturate(150%);
+        box-shadow: 0 8px 30px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2)
+    }
+
+    .tk-h2 {
+        font-size: 14px !important;
+        color: var(--cyan) !important;
+        text-shadow: 0 0 14px rgba(34,211,238,.65)
+    }
+
+    .tk-grid {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: 310px 1fr;
+        gap: 10px
+    }
+
+    .tk-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-left: 2px;
+        margin-top: 8px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(34,211,238,.5) transparent
+    }
+
+        .tk-scroll::-webkit-scrollbar {
+            width: 5px
+        }
+
+        .tk-scroll::-webkit-scrollbar-thumb {
+            background: rgba(34,211,238,.5);
+            border-radius: 9px
+        }
+
+    /* فرم فشرده */
+    .tk-formhead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px
+    }
+
+    .tk-chev {
+        display: none;
+        color: var(--cyan);
+        transition: .25s
+    }
+
+    .tk-scope label.tk-lbl {
+        display: block;
+        font-size: 11px;
+        font-weight: 400;
+        color: var(--muted);
+        margin: 8px 0 3px;
+        max-width: none
+    }
+
+    .tk-scope .tk-in {
+        display: block;
+        width: 100%;
+        height: auto;
+        padding: 7px 10px;
+        border-radius: 10px;
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+        background: rgba(4,6,22,.6);
+        border: 1px solid rgba(255,255,255,.15);
+        box-shadow: none;
+        outline: none;
+        transition: .2s
+    }
+
+        .tk-scope .tk-in:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 2px rgba(34,211,238,.2),0 0 14px rgba(34,211,238,.4)
+        }
+
+    .tk-scope textarea.tk-in {
+        min-height: 76px;
+        resize: none
+    }
+
+    .tk-scope .tk-in::placeholder {
+        color: #6d7aa8
+    }
+
+    .tk-two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px
+    }
+
+    .tk-scope label.tk-filebtn {
+        display: block;
+        width: 100%;
+        margin: 0;
+        padding: 7px 10px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text);
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border: 1px dashed rgba(255,255,255,.35);
+        background: rgba(255,255,255,.04);
+        transition: .2s
+    }
+
+        .tk-scope label.tk-filebtn:hover {
+            border-color: var(--pink);
+            box-shadow: 0 0 14px rgba(244,63,158,.4)
+        }
+
+    /* دکمه‌ها */
+    .tk-btn {
+        display: inline-block;
+        cursor: pointer;
+        border: 0;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        color: #fff;
+        transition: .25s;
+        background: linear-gradient(90deg,var(--cyan),var(--violet));
+        box-shadow: 0 0 16px rgba(34,211,238,.45)
+    }
+
+        .tk-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 0 26px rgba(139,92,246,.85);
+            color: #fff
+        }
+
+        .tk-btn:disabled {
+            opacity: .5;
+            cursor: wait
+        }
+
+        .tk-btn.ghost {
+            background: rgba(255,255,255,.08);
+            border: 1px solid var(--line);
+            box-shadow: none
+        }
+
+    .tk-flex {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center
+    }
+
+    .tk-ib {
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.08);
+        color: #fff;
+        font-size: 12px;
+        line-height: 1;
+        transition: .2s
+    }
+
+        .tk-ib:hover {
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(34,211,238,.5)
+        }
+
+        .tk-ib.danger:hover {
+            border-color: var(--red);
+            box-shadow: 0 0 12px rgba(251,113,133,.6)
+        }
+
+    /* کارت مسئله */
+    .tk-task {
+        --acc: var(--cyan);
+        margin-bottom: 8px;
+        padding: 9px 12px;
+        border-radius: 12px;
+        position: relative;
+        background: linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+        border: 1px solid rgba(255,255,255,.14);
+        border-right: 3px solid var(--acc);
+        box-shadow: inset -8px 0 18px -12px var(--acc);
+        transition: .25s
+    }
+
+        .tk-task:hover {
+            box-shadow: 0 0 20px -4px var(--acc),inset -8px 0 18px -12px var(--acc)
+        }
+
+        .tk-task.s1 {
+            --acc: var(--amber)
+        }
+
+        .tk-task.s2 {
+            --acc: var(--lime);
+            opacity: .82
+        }
+
+        .tk-task.s3 {
+            --acc: var(--red)
+        }
+
+    .tk-top {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+        justify-content: space-between
+    }
+
+    .tk-ttl {
+        font-weight: 700;
+        font-size: 13px;
+        min-width: 0;
+        overflow-wrap: anywhere
+    }
+
+    .tk-desc {
+        color: var(--muted);
+        font-size: 12px;
+        margin: 4px 0 0;
+        white-space: pre-wrap;
+        line-height: 1.7;
+        cursor: pointer;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden
+    }
+
+        .tk-desc.x {
+            display: block;
+            -webkit-line-clamp: unset
+        }
+
+    .tk-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 6px;
+        align-items: center
+    }
+
+    .tk-chip {
+        display: inline-block;
+        font-size: 11px;
+        line-height: 1.5;
+        padding: 1px 9px;
+        border-radius: 99px;
+        border: 1px solid rgba(255,255,255,.2);
+        background: rgba(255,255,255,.06);
+        white-space: nowrap
+    }
+
+        .tk-chip.s0 {
+            color: var(--cyan);
+            border-color: var(--cyan);
+            box-shadow: 0 0 10px rgba(34,211,238,.4)
+        }
+
+        .tk-chip.s1 {
+            color: var(--amber);
+            border-color: var(--amber);
+            box-shadow: 0 0 10px rgba(251,191,36,.4)
+        }
+
+        .tk-chip.s2 {
+            color: var(--lime);
+            border-color: var(--lime);
+            box-shadow: 0 0 10px rgba(163,230,53,.4)
+        }
+
+        .tk-chip.s3 {
+            color: var(--red);
+            border-color: var(--red);
+            box-shadow: 0 0 10px rgba(251,113,133,.4)
+        }
+
+        .tk-chip.late {
+            color: var(--red);
+            border-color: var(--red);
+            animation: tkPulse 1.4s infinite
+        }
+
+        .tk-chip.pink {
+            color: var(--pink);
+            border-color: var(--pink);
+            box-shadow: 0 0 10px rgba(244,63,158,.35)
+        }
+
+    @@keyframes tkPulse {
+        50% {
+            box-shadow: 0 0 14px var(--red)
+        }
+    }
+
+    .tk-chip a {
+        color: var(--cyan)
+    }
+
+    .tk-note {
+        margin-top: 5px;
+        font-size: 12px;
+        color: var(--muted)
+    }
+
+    .tk-x {
+        border: 0;
+        background: none;
+        color: var(--red);
+        cursor: pointer;
+        padding: 0 4px;
+        font-size: 12px
+    }
+
+    .tk-empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 30px 0
+    }
+
+    /* اعلان */
+    .tk-toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(90px);
+        z-index: 99999;
+        padding: 9px 20px;
+        border-radius: 12px;
+        font-size: 13px;
+        max-width: 90vw;
+        background: rgba(8,12,38,.94);
+        border: 1px solid var(--cyan);
+        box-shadow: 0 0 24px rgba(34,211,238,.6);
+        color: #fff;
+        transition: .35s;
+        opacity: 0;
+        pointer-events: none
+    }
+
+        .tk-toast.show {
+            transform: translateX(-50%);
+            opacity: 1
+        }
+
+        .tk-toast.err {
+            border-color: var(--red);
+            box-shadow: 0 0 24px rgba(251,113,133,.6)
+        }
+
+    /* ============ موبایل / تبلت ============ */
+    @@media(max-width:900px) {
+        .tk-root {
+            height: auto;
+            min-height: 0;
+            padding: 10px;
+            border-radius: 16px
+        }
+
+        .tk-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .tk-scroll {
+            overflow: visible;
+            margin-top: 6px
+        }
+
+        .tk-chev {
+            display: inline
+        }
+
+        .tk-formhead {
+            cursor: pointer
+        }
+
+        .tk-formbody {
+            display: none
+        }
+
+        .tk-formcard.open .tk-formbody {
+            display: block
+        }
+
+        .tk-formcard.open .tk-chev {
+            transform: rotate(180deg)
+        }
+
+        .tk-title {
+            font-size: 14px !important
+        }
+    }
+
+    /* ============ انتخاب‌گر تاریخ شمسی ============ */
+    .tk-dp {
+        box-sizing: border-box;
+        position: fixed;
+        z-index: 100000;
+        display: none;
+        width: 292px;
+        padding: 10px;
+        border-radius: 16px;
+        background: linear-gradient(145deg,rgba(26,30,76,.97),rgba(10,12,36,.98));
+        border: 1px solid var(--cyan);
+        box-shadow: 0 0 34px rgba(34,211,238,.4),0 18px 50px rgba(0,0,0,.65);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px)
+    }
+
+        .tk-dp.open {
+            display: block
+        }
+
+    .tk-dp-head {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 8px
+    }
+
+    .tk-dp .tk-dp-nav {
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        border-radius: 9px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.08);
+        color: #fff;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        transition: .2s
+    }
+
+        .tk-dp .tk-dp-nav:hover {
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(34,211,238,.55)
+        }
+
+    .tk-dp select {
+        flex: 1 1 0;
+        min-width: 0;
+        width: auto;
+        height: 30px;
+        padding: 0 6px;
+        border-radius: 9px;
+        color: #fff;
+        background: rgba(4,6,22,.75);
+        border: 1px solid var(--line);
+        font: inherit;
+        font-size: 12px;
+        outline: none;
+        cursor: pointer
+    }
+
+        .tk-dp select:focus {
+            border-color: var(--cyan)
+        }
+
+        .tk-dp select option {
+            background: #0b0f24;
+            color: #fff
+        }
+
+    .tk-dp-grid {
+        display: grid;
+        grid-template-columns: repeat(7,1fr);
+        gap: 3px;
+        text-align: center
+    }
+
+    .tk-dp-wd {
+        font-size: 11px;
+        color: var(--muted);
+        padding: 3px 0
+    }
+
+        .tk-dp-wd.fri {
+            color: var(--red)
+        }
+
+    .tk-dp .tk-dp-d {
+        height: 34px;
+        padding: 0;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        transition: .15s
+    }
+
+        .tk-dp .tk-dp-d:hover {
+            background: rgba(34,211,238,.22);
+            box-shadow: 0 0 12px rgba(34,211,238,.5)
+        }
+
+        .tk-dp .tk-dp-d.fri {
+            color: var(--red)
+        }
+
+        .tk-dp .tk-dp-d.today {
+            box-shadow: inset 0 0 0 1.5px var(--cyan)
+        }
+
+        .tk-dp .tk-dp-d.sel {
+            color: #fff;
+            background: linear-gradient(135deg,var(--pink),var(--violet));
+            box-shadow: 0 0 16px rgba(244,63,158,.75)
+        }
+
+    .tk-dp-foot {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        margin-top: 8px
+    }
+
+    .tk-dp .tk-dp-foot button {
+        flex: 1;
+        padding: 6px 8px;
+        border-radius: 9px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.08);
+        color: #fff;
+        cursor: pointer;
+        font-size: 12px;
+        transition: .2s
+    }
+
+        .tk-dp .tk-dp-foot button:hover {
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(34,211,238,.5)
+        }
+
+        .tk-dp .tk-dp-foot button.clr:hover {
+            border-color: var(--red);
+            box-shadow: 0 0 12px rgba(251,113,133,.6)
+        }
+
+    @@media(max-width:600px) {
+        .tk-dp {
+            left: 8px !important;
+            right: 8px !important;
+            top: auto !important;
+            bottom: 8px;
+            width: auto;
+            max-width: 380px;
+            margin: 0 auto
+        }
+
+            .tk-dp .tk-dp-d {
+                height: 40px
+            }
+    }
+</style>
+
+<div class="tk-scope tk-root" id="tk-root">
+    <div class="tk-nav">
+        <h1 class="tk-title">✦ مسائل من</h1>
+        <a class="tk-link on" href="@Url.Action("Index")">ثبت مسئله</a>
+        <a class="tk-link" href="@Url.Action("Board")">برد عمومی</a>
+        @if (isManager)
+        {
+            <a class="tk-link" href="@Url.Action("Manage")">مدیریت</a>
+        }
+    </div>
+
+    <div class="tk-grid">
+        <div class="tk-glass tk-formcard" id="tk-formcard">
+            <div class="tk-formhead" id="tk-formhead">
+                <h2 class="tk-h2" id="tk-formTitle">＋ مسئله جدید</h2>
+                <span class="tk-chev">▾</span>
+            </div>
+            <div class="tk-formbody tk-scroll">
+                <input type="hidden" id="tk-taskId" value="0" />
+
+                <label class="tk-lbl" style="margin-top:0">عنوان مسئله</label>
+                <input type="text" class="tk-in" id="tk-title" maxlength="300" placeholder="مثلاً: گزارش حقوق خطا می‌دهد" />
+
+                <div class="tk-two">
+                    <div>
+                        <label class="tk-lbl">مهلت (شمسی)</label>
+                        <input type="text" class="tk-in" id="tk-deadline" placeholder="1405/07/20" maxlength="10" autocomplete="off" inputmode="numeric" />
+                    </div>
+                    <div>
+                        <label class="tk-lbl">پیوست</label>
+                        <label class="tk-filebtn" for="tk-files" id="tk-fileLbl">📎 انتخاب فایل</label>
+                        <input type="file" id="tk-files" multiple style="display:none" />
+                    </div>
+                </div>
+
+                <label class="tk-lbl">شرح</label>
+                <textarea class="tk-in" id="tk-description" placeholder="توضیح مسئله..."></textarea>
+
+                <div id="tk-oldFiles" class="tk-meta"></div>
+
+                <div class="tk-flex" style="margin-top:10px">
+                    <button type="button" class="tk-btn" id="tk-btnSave">ثبت</button>
+                    <button type="button" class="tk-btn ghost" id="tk-btnCancel" style="display:none">انصراف</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="tk-glass">
+            <h2 class="tk-h2">مسائل ثبت‌شده توسط من</h2>
+            <div id="tk-list" class="tk-scroll"></div>
+        </div>
+    </div>
+</div>
+
+<div class="tk-scope tk-toast" id="tk-toast"></div>
+
+<script>
+(function () {
+    'use strict';
+    // ⚠️ همه‌چیز داخل IIFE است تا متغیرهای سراسری لایه (مثل $ و jQuery) خراب نشوند
+    var URLS = {
+        list:   '@Url.Action("MyList")',
+        save:   '@Url.Action("Save")',
+        del:    '@Url.Action("Delete")',
+        rmFile: '@Url.Action("RemoveFile")',
+        dl:     '@Url.Action("DownloadFile")'
+    };
+    var q = function (s) { return document.querySelector(s); };
+    var items = [];
+    var isMobile = function () { return window.matchMedia('(max-width:900px)').matches; };
+
+    var toastEl = q('#tk-toast'); document.body.appendChild(toastEl);
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+    function toast(msg, err) { toastEl.textContent = msg; toastEl.className = 'tk-scope tk-toast show' + (err ? ' err' : ''); setTimeout(function () { toastEl.className = 'tk-scope tk-toast'; }, 2600); }
+    function fmtSize(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+    async function postForm(url, fd) { return (await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' })).json(); }
+    function formOf(obj) { var f = new FormData(); for (var k in obj) f.append(k, obj[k]); return f; }
+
+    function dueChip(t) {
+        if (t.status === 2) return '';
+        if (t.daysLeft < 0) return '<span class="tk-chip late">' + (-t.daysLeft) + ' روز تأخیر</span>';
+        if (t.daysLeft === 0) return '<span class="tk-chip late">امروز آخرین مهلت</span>';
+        return '<span class="tk-chip">' + t.daysLeft + ' روز مانده</span>';
+    }
+
+    function render() {
+        var box = q('#tk-list');
+        if (!items.length) { box.innerHTML = '<div class="tk-empty">هنوز مسئله‌ای ثبت نکرده‌اید ✨</div>'; return; }
+        box.innerHTML = items.map(function (t) {
+            return '<div class="tk-task s' + t.status + '">' +
+              '<div class="tk-top"><div class="tk-ttl">' + esc(t.title) + '</div>' +
+                '<div class="tk-flex" style="flex-wrap:nowrap">' +
+                  '<button type="button" class="tk-ib" title="ویرایش" data-act="edit" data-id="' + t.id + '">✎</button>' +
+                  '<button type="button" class="tk-ib danger" title="حذف" data-act="del" data-id="' + t.id + '">🗑</button>' +
+                '</div></div>' +
+              (t.description ? '<div class="tk-desc" data-act="more">' + esc(t.description) + '</div>' : '') +
+              '<div class="tk-meta">' +
+                '<span class="tk-chip s' + t.status + '">' + esc(t.statusName) + '</span>' +
+                (t.rank > 0 ? '<span class="tk-chip pink" title="جایگاه در صف اولویت‌ها">اولویت ' + t.rank + '</span>' : '') +
+                '<span class="tk-chip">مهلت ' + t.deadline + '</span>' + dueChip(t) +
+                (t.estimate != null ? '<span class="tk-chip pink">تخمین ' + t.estimate + ' ساعت</span>' : '') +
+                t.files.map(function (f) { return '<span class="tk-chip"><a href="' + URLS.dl + '/' + f.id + '" title="' + fmtSize(f.size) + '">📎 ' + esc(f.name) + '</a></span>'; }).join('') +
+              '</div>' +
+              (t.note ? '<div class="tk-note">💬 ' + esc(t.note) + '</div>' : '') +
+            '</div>';
+        }).join('');
+    }
+
+    async function load() {
+        var r = await (await fetch(URLS.list, { credentials: 'same-origin' })).json();
+        if (!r.ok) return toast(r.msg, true);
+        items = r.data; render();
+    }
+
+    function setFormOpen(open) { q('#tk-formcard').classList.toggle('open', open); }
+    function fileLabel() { var n = q('#tk-files').files.length; q('#tk-fileLbl').textContent = n ? ('📎 ' + n + ' فایل') : '📎 انتخاب فایل'; }
+
+    function resetForm() {
+        q('#tk-taskId').value = 0; q('#tk-title').value = ''; q('#tk-deadline').value = ''; q('#tk-description').value = '';
+        q('#tk-files').value = ''; fileLabel(); q('#tk-oldFiles').innerHTML = '';
+        q('#tk-formTitle').textContent = '＋ مسئله جدید'; q('#tk-btnSave').textContent = 'ثبت'; q('#tk-btnCancel').style.display = 'none';
+    }
+
+    function edit(id) {
+        var t = items.find(function (x) { return x.id === id; }); if (!t) return;
+        q('#tk-taskId').value = t.id; q('#tk-title').value = t.title; q('#tk-deadline').value = t.deadline; q('#tk-description').value = t.description || '';
+        q('#tk-files').value = ''; fileLabel();
+        q('#tk-oldFiles').innerHTML = t.files.map(function (f) {
+            return '<span class="tk-chip">📎 ' + esc(f.name) + ' <button type="button" class="tk-x" data-act="rmfile" data-id="' + f.id + '">✕</button></span>';
+        }).join('');
+        q('#tk-formTitle').textContent = '✎ ویرایش مسئله'; q('#tk-btnSave').textContent = 'ذخیره'; q('#tk-btnCancel').style.display = '';
+        setFormOpen(true);
+        if (isMobile()) q('#tk-formcard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function rmFile(id) {
+        if (!confirm('این فایل حذف شود؟')) return;
+        var r = await postForm(URLS.rmFile, formOf({ id: id }));
+        if (!r.ok) return toast(r.msg, true);
+        var cur = +q('#tk-taskId').value; await load(); edit(cur);
+    }
+
+    async function removeTask(id) {
+        if (!confirm('این مسئله و پیوست‌هایش حذف شود؟')) return;
+        var r = await postForm(URLS.del, formOf({ id: id }));
+        if (!r.ok) return toast(r.msg, true);
+        toast('حذف شد'); if (+q('#tk-taskId').value === id) resetForm(); load();
+    }
+
+    q('#tk-root').addEventListener('click', function (e) {
+        var el = e.target.closest('[data-act]'); if (!el) return;
+        var id = +el.dataset.id;
+        switch (el.dataset.act) {
+            case 'edit': edit(id); break;
+            case 'del': removeTask(id); break;
+            case 'rmfile': rmFile(id); break;
+            case 'more': el.classList.toggle('x'); break;
+        }
+    });
+
+    q('#tk-formhead').addEventListener('click', function () { if (isMobile()) q('#tk-formcard').classList.toggle('open'); });
+    q('#tk-files').addEventListener('change', fileLabel);
+    q('#tk-btnCancel').onclick = function () { resetForm(); if (isMobile()) setFormOpen(false); };
+    q('#tk-btnSave').onclick = async function () {
+        var fd = formOf({ id: q('#tk-taskId').value, title: q('#tk-title').value, deadline: q('#tk-deadline').value, description: q('#tk-description').value });
+        var files = q('#tk-files').files;
+        for (var i = 0; i < files.length; i++) fd.append('files', files[i]);
+        var btn = q('#tk-btnSave'); btn.disabled = true;
+        try {
+            var r = await postForm(URLS.save, fd);
+            if (!r.ok) return toast(r.msg, true);
+            toast('ذخیره شد ✓'); resetForm(); load(); if (isMobile()) setFormOpen(false);
+        } catch (e) { toast('خطا در ارتباط با سرور', true); }
+        finally { btn.disabled = false; }
+    };
+
+    // ============ انتخاب‌گر تاریخ شمسی (بدون وابستگی به کتابخانه) ============
+    var DP = (function () {
+        var BR = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+        function div(a, b) { return ~~(a / b); } function mod(a, b) { return a - ~~(a / b) * b; }
+        function jalCal(jy) {
+            var bl = BR.length, gy = jy + 621, leapJ = -14, jp = BR[0], jm, jump = 0, leap, leapG, march, n, i;
+            if (jy < jp || jy >= BR[bl - 1]) throw new Error('bad year');
+            for (i = 1; i < bl; i++) { jm = BR[i]; jump = jm - jp; if (jy < jm) break; leapJ = leapJ + div(jump, 33) * 8 + div(mod(jump, 33), 4); jp = jm; }
+            n = jy - jp; leapJ = leapJ + div(n, 33) * 8 + div(mod(n, 33) + 3, 4);
+            if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+            leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150; march = 20 + leapJ - leapG;
+            if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33;
+            leap = mod(mod(n + 1, 33) - 1, 4); if (leap === -1) leap = 4;
+            return { leap: leap, gy: gy, march: march };
+        }
+        function g2d(gy, gm, gd) { var d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408; return d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752; }
+        function d2g(jdn) { var j = 4 * jdn + 139361631; j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908; var i = div(mod(j, 1461), 4) * 5 + 308; var gd = div(mod(i, 153), 5) + 1; var gm = mod(div(i, 153), 12) + 1; return { gy: div(j, 1461) - 100100 + div(8 - gm, 6), gm: gm, gd: gd }; }
+        function j2d(jy, jm, jd) { var r = jalCal(jy); return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1; }
+        function d2j(jdn) {
+            var gy = d2g(jdn).gy, jy = gy - 621, r = jalCal(jy), jdn1f = g2d(gy, 3, r.march), jd, jm, k = jdn - jdn1f;
+            if (k >= 0) { if (k <= 185) { return { jy: jy, jm: 1 + div(k, 31), jd: mod(k, 31) + 1 }; } k -= 186; }
+            else { jy -= 1; k += 179; if (r.leap === 1) k += 1; }
+            jm = 7 + div(k, 30); jd = mod(k, 30) + 1; return { jy: jy, jm: jm, jd: jd };
+        }
+        function monthLen(jy, jm) { return jm <= 6 ? 31 : (jm <= 11 ? 30 : (jalCal(jy).leap === 0 ? 30 : 29)); }
+        function weekday(jy, jm, jd) { var g = d2g(j2d(jy, jm, jd)); return (new Date(g.gy, g.gm - 1, g.gd).getDay() + 1) % 7; } // شنبه = 0
+
+        var MN = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+        var WD = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+        function fa(n) { return String(n).replace(/\d/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'.charAt(d); }); }
+        function pad(n) { return (n < 10 ? '0' : '') + n; }
+        function latin(s) { return String(s || '').replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }); }
+        function parse(s) {
+            var m = /^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/.exec(latin(s).trim()); if (!m) return null;
+            var y = +m[1], mo = +m[2], d = +m[3];
+            try { if (mo < 1 || mo > 12 || d < 1 || d > monthLen(y, mo)) return null; } catch (e) { return null; }
+            return { y: y, m: mo, d: d };
+        }
+        function today() { var n = new Date(), j = d2j(g2d(n.getFullYear(), n.getMonth() + 1, n.getDate())); return { y: j.jy, m: j.jm, d: j.jd }; }
+
+        var el = null, cur = null, vy = 0, vm = 1, sel = null;
+
+        function build() {
+            el = document.createElement('div'); el.className = 'tk-scope tk-dp'; document.body.appendChild(el);
+            el.addEventListener('mousedown', function (e) { if (e.target.tagName !== 'SELECT') e.preventDefault(); }); // فوکوس ورودی از بین نرود
+            el.addEventListener('click', function (e) {
+                var b = e.target.closest('button'); if (!b) return;
+                if (b.hasAttribute('data-n')) { vm += +b.dataset.n; if (vm > 12) { vm = 1; vy++; } if (vm < 1) { vm = 12; vy--; } render(); }
+                else if (b.hasAttribute('data-d')) { pick(vy, vm, +b.dataset.d); }
+                else if (b.hasAttribute('data-today')) { var t = today(); pick(t.y, t.m, t.d); }
+                else if (b.hasAttribute('data-clear')) { setVal(''); close(); }
+            });
+            el.addEventListener('change', function (e) {
+                if (e.target.hasAttribute('data-m')) vm = +e.target.value;
+                if (e.target.hasAttribute('data-y')) vy = +e.target.value;
+                render();
+            });
+        }
+
+        function render() {
+            var t = today(), len = monthLen(vy, vm), first = weekday(vy, vm, 1), i, h = '';
+            h += '<div class="tk-dp-head"><button type="button" class="tk-dp-nav" data-n="-1" title="ماه قبل">›</button>';
+            h += '<select data-m>'; for (i = 1; i <= 12; i++) h += '<option value="' + i + '"' + (i === vm ? ' selected' : '') + '>' + MN[i - 1] + '</option>'; h += '</select>';
+            h += '<select data-y>'; for (i = vy - 12; i <= vy + 12; i++) h += '<option value="' + i + '"' + (i === vy ? ' selected' : '') + '>' + fa(i) + '</option>'; h += '</select>';
+            h += '<button type="button" class="tk-dp-nav" data-n="1" title="ماه بعد">‹</button></div>';
+            h += '<div class="tk-dp-grid">';
+            for (i = 0; i < 7; i++) h += '<div class="tk-dp-wd' + (i === 6 ? ' fri' : '') + '">' + WD[i] + '</div>';
+            for (i = 0; i < first; i++) h += '<div></div>';
+            for (i = 1; i <= len; i++) {
+                var c = 'tk-dp-d' + ((first + i - 1) % 7 === 6 ? ' fri' : '');
+                if (t.y === vy && t.m === vm && t.d === i) c += ' today';
+                if (sel && sel.y === vy && sel.m === vm && sel.d === i) c += ' sel';
+                h += '<button type="button" class="' + c + '" data-d="' + i + '">' + fa(i) + '</button>';
+            }
+            h += '</div><div class="tk-dp-foot"><button type="button" data-today>امروز</button><button type="button" class="clr" data-clear>پاک کردن</button></div>';
+            el.innerHTML = h;
+        }
+
+        function place() {
+            var r = cur.getBoundingClientRect(), w = el.offsetWidth, hh = el.offsetHeight;
+            var left = Math.min(Math.max(8, r.right - w), window.innerWidth - w - 8);
+            var top = r.bottom + 6; if (top + hh > window.innerHeight - 8) top = Math.max(8, r.top - hh - 6);
+            el.style.left = left + 'px'; el.style.top = top + 'px';
+        }
+
+        function setVal(v) {
+            cur.value = v;
+            cur.dispatchEvent(new Event('input', { bubbles: true })); cur.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        function pick(y, m, d) { setVal(y + '/' + pad(m) + '/' + pad(d)); close(); }
+
+        function open(input) {
+            if (!el) build();
+            cur = input; sel = parse(input.value); var base = sel || today(); vy = base.y; vm = base.m;
+            render(); el.classList.add('open'); place();
+        }
+        function close() { if (el) el.classList.remove('open'); cur = null; }
+
+        document.addEventListener('mousedown', function (e) { if (el && cur && !el.contains(e.target) && e.target !== cur) close(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' || e.key === 'Tab') close(); });
+        window.addEventListener('resize', function () { if (el && cur) place(); });
+        // با اسکرول صفحه/فرم، انتخاب‌گر دنبال ورودی می‌ماند؛ فقط اگر ورودی از دید خارج شد بسته می‌شود
+        window.addEventListener('scroll', function (e) {
+            if (!el || !cur || el.contains(e.target)) return;
+            var r = cur.getBoundingClientRect();
+            if (r.bottom < 0 || r.top > window.innerHeight) close(); else place();
+        }, true);
+
+        return {
+            attach: function (input) {
+                if (!input) return;
+                input.setAttribute('autocomplete', 'off');
+                // روی موبایل/لمسی کیبورد باز نشود؛ فقط انتخاب‌گر
+                if (window.matchMedia && window.matchMedia('(pointer:coarse)').matches) input.readOnly = true;
+                input.addEventListener('focus', function () { open(input); });
+                input.addEventListener('click', function () { if (!el || !el.classList.contains('open') || cur !== input) open(input); });
+                input.addEventListener('input', function () {
+                    if (el && cur === input) { var p = parse(input.value); if (p) { sel = p; vy = p.y; vm = p.m; render(); } }
+                });
+            }
+        };
+    })();
+
+    DP.attach(q('#tk-deadline'));
+
+    load();
+})();
+</script>

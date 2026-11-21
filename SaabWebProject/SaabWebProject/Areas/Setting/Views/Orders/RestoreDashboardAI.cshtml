@@ -1,0 +1,5435 @@
+﻿
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "RestoreAI";
+}
+
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>RestoreDashboardAI</title>
+    @*==========================AG STYLE============================*@
+    <style>
+
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.055);
+            --glass-bg-strong: rgba(255, 255, 255, 0.085);
+            --glass-bg-soft: rgba(0, 255, 255, 0.035);
+            --glass-border: rgba(255, 255, 255, 0.16);
+            --glass-border-bright: rgba(255, 255, 255, 0.28);
+            --glass-highlight: rgba(255, 255, 255, 0.18);
+            --glass-shadow: rgba(0, 0, 0, 0.28);
+            --font-low-color: rgb(255 255 255 / 50%);
+            --aqua: #00ffff;
+            --aqua-btn: #00d1d1;
+            --aqua-soft: rgba(0, 255, 255, 0.12);
+            --aqua-faint: rgba(0, 255, 255, 0.055);
+            --danger: #ff4d6d;
+            --success: #32d583;
+            --glass-blur: 18px;
+            --glass-saturation: 150%;
+            --glass-radius: .75rem;
+            --glass-transition: .35s cubic-bezier(.22, .61, .36, 1);
+        }
+
+        .tab-AG {
+            background-image: url('/Areas/Setting/Images/AdminImages/back7-01.jpg') !important;
+            background-size: cover !important;
+            /*            background: radial-gradient( circle at 1px 1px, rgba(255, 255, 255, 0.055) 1px, transparent 1px ), rgba(255, 255, 255, 0.018) !important;
+                    background-size: 22px 22px !important;*/
+        }
+
+
+
+        .col-xl-1,
+        .col-xl-2,
+        .col-xl-3,
+        .col-xl-4,
+        .col-xl-5,
+        .col-xl-6,
+        .col-xl-7,
+        .col-xl-8,
+        .col-xl-9,
+        .col-xl-10,
+        .col-xl-11,
+        .col-xl-12 {
+            position: relative !important;
+        }
+
+        .col-xl-AG {
+            padding-top: 1.2rem;
+            flex-direction: row;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .row-input-AG {
+            min-height: 3.4rem !important;
+        }
+
+            .row-input-AG > [class*="col-xl"] .glass-btn-ag {
+                margin-top: 1.3rem !important;
+            }
+
+        .row-table-AG {
+            /*                    padding-top: 1rem;*/
+            height: fit-content !important;
+        }
+
+        .row-btn-AG {
+            margin-top: 1rem !important;
+        }
+
+        .row-ltr-AG {
+            flex-direction: row-reverse !important;
+        }
+
+        /*    ================================================================================================================
+                                                                                           "MY STYLE"
+                      ================================================================================================================       */
+        /* ========================================================= */
+        /* 06. GENERIC SCROLLBAR                                     */
+        /* ========================================================= */
+
+        .scrollbar {
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, .18) transparent;
+        }
+
+
+            .scrollbar::-webkit-scrollbar {
+                width: .4rem;
+            }
+
+
+            .scrollbar::-webkit-scrollbar-track {
+                margin: .5rem 0;
+                background: rgba(255, 255, 255, .025);
+                border-radius: 1rem;
+                box-shadow: inset 0 0 0 .0625rem rgba(255, 255, 255, .025);
+            }
+
+
+            .scrollbar::-webkit-scrollbar-thumb {
+                background: linear-gradient( 180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .10) );
+                border: .0625rem solid rgba(255, 255, 255, .12);
+                border-radius: 1rem;
+                box-shadow: inset 0 .0625rem 0 rgba(255, 255, 255, .18), 0 0 .5rem rgba(255, 255, 255, .05);
+                backdrop-filter: blur(.75rem);
+                -webkit-backdrop-filter: blur(.75rem);
+                transition: background .25s ease, border-color .25s ease, box-shadow .25s ease;
+            }
+
+
+                .scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: linear-gradient( 180deg, rgba(255, 255, 255, .32), rgba(255, 255, 255, .15) );
+                    border-color: rgba(255, 255, 255, .20);
+                    box-shadow: inset 0 .0625rem 0 rgba(255, 255, 255, .22), 0 0 .7rem rgba(255, 255, 255, .08);
+                }
+
+        /*LABEL*/
+        .glass-label-ag {
+            position: relative;
+            right: .3rem;
+            top: .1rem;
+            color: rgba(255,255,255,.88);
+            font-size: .7rem;
+            font-weight: 500;
+            border-radius: .45rem;
+            background-color: transparent;
+            margin-top: -1rem;
+            transition: .3s ease;
+        }
+        /*SELECT & TEXTAERA*/
+        .glass-select-ag {
+            font-size: 12px !important;
+            padding: .375rem .75rem !important;
+            margin-bottom: 0 !important;
+            width: 100%;
+            color: rgba(255,255,255,.92) !important;
+            border: 1px solid rgba(255,255,255,.14) !important;
+            border-radius: .55rem !important;
+            background-color: rgba(255, 255, 255, .035) !important;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2300ffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+            background-repeat: no-repeat !important;
+            background-position: left .75rem center !important;
+            background-size: 1rem .75rem !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.02);
+            transition: border-color .3s ease, background-color .3s ease, box-shadow .3s ease, transform .2s ease;
+            appearance: none;
+        }
+
+        .glass-textarea-ag {
+            min-height: 32px;
+            height: 32px;
+            resize: vertical;
+            overflow-y: auto;
+            scrollbar-color: rgba(0, 255, 255, 0.3) transparent;
+            scrollbar-width: thin;
+            font-size: 12px !important;
+            padding: .375rem .75rem !important;
+            margin-bottom: 0 !important;
+            width: 100%;
+            color: rgba(255,255,255,.92) !important;
+            border: 1px solid rgba(255,255,255,.14) !important;
+            background-color: rgba(255, 255, 255, .035) !important;
+            border-radius: .55rem !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(255,255,255,.025);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease, transform .3s ease;
+        }
+
+        .glass-input-ag {
+            font-size: 12px !important;
+            padding: .375rem .75rem !important;
+            margin-bottom: 0 !important;
+            width: 100%;
+            color: rgba(255,255,255,.92) !important;
+            border: 1px solid rgba(255,255,255,.14) !important;
+            background-color: rgba(255, 255, 255, .035) !important;
+            border-radius: .55rem !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(255,255,255,.025);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease, transform .3s ease;
+        }
+
+            .glass-textarea-ag:hover,
+            .glass-select-ag:hover,
+            .glass-input-ag:hover {
+                border-color: rgba(0,255,255,.40) !important;
+                background-color: rgba(0,255,255,.055) !important;
+                box-shadow: inset 0 0 .6rem rgba(0,255,255,.05), 0 0 .5rem rgba(0,255,255,.03);
+            }
+
+            .glass-textarea-ag:focus,
+            .glass-select-ag:focus,
+            .glass-input-ag:focus {
+                outline: none !important;
+                color: white !important;
+                background: linear-gradient( 135deg, rgba(0,255,255,.09), rgba(255,255,255,.035) ) !important;
+                border-color: rgba(0,255,255,.65) !important;
+                box-shadow: inset 0 0 .7rem rgba(0,255,255,.06), 0 0 .8rem rgba(0,255,255,.08) !important;
+                transform: translateY(-1px);
+            }
+
+            .glass-input-ag::placeholder {
+                color: rgba(255,255,255,.38) !important;
+            }
+
+            .glass-textarea-ag:disabled,
+            .glass-select-ag:disabled,
+            .glass-input-ag:disabled {
+                opacity: .5;
+                cursor: not-allowed;
+                background: rgba(255,255,255,.025) !important;
+                border-color: transparent !important;
+            }
+
+        .glass-textarea-ag::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .glass-textarea-ag::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .glass-textarea-ag::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+            .glass-textarea-ag::-webkit-scrollbar-thumb:hover {
+                background: rgba(0, 255, 255, 0.6);
+            }
+        /*TIME (فیلد ساعت هم‌سبک سلکتور؛ منوی بازشو را GlassTime می‌سازد)*/
+        input[type="time"].glass-time-ag {
+            min-height: 2.1rem;
+            direction: ltr;
+            text-align: center;
+            cursor: pointer;
+            color-scheme: dark;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: .04em;
+            padding-left: 2rem !important;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%2300ffff'%3E%3Cpath d='M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z'/%3E%3Cpath d='M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: left .7rem center !important;
+            background-size: .9rem !important;
+        }
+
+            input[type="time"].glass-time-ag::-webkit-calendar-picker-indicator {
+                display: none;
+            }
+
+            input[type="time"].glass-time-ag::-webkit-datetime-edit,
+            input[type="time"].glass-time-ag::-webkit-datetime-edit-fields-wrapper {
+                padding: 0;
+            }
+
+            input[type="time"].glass-time-ag::-webkit-datetime-edit-hour-field,
+            input[type="time"].glass-time-ag::-webkit-datetime-edit-minute-field,
+            input[type="time"].glass-time-ag::-webkit-datetime-edit-ampm-field {
+                padding: 0 .15rem;
+                border-radius: .25rem;
+            }
+
+                input[type="time"].glass-time-ag::-webkit-datetime-edit-hour-field:focus,
+                input[type="time"].glass-time-ag::-webkit-datetime-edit-minute-field:focus,
+                input[type="time"].glass-time-ag::-webkit-datetime-edit-ampm-field:focus {
+                    outline: none;
+                    color: #00ffff;
+                    background: rgba(0, 255, 255, .16);
+                }
+
+            input[type="time"].glass-time-ag::-webkit-datetime-edit-text {
+                color: rgba(255, 255, 255, .45);
+                padding: 0 .1rem;
+            }
+
+        /* منوی انتخاب ساعت (همان ظاهر gs-ag-panel) */
+        .gt-ag-panel {
+            width: 12rem;
+        }
+
+        .gt-ag-cols {
+            display: flex;
+            direction: ltr;
+            gap: .3rem;
+            padding: .3rem;
+        }
+
+        .gt-ag-col {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gt-ag-head {
+            padding: .25rem 0 .3rem;
+            text-align: center;
+            font-size: 10px;
+            color: rgba(255,255,255,.5);
+        }
+
+        .gt-ag-col .gs-ag-list {
+            max-height: 13rem;
+            padding: .1rem;
+        }
+
+        .gt-ag-col .gs-ag-option {
+            justify-content: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .gt-ag-foot {
+            display: flex;
+            direction: rtl;
+            gap: .4rem;
+            padding: .35rem .4rem .4rem;
+            border-top: 1px solid rgba(255,255,255,.08);
+        }
+
+            .gt-ag-foot button {
+                flex: 1 1 0;
+                padding: .3rem .5rem;
+                font-size: 11px;
+                color: rgba(255,255,255,.92);
+                border: 1px solid rgba(255,255,255,.14);
+                border-radius: .45rem;
+                background: rgba(255,255,255,.035);
+                cursor: pointer;
+                transition: background .15s ease, border-color .15s ease, color .15s ease;
+            }
+
+                .gt-ag-foot button:hover,
+                .gt-ag-foot button:focus {
+                    outline: none;
+                    color: #00ffff;
+                    border-color: rgba(0,255,255,.45);
+                    background: rgba(0,255,255,.08);
+                }
+
+        /*RADIO*/
+        .box-glass-radio-ag {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: end;
+            padding-bottom: .3rem;
+            gap: .1rem;
+        }
+
+        .glass-radio-ag {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            margin: 0 !important;
+            position: relative;
+            cursor: pointer;
+            border-radius: 50% !important;
+            border: 1px solid rgba(255, 255, 255, .20) !important;
+            background: linear-gradient( 135deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02) ) !important;
+            backdrop-filter: blur(10px) saturate(140%);
+            -webkit-backdrop-filter: blur(10px) saturate(140%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 .5rem rgba(255,255,255,.025);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease, transform .2s ease;
+        }
+
+            .glass-radio-ag:hover {
+                border-color: rgba(0,255,255,.55) !important;
+                background: linear-gradient( 135deg, rgba(0,255,255,.10), rgba(255,255,255,.025) ) !important;
+                box-shadow: inset 0 0 .5rem rgba(0,255,255,.06), 0 0 .5rem rgba(0,255,255,.04) !important;
+            }
+
+
+
+        input[type="radio"].glass-radio-ag:checked {
+            border-color: rgba(0,255,255,.85) !important;
+            border-width: 1px !important;
+            background: linear-gradient( 135deg, rgba(0,255,255,.16), rgba(0,255,255,.045) ) !important;
+            box-shadow: inset 0 0 .7rem rgba(0,255,255,.10), 0 0 .7rem rgba(0,255,255,.08) !important;
+        }
+
+        .glass-radio-ag:checked::after {
+            content: "";
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            width: .65rem !important;
+            height: .65rem !important;
+            border-radius: 50% !important;
+            background: aqua !important;
+            transform: translate(-50%, -50%) scale(1) !important;
+            box-shadow: 0 0 .45rem aqua, 0 0 .8rem rgba(0,255,255,.55) !important;
+            animation: radioGlassPulse .3s ease !important;
+        }
+
+        .glass-radio-ag:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 .2rem rgba(0,255,255,.10), inset 0 0 .5rem rgba(0,255,255,.08) !important;
+        }
+
+
+        .glass-radio-ag:active {
+            transform: scale(.9) !important;
+        }
+
+        .glass-radio-ag:disabled {
+            opacity: .4 !important;
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+        }
+
+        @@keyframes radioGlassPulse {
+
+            0% {
+                transform: translate(-50%, -50%) scale(.3);
+                opacity: .3;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /*CHECKBOX*/
+
+        .box-glass-checkbox-ag {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: end;
+            padding-bottom: .3rem;
+            gap: .1rem;
+        }
+
+        .glass-checkbox-ag {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            margin: 0 !important;
+            position: relative;
+            cursor: pointer;
+            border-radius: .45rem !important;
+            border: 1px solid rgba(255, 255, 255, .20) !important;
+            background: linear-gradient( 135deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02) ) !important;
+            backdrop-filter: blur(10px) saturate(140%);
+            -webkit-backdrop-filter: blur(10px) saturate(140%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 .5rem rgba(255,255,255,.025);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease, transform .2s ease;
+        }
+
+
+            .glass-checkbox-ag:hover {
+                border-color: rgba(0, 255, 255, .55) !important;
+                background: linear-gradient( 135deg, rgba(0, 255, 255, .10), rgba(255, 255, 255, .025) ) !important;
+                box-shadow: inset 0 0 .5rem rgba(0,255,255,.06), 0 0 .5rem rgba(0,255,255,.04) !important;
+            }
+
+
+
+        input[type="checkbox"].glass-checkbox-ag:checked {
+            border-color: rgba(0,255,255,.85) !important;
+            border-width: 1px !important;
+            background: linear-gradient( 135deg, rgba(0,255,255,.22), rgba(0,255,255,.06) ) !important;
+            box-shadow: inset 0 0 .6rem rgba(0,255,255,.10), 0 0 .6rem rgba(0,255,255,.08) !important;
+        }
+
+
+        .glass-checkbox-ag:checked::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: .4rem;
+            height: .75rem;
+            border: solid aqua;
+            border-width: 0 2px 2px 0;
+            transform: translate(-50%, -58%) rotate(45deg);
+            filter: drop-shadow(0 0 .3rem aqua);
+        }
+
+
+        .glass-checkbox-ag:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 .2rem rgba(0,255,255,.10), inset 0 0 .5rem rgba(0,255,255,.08) !important;
+        }
+
+
+        .glass-checkbox-ag:active {
+            transform: scale(.9) !important;
+        }
+
+
+        .glass-checkbox-ag:disabled {
+            opacity: .4 !important;
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+        }
+
+        /*BUTTON*/
+
+        .glass-btn-ag {
+            width: 100%;
+            height: 2rem;
+            transition: var(--glass-transition);
+            font-size: .7rem;
+            border: 1px solid rgba(255,255,255,.14) !important;
+            background-color: transparent !important;
+            border-radius: .55rem !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(255,255,255,.025);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: .5rem;
+        }
+
+            .glass-btn-ag i {
+                color: var(--aqua-btn);
+                font-size: 14px;
+            }
+
+            .glass-btn-ag p {
+                margin: 0px !important;
+            }
+
+            .glass-btn-ag:hover {
+                transform: translateY(-1px) scale(1.025);
+                background: linear-gradient( 135deg, rgba(0,255,255,.12), rgba(255,255,255,.035) );
+                border-color: rgba(0,255,255,.65) !important;
+                box-shadow: inset 0 0 .7rem rgba(0,255,255,.10), 0 0 .8rem rgba(0,255,255,.08);
+                color: var(--aqua);
+            }
+
+            .glass-btn-ag:active {
+                transform: scale(.94);
+            }
+
+        .row-input-AG > [class*="col-xl"] .glass-btn-ag {
+            margin-top: 1.3rem !important;
+        }
+
+
+
+
+
+
+
+        .glass-btn-ag-primary {
+            background: linear-gradient( 135deg, rgba(0, 255, 255, .24), rgba(0, 255, 255, .08) ) !important;
+            border: 1px solid rgba(0, 255, 255, .65) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.20), inset 0 0 .8rem rgba(0,255,255,.10), 0 0 .75rem rgba(0,255,255,.12);
+        }
+
+            .glass-btn-ag-primary:hover {
+                background: linear-gradient( 135deg, rgba(0, 255, 255, .34), rgba(0, 255, 255, .12) ) !important;
+                border-color: rgba(0, 255, 255, .95) !important;
+                color: var(--aqua);
+                box-shadow: inset 0 0 1rem rgba(0,255,255,.16), 0 0 1rem rgba(0,255,255,.18), 0 0 2rem rgba(0,255,255,.08);
+            }
+
+                .glass-btn-ag-primary:hover i {
+                    filter: drop-shadow(0 0 .5rem aqua);
+                }
+
+
+            .glass-btn-ag-primary:active {
+                transform: scale(.94) !important;
+            }
+
+
+
+
+
+        /* ========================================================= */
+        /* GLASS ICON BUTTON - BASE */
+        /* ========================================================= */
+
+        .glass-btn-icon {
+            width: 2.15rem;
+            height: 2.15rem;
+            padding: 0 !important;
+            transition: var(--glass-transition);
+            font-size: .7rem;
+            border: 1px solid rgba(255,255,255,.14) !important;
+            background-color: transparent !important;
+            border-radius: .55rem !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(255,255,255,.025);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+            .glass-btn-icon i {
+                font-size: 14px;
+            }
+
+            .glass-btn-icon:hover {
+                transform: translateY(-1px) scale(1.025);
+            }
+
+            .glass-btn-icon:active {
+                transform: scale(.94);
+            }
+
+
+        /* ========================================================= */
+        /* CONFIRM - GREEN */
+        /* ========================================================= */
+
+        .glass-btn-icon-confirm {
+            border-color: rgba(50,213,131,.45) !important;
+        }
+
+            .glass-btn-icon-confirm i {
+                color: #32d583;
+            }
+
+            .glass-btn-icon-confirm:hover {
+                background: linear-gradient( 135deg, rgba(50,213,131,.14), rgba(255,255,255,.035) );
+                border-color: rgba(50,213,131,.75) !important;
+                box-shadow: inset 0 0 .7rem rgba(50,213,131,.10), 0 0 .8rem rgba(50,213,131,.08);
+            }
+
+                .glass-btn-icon-confirm:hover i {
+                    color: #32d583;
+                    filter: drop-shadow(0 0 .35rem rgba(50,213,131,.8));
+                }
+
+
+        /* ========================================================= */
+        /* REJECT - RED */
+        /* ========================================================= */
+
+        .glass-btn-icon-reject {
+            border-color: rgba(255,90,79,.45) !important;
+        }
+
+            .glass-btn-icon-reject i {
+                color: #ff5a4f;
+            }
+
+            .glass-btn-icon-reject:hover {
+                background: linear-gradient( 135deg, rgba(255,90,79,.14), rgba(255,255,255,.035) );
+                border-color: rgba(255,90,79,.75) !important;
+                box-shadow: inset 0 0 .7rem rgba(255,90,79,.10), 0 0 .8rem rgba(255,90,79,.08);
+            }
+
+                .glass-btn-icon-reject:hover i {
+                    color: #ff5a4f;
+                    filter: drop-shadow(0 0 .35rem rgba(255,90,79,.8));
+                }
+
+
+        /* ========================================================= */
+        /* SUGGEST - BLUE */
+        /* ========================================================= */
+
+        .glass-btn-icon-suggest {
+            border-color: rgba(0,255,255,.45) !important;
+        }
+
+            .glass-btn-icon-suggest i {
+                color: var(--aqua);
+            }
+
+            .glass-btn-icon-suggest:hover {
+                background: linear-gradient( 135deg, rgba(0,255,255,.14), rgba(255,255,255,.035) );
+                border-color: rgba(0,255,255,.75) !important;
+                box-shadow: inset 0 0 .7rem rgba(0,255,255,.10), 0 0 .8rem rgba(0,255,255,.08);
+            }
+
+                .glass-btn-icon-suggest:hover i {
+                    color: var(--aqua);
+                    filter: drop-shadow(0 0 .35rem rgba(0,255,255,.8));
+                }
+
+        /* ========================================================= */
+        /* GLASS TEXT BUTTON - BASE */
+        /* ========================================================= */
+
+        .glass-btn-text {
+            width: 100%;
+            height: 2rem;
+            padding: 0 .75rem !important;
+            transition: var(--glass-transition);
+            font-size: .7rem;
+            border: 1px solid rgba(255,255,255,.14) !important;
+            background-color: transparent !important;
+            border-radius: .55rem !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(255,255,255,.025);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: .5rem;
+        }
+
+            .glass-btn-text p {
+                margin: 0 !important;
+            }
+
+
+            .glass-btn-text:hover {
+                transform: translateY(-1px) scale(1.025);
+            }
+
+            .glass-btn-text:active {
+                transform: scale(.94);
+            }
+
+
+        /* ========================================================= */
+        /* CONFIRM - GREEN */
+        /* ========================================================= */
+
+        .glass-btn-text-confirm {
+            border-color: rgba(50,213,131,.45) !important;
+        }
+
+            .glass-btn-text-confirm p {
+                color: #32d583;
+            }
+
+            .glass-btn-text-confirm i {
+                color: #32d583;
+            }
+
+            .glass-btn-text-confirm:hover {
+                background: linear-gradient( 135deg, rgba(50,213,131,.14), rgba(255,255,255,.035) );
+                border-color: rgba(50,213,131,.75) !important;
+                box-shadow: inset 0 0 .7rem rgba(50,213,131,.10), 0 0 .8rem rgba(50,213,131,.08);
+                color: #32d583 !important;
+            }
+
+                .glass-btn-text-confirm:hover p {
+                    filter: drop-shadow(0 0 .35rem rgba(50,213,131,.8)) !important;
+                }
+
+
+        /* ========================================================= */
+        /* REJECT - RED */
+        /* ========================================================= */
+
+        .glass-btn-text-reject {
+            border-color: rgba(255,90,79,.45) !important;
+        }
+
+            .glass-btn-text-reject p {
+                color: #ff5a4f;
+            }
+
+            .glass-btn-text-reject i {
+                color: #ff5a4f;
+            }
+
+            .glass-btn-text-reject:hover {
+                background: linear-gradient( 135deg, rgba(255,90,79,.14), rgba(255,255,255,.035) );
+                border-color: rgba(255,90,79,.75) !important;
+                box-shadow: inset 0 0 .7rem rgba(255,90,79,.10), 0 0 .8rem rgba(255,90,79,.08);
+                color: #ff5a4f !important;
+            }
+
+                .glass-btn-text-reject:hover p {
+                    filter: drop-shadow(0 0 .35rem rgba(255,90,79,.8)) !important;
+                }
+
+
+        /* ========================================================= */
+        /* SUGGEST - AQUA */
+        /* ========================================================= */
+
+        .glass-btn-text-suggest {
+            border-color: rgba(0,255,255,.45) !important;
+        }
+
+            .glass-btn-text-suggest p {
+                color: var(--aqua);
+            }
+
+            .glass-btn-text-suggest i {
+                color: var(--aqua);
+            }
+
+            .glass-btn-text-suggest:hover {
+                background: linear-gradient( 135deg, rgba(0,255,255,.14), rgba(255,255,255,.035) );
+                border-color: rgba(0,255,255,.75) !important;
+                box-shadow: inset 0 0 .7rem rgba(0,255,255,.10), 0 0 .8rem rgba(0,255,255,.08);
+                color: var(--aqua) !important;
+            }
+
+                .glass-btn-text-suggest:hover p {
+                    filter: drop-shadow(0 0 .35rem rgba(0,255,255,.8)) !important;
+                }
+
+
+
+
+        /* =========================================================
+           GLASS TABLE
+        ========================================================= */
+
+        .glass-table-ag {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            direction: rtl;
+            color: #fff;
+            font-size: .6rem;
+            table-layout: fixed;
+        }
+
+
+            /* =========================================================
+           TABLE HEADER
+        ========================================================= */
+
+            .glass-table-ag thead {
+                display: table;
+                width: 100%;
+                table-layout: fixed;
+                font-size: .7rem;
+            }
+
+                .glass-table-ag thead th {
+                    height: 3.5rem;
+                    padding: .75rem 1rem;
+                    text-align: center;
+                    vertical-align: middle;
+                    font-weight: 600;
+                    white-space: nowrap;
+                    background: linear-gradient( 135deg, rgba(255,255,255,.10), rgba(255,255,255,.045) );
+                    border-top: 1px solid rgba(255,255,255,.18);
+                    border-bottom: 1px solid rgba(0,255,255,.20);
+                    border-left: 1px solid rgba(255,255,255,.08);
+                    backdrop-filter: blur(15px) saturate(150%);
+                    -webkit-backdrop-filter: blur(15px) saturate(150%);
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+                }
+
+
+                    /* اولین ستون */
+
+                    .glass-table-ag thead th:first-child {
+                        border-top-right-radius: .55rem;
+                        border-bottom-right-radius: .55rem;
+                        border-right: 1px solid rgba(255,255,255,.10);
+                    }
+
+
+                    /* آخرین ستون */
+
+                    .glass-table-ag thead th:last-child {
+                        border-top-left-radius: .55rem;
+                        border-bottom-left-radius: .55rem;
+                        border-left: none;
+                    }
+
+
+            /* =========================================================
+           TABLE BODY
+        ========================================================= */
+
+            .glass-table-ag tbody {
+                display: block;
+                width: 100%;
+                max-height: 24rem;
+                overflow-y: auto;
+                overflow-x: hidden;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255,255,255,.18) transparent;
+            }
+
+
+                /* =========================================================
+           TABLE ROW
+        ========================================================= */
+
+                .glass-table-ag tbody tr {
+                    display: table;
+                    width: 100%;
+                    table-layout: fixed;
+                    transition: background .25s ease;
+                }
+
+                    .glass-table-ag tbody tr:hover {
+                        background: rgba(255,255,255,.018);
+                    }
+
+
+                /* =========================================================
+           TABLE BODY CELLS
+        ========================================================= */
+
+                .glass-table-ag tbody td {
+                    height: 2.5rem;
+                    /*                            padding: .5rem .75rem;*/
+                    text-align: center;
+                    vertical-align: middle;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    background: transparent;
+                    color: rgba(255,255,255,.88);
+                    border: none;
+                    border-bottom: 1px solid rgba(255,255,255,.06);
+                    box-sizing: border-box;
+                }
+
+
+                    /* جداکننده بین ستون‌ها */
+
+                    .glass-table-ag tbody td:not(:last-child) {
+                        border-left: 1px solid rgba(255,255,255,.045);
+                    }
+
+
+                /* آخرین ردیف */
+
+                .glass-table-ag tbody tr:last-child td {
+                    border-bottom: none;
+                }
+
+
+            /* =========================================================
+           STATUS
+        ========================================================= */
+
+            .glass-table-ag .meeting-status {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 4.5rem;
+                height: 1.75rem;
+                padding: 0 .65rem;
+                border-radius: .45rem;
+                font-size: .68rem;
+                white-space: nowrap;
+                border: 1px solid rgba(255,255,255,.12);
+                background: rgba(255,255,255,.035);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+
+
+            /* =========================================================
+           ACTIONS
+        ========================================================= */
+
+            .glass-table-ag .meeting-actions {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: .4rem;
+            }
+
+
+                /* دکمه‌های داخل جدول */
+
+                .glass-table-ag .meeting-actions .glass-btn-icon {
+                    flex: 0 0 auto;
+                }
+
+            /* =========================================================
+           GLASS STATUS
+        ========================================================= */
+
+            .glass-table-ag .meeting-status {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 4.5rem;
+                height: 1.75rem;
+                padding: 0 .7rem;
+                border-radius: .45rem;
+                font-size: .68rem;
+                font-weight: 500;
+                white-space: nowrap;
+                background: transparent;
+                backdrop-filter: blur(10px) saturate(150%);
+                -webkit-backdrop-filter: blur(10px) saturate(150%);
+                transition: none;
+            }
+
+
+        /* =========================================================
+           SUCCESS
+        ========================================================= */
+
+        .glass-status-success {
+            color: #32d583 !important;
+            border: 1px solid rgba(50,213,131,.55) !important;
+            background: rgba(50,213,131,.06) !important;
+        }
+
+
+        /* =========================================================
+           WARNING
+        ========================================================= */
+
+        .glass-status-warning {
+            color: #ffc857 !important;
+            border: 1px solid rgba(255,200,87,.55) !important;
+            background: rgba(255,200,87,.06) !important;
+        }
+
+
+        /* =========================================================
+           DANGER
+        ========================================================= */
+
+        .glass-status-danger {
+            color: #ff5a4f !important;
+            border: 1px solid rgba(255,90,79,.55) !important;
+            background: rgba(255,90,79,.06) !important;
+        }
+
+
+        /* =========================================================
+           INFO
+        ========================================================= */
+
+        .glass-status-info {
+            color: var(--aqua) !important;
+            border: 1px solid rgba(0,255,255,.55) !important;
+            background: rgba(0,255,255,.06) !important;
+        }
+
+        /* =========================================================
+           GLASS ALERT CONTAINER
+        ========================================================= */
+        .glass-alert-container {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            direction: rtl;
+            pointer-events: none;
+            padding: 1rem;
+        }
+
+
+        /* =========================================================
+           GLASS ALERT
+        ========================================================= */
+
+        .glass-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: min(32rem, calc(100vw - 2rem));
+            min-height: 6rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.1rem;
+            color: rgba(255,255,255,.94) !important;
+            background: linear-gradient( 135deg, rgba(255,255,255,.09), rgba(255,255,255,.025) ) !important;
+            border: 1px solid rgba(255,255,255,.18) !important;
+            border-radius: 1rem !important;
+            backdrop-filter: blur(22px) saturate(170%);
+            -webkit-backdrop-filter: blur(22px) saturate(170%);
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(255,255,255,.04);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translate(-50%, -50%) translateY(-2rem) scale(.82);
+            transition: opacity .35s ease, visibility .35s ease, transform .5s cubic-bezier(.22,.61,.36,1);
+        }
+
+
+            /* =========================================================
+           SHOW
+        ========================================================= */
+
+            .glass-alert.show {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transform: translate(-50%, -50%) translateY(0) scale(1);
+            }
+
+
+            /* =========================================================
+           TOP LIGHT
+        ========================================================= */
+
+            .glass-alert::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 100%;
+                height: 1px;
+                background: linear-gradient( 90deg, transparent, rgba(255,255,255,.35), transparent );
+                opacity: .7;
+            }
+
+
+            /* =========================================================
+           NEON GLOW
+        ========================================================= */
+
+            .glass-alert::before {
+                content: "";
+                position: absolute;
+                width: 11rem;
+                height: 11rem;
+                top: -7rem;
+                right: -5rem;
+                border-radius: 50%;
+                filter: blur(45px);
+                opacity: .18;
+                pointer-events: none;
+            }
+
+
+        /* =========================================================
+           ALERT ICON
+        ========================================================= */
+
+        .glass-alert-icon {
+            position: relative;
+            flex: 0 0 3.4rem;
+            width: 3.4rem;
+            height: 3.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .85rem;
+            font-size: 1.45rem;
+            background: rgba(255,255,255,.045);
+            border: 1px solid rgba(255,255,255,.14);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+
+        /* =========================================================
+           CONTENT
+        ========================================================= */
+
+        .glass-alert-content {
+            flex: 1;
+            min-width: 0;
+            text-align: right;
+        }
+
+
+        .glass-alert-title {
+            margin-bottom: .25rem;
+            font-size: .95rem;
+            font-weight: 800;
+            letter-spacing: -.01em;
+        }
+
+
+        .glass-alert-message {
+            font-size: .76rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,.62);
+        }
+
+
+        /* =========================================================
+           SUCCESS
+        ========================================================= */
+
+        .glass-alert-success {
+            border-color: rgba(0,255,195,.30) !important;
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), 0 0 2.5rem rgba(0,255,195,.09), inset 0 1px 0 rgba(255,255,255,.25);
+        }
+
+
+            .glass-alert-success::before {
+                background: #00ffc3;
+            }
+
+
+            .glass-alert-success .glass-alert-icon {
+                color: #00ffc3;
+                background: rgba(0,255,195,.07);
+                border-color: rgba(0,255,195,.30);
+                box-shadow: 0 0 1.5rem rgba(0,255,195,.18), inset 0 0 1rem rgba(0,255,195,.04);
+            }
+
+
+            .glass-alert-success .glass-alert-title {
+                color: #00ffc3 !important;
+                text-shadow: 0 0 .8rem rgba(0,255,195,.25);
+            }
+
+
+        /* =========================================================
+           WARNING
+        ========================================================= */
+
+        .glass-alert-warning {
+            border-color: rgba(255,193,7,.30) !important;
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), 0 0 2.5rem rgba(255,193,7,.08), inset 0 1px 0 rgba(255,255,255,.25);
+        }
+
+
+            .glass-alert-warning::before {
+                background: #ffc107;
+            }
+
+
+            .glass-alert-warning .glass-alert-icon {
+                color: #ffc107;
+                background: rgba(255,193,7,.07);
+                border-color: rgba(255,193,7,.30);
+                box-shadow: 0 0 1.5rem rgba(255,193,7,.16), inset 0 0 1rem rgba(255,193,7,.04);
+            }
+
+
+            .glass-alert-warning .glass-alert-title {
+                color: #ffc107 !important;
+                text-shadow: 0 0 .8rem rgba(255,193,7,.25);
+            }
+
+
+        /* =========================================================
+           ERROR
+        ========================================================= */
+
+        .glass-alert-error {
+            border-color: rgba(255,90,79,.32) !important;
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), 0 0 2.5rem rgba(255,90,79,.10), inset 0 1px 0 rgba(255,255,255,.25);
+        }
+
+
+            .glass-alert-error::before {
+                background: #ff5a4f;
+            }
+
+
+            .glass-alert-error .glass-alert-icon {
+                color: #ff5a4f !important;
+                background: rgba(255,90,79,.07);
+                border-color: rgba(255,90,79,.30);
+                box-shadow: 0 0 1.5rem rgba(255,90,79,.18), inset 0 0 1rem rgba(255,90,79,.04);
+            }
+
+
+                .glass-alert-error .glass-alert-icon i {
+                    color: #ff5a4f !important;
+                    filter: drop-shadow(0 0 .45rem rgba(255,90,79,.65));
+                }
+
+
+            .glass-alert-error .glass-alert-title {
+                color: #ff5a4f !important;
+                text-shadow: 0 0 .8rem rgba(255,90,79,.25);
+            }
+
+
+        .glass-field-ag {
+            /*            margin-bottom: 1rem;*/
+            display: flex;
+            flex-direction: column;
+            /*           height: 15rem;
+           width: 27rem;*/
+            color: rgba(255,255,255,.92) !important;
+            border: 1px solid rgba(255,255,255,.14) !important;
+            background-color: transparent !important;
+            border-radius: .55rem !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), inset 0 -1px 0 rgba(255,255,255,.025);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease, transform .3s ease;
+        }
+
+        .glass-field-header {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .5rem;
+            direction: rtl;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            background: linear-gradient( 180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012) );
+        }
+
+
+        .glass-field-icon {
+            width: 2rem;
+            height: 2rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(0, 255, 255, .25);
+            border-radius: .65rem;
+            background: linear-gradient( 145deg, rgba(0, 255, 255, .13), rgba(0, 255, 255, .025) );
+            color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, .08), inset 0 0 8px rgba(0, 255, 255, .04);
+        }
+
+
+            .glass-field-icon i {
+                font-size: .85rem;
+            }
+
+
+        .glass-field-heading {
+            min-width: 0;
+        }
+
+
+        .glass-field-title {
+            font-size: .75rem;
+            font-weight: 600;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, .82);
+        }
+
+
+        .glass-field-subtitle {
+            margin-top: .08rem;
+            font-size: .57rem;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, .32);
+        }
+
+        .glass-field-body {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            padding: .5rem;
+        }
+    </style>
+    <style>
+        /* =========================================================
+        CONFIRM
+        ========================================================= */
+
+        .action-confirm {
+            color: var(--success) !important;
+        }
+
+            .action-confirm i {
+                color: var(--success) !important;
+            }
+
+            .action-confirm:hover {
+                color: var(--success) !important;
+                background: rgba(50,213,131,.07);
+                border-color: rgba(50,213,131,.45);
+                box-shadow: 0 0 12px rgba(50,213,131,.08);
+                transform: scale(1) translateY(-.1rem) !important;
+            }
+
+            .action-confirm:active {
+                transform: scale(.9) translateY(-.1rem) !important;
+            }
+
+
+        /* =========================================================
+        REJECT
+        ========================================================= */
+
+        .action-reject {
+            color: var(--danger) !important;
+        }
+
+            .action-reject i {
+                color: var(--danger) !important;
+            }
+
+            .action-reject:hover {
+                color: var(--danger) !important;
+                background: rgba(255,77,109,.07) !important;
+                border-color: rgba(255,77,109,.45) !important;
+                box-shadow: 0 0 12px rgba(255,77,109,.08) !important;
+                transform: scale(1) translateY(-.1rem) !important;
+            }
+
+            .action-reject:active {
+                transform: scale(.9) translateY(-.1rem) !important;
+            }
+
+
+        /* =========================================================
+        SUGGEST TIME
+        ========================================================= */
+
+        .action-suggest {
+            color: #00c8ff !important;
+        }
+
+            .action-suggest i {
+                color: #00c8ff !important;
+            }
+
+            .action-suggest:hover {
+                color: #00c8ff !important;
+                background: rgba(0,200,255,.07);
+                border-color: rgba(0,200,255,.45);
+                box-shadow: 0 0 12px rgba(0,200,255,.08);
+                transform: scale(1) translateY(-.1rem) !important;
+            }
+
+            .action-suggest:active {
+                transform: scale(.9) translateY(-.1rem) !important;
+            }
+
+        /* ========================================================= */
+        /* 01. GENERAL / MODAL                                       */
+        /* ========================================================= */
+
+        .col-xl-1,
+        .col-xl-2,
+        .col-xl-3,
+        .col-xl-4,
+        .col-xl-5,
+        .col-xl-6 {
+            position: relative !important;
+        }
+
+
+        .ModalAG {
+            display: none;
+            flex-direction: row-reverse;
+            align-items: flex-start;
+            justify-content: center;
+            gap: .5rem;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1rem;
+            background: #00000075;
+            backdrop-filter: blur(5px);
+        }
+
+
+        .ContentModalAG {
+            position: relative;
+            width: 52rem;
+            margin-top: 2.4rem;
+            max-width: 100%;
+            max-height: 800px;
+            /* position: absolute; */
+            /* top: 3.3rem; */
+            /* left: 16.5rem; */
+            border-radius: 0 0 10px 10px;
+        }
+
+
+        #BodyModalAG .tab-content {
+            max-height: 35.65rem !important;
+            overflow-y: auto !important;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            color: rgba(255, 255, 255, .92) !important;
+            border: 1px solid rgba(255, 255, 255, .14) !important;
+            border-radius: 1rem !important;
+            background-color: rgba(255, 255, 255, .035) !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -1px 0 rgba(255, 255, 255, .025);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease, transform .3s ease;
+        }
+
+
+        .BtnCloseAG {
+            position: absolute;
+            top: -2.3rem;
+            left: 1rem;
+            z-index: 1;
+            width: 30px;
+            height: 30px;
+            font-size: 21px;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            color: rgba(255, 255, 255, .42);
+            border: 1px solid rgba(255, 255, 255, .14) !important;
+            border-radius: .5rem;
+            background-color: rgba(255, 255, 255, .035) !important;
+            transition: .2s;
+        }
+
+
+
+        /* ========================================================= */
+        /* 02. SHARED PANEL HEADER                                   */
+        /* ========================================================= */
+
+        .meeting-panel-header {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .8rem .75rem;
+            direction: rtl;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+            background: linear-gradient( 180deg, rgba(255, 255, 255, .045), rgba(255, 255, 255, .012) );
+        }
+
+
+        .meeting-panel-icon {
+            width: 2rem;
+            height: 2rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(0, 255, 255, .25);
+            border-radius: .65rem;
+            background: linear-gradient( 145deg, rgba(0, 255, 255, .13), rgba(0, 255, 255, .025) );
+            color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, .08), inset 0 0 8px rgba(0, 255, 255, .04);
+        }
+
+
+            .meeting-panel-icon i {
+                font-size: .85rem;
+            }
+
+
+        .meeting-panel-heading {
+            min-width: 0;
+        }
+
+
+        .meeting-panel-title {
+            font-size: .75rem;
+            font-weight: 600;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, .82);
+        }
+
+
+        .meeting-panel-subtitle {
+            margin-top: .08rem;
+            font-size: .57rem;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, .32);
+        }
+
+
+
+        /* ========================================================= */
+        /* 03. MEETING PROCESS PANEL                                 */
+        /* ========================================================= */
+
+        #Marahel {
+            width: 15rem;
+            height: 40.5rem;
+            display: flex;
+            flex-direction: column;
+            direction: rtl;
+            overflow: hidden;
+            z-index: 10;
+            color: rgba(255, 255, 255, .92) !important;
+            border: 1px solid rgba(255, 255, 255, .14) !important;
+            border-radius: 1rem !important;
+            background: linear-gradient( 145deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .018) ) !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -1px 0 rgba(255, 255, 255, .025), 0 12px 30px rgba(0, 0, 0, .12);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease;
+        }
+
+
+        #MyModalAG.edit-mode #Marahel .timeline-item {
+            cursor: pointer;
+        }
+
+            #MyModalAG.edit-mode #Marahel .timeline-item:hover {
+                background: rgba(255, 255, 255, .035);
+            }
+        /* ========================================================= */
+        /* 04. TIMELINE                                              */
+        /* ========================================================= */
+
+        .meeting-timeline-wrapper {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+
+        .meeting-timeline {
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            direction: ltr;
+            padding: 1rem .65rem .65rem .75rem;
+            position: relative;
+            box-sizing: border-box;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 255, 255, .15) transparent;
+        }
+
+
+            .meeting-timeline::-webkit-scrollbar {
+                width: 3px;
+            }
+
+
+            .meeting-timeline::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+
+            .meeting-timeline::-webkit-scrollbar-thumb {
+                background: rgba(0, 255, 255, .16);
+                border-radius: 10px;
+            }
+
+
+                .meeting-timeline::-webkit-scrollbar-thumb:hover {
+                    background: rgba(0, 255, 255, .3);
+                }
+
+
+
+        /* ========================================================= */
+        /* TIMELINE ITEM                                             */
+        /* ========================================================= */
+
+        .timeline-item {
+            min-height: 3.15rem;
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+            isolation: isolate;
+            box-sizing: border-box;
+        }
+
+
+        .timeline-icon {
+            width: 2.05rem;
+            height: 2.05rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 3;
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 50%;
+            background: linear-gradient( 145deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .025) );
+            backdrop-filter: blur(1rem) saturate(160%);
+            -webkit-backdrop-filter: blur(1rem) saturate(160%);
+            color: rgba(255, 255, 255, .3);
+            font-size: .64rem;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, .15), inset 0 -1px 1px rgba(0, 0, 0, .15);
+            transition: all .35s cubic-bezier(.22, .61, .36, 1);
+        }
+
+
+            .timeline-icon::before {
+                content: "";
+                position: absolute;
+                inset: 3px;
+                border: 1px solid rgba(255, 255, 255, .05);
+                border-radius: inherit;
+                pointer-events: none;
+            }
+
+
+            .timeline-icon i {
+                position: relative;
+                z-index: 2;
+                font-size: .75rem;
+            }
+
+
+
+        /* ========================================================= */
+        /* TIMELINE CONNECTOR                                        */
+        /* ========================================================= */
+
+        .timeline-item:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            top: 2.05rem;
+            left: .975rem;
+            width: 1px;
+            height: 1.1rem;
+            z-index: 1;
+            background: linear-gradient( 180deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .04) );
+            box-shadow: 0 0 5px rgba(255, 255, 255, .04);
+        }
+
+
+
+        /* ========================================================= */
+        /* TIMELINE CONTENT                                          */
+        /* ========================================================= */
+
+        .timeline-content {
+            flex: 1;
+            min-width: 0;
+            padding-top: .03rem;
+            padding-left: .75rem;
+            padding-right: 0;
+            position: relative;
+            direction: rtl;
+            text-align: left;
+        }
+
+
+        .timeline-title {
+            font-size: .69rem;
+            font-weight: 500;
+            line-height: 1.55;
+            color: rgba(255, 255, 255, .48);
+            transition: all .3s ease;
+        }
+
+
+        .timeline-description {
+            margin-top: .08rem;
+            font-size: .59rem;
+            line-height: 1.55;
+            color: rgba(255, 255, 255, .25);
+            transition: all .3s ease;
+        }
+
+
+
+        /* ========================================================= */
+        /* TIMELINE - COMPLETED                                     */
+        /* ========================================================= */
+
+        .timeline-item.completed .timeline-icon {
+            background: linear-gradient( 145deg, rgba(50, 213, 131, .16), rgba(50, 213, 131, .035) );
+            border-color: rgba(50, 213, 131, .55);
+            color: #32d583;
+            box-shadow: 0 0 6px rgba(50, 213, 131, .25), 0 0 16px rgba(50, 213, 131, .12), inset 0 0 10px rgba(50, 213, 131, .08);
+        }
+
+
+            .timeline-item.completed .timeline-icon::after {
+                content: "";
+                position: absolute;
+                inset: -4px;
+                border: 1px solid rgba(50, 213, 131, .08);
+                border-radius: 50%;
+                box-shadow: 0 0 10px rgba(50, 213, 131, .12);
+                pointer-events: none;
+            }
+
+
+        .timeline-item.completed .timeline-title {
+            color: rgba(255, 255, 255, .72);
+        }
+
+
+        .timeline-item.completed .timeline-description {
+            color: rgba(255, 255, 255, .38);
+        }
+
+
+        .timeline-item.completed:not(:last-child)::after {
+            background: linear-gradient( 180deg, rgba(50, 213, 131, .5), rgba(50, 213, 131, .08) );
+            box-shadow: 0 0 7px rgba(50, 213, 131, .15);
+        }
+
+
+
+        /* ========================================================= */
+        /* TIMELINE - ACTIVE                                         */
+        /* ========================================================= */
+
+        .timeline-item.active .timeline-icon {
+            background: linear-gradient( 145deg, rgba(0, 255, 255, .18), rgba(0, 255, 255, .035) );
+            border-color: rgba(0, 255, 255, .7);
+            color: #00ffff;
+            box-shadow: 0 0 6px rgba(0, 255, 255, .35), 0 0 18px rgba(0, 255, 255, .18), 0 0 35px rgba(0, 255, 255, .08), inset 0 0 12px rgba(0, 255, 255, .1);
+        }
+
+
+            .timeline-item.active .timeline-icon::after {
+                content: "";
+                position: absolute;
+                inset: -5px;
+                border: 1px solid rgba(0, 255, 255, .15);
+                border-radius: 50%;
+                box-shadow: 0 0 12px rgba(0, 255, 255, .2), inset 0 0 8px rgba(0, 255, 255, .08);
+                animation: timelinePulse 2.2s ease-in-out infinite;
+                pointer-events: none;
+            }
+
+
+        .timeline-item.active .timeline-title {
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, .35);
+        }
+
+
+        .timeline-item.active .timeline-description {
+            color: rgba(0, 255, 255, .55);
+        }
+
+
+        .timeline-item.active:not(:last-child)::after {
+            background: linear-gradient( 180deg, rgba(0, 255, 255, .55), rgba(0, 255, 255, .08) );
+            box-shadow: 0 0 7px rgba(0, 255, 255, .2);
+        }
+
+
+
+        /* ========================================================= */
+        /* TIMELINE - PENDING                                        */
+        /* ========================================================= */
+
+        .timeline-item:not(.active):not(.completed) .timeline-icon {
+            color: rgba(255, 255, 255, .24);
+            background: linear-gradient( 145deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .015) );
+        }
+
+
+
+        /* ========================================================= */
+        /* TIMELINE - HOVER                                          */
+        /* ========================================================= */
+
+        .timeline-item:hover .timeline-icon {
+            transform: scale(1.06);
+            border-color: rgba(0, 255, 255, .35);
+            box-shadow: 0 0 10px rgba(0, 255, 255, .12), inset 0 0 10px rgba(0, 255, 255, .05);
+        }
+
+
+        .timeline-item:hover .timeline-title {
+            color: rgba(255, 255, 255, .75);
+        }
+
+
+
+        /* ========================================================= */
+        /* 05. MEETING INFORMATION PANEL                             */
+        /* ========================================================= */
+
+        #EtelaatJalaseh {
+            padding-bottom: 1rem;
+            width: 15rem;
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+            direction: rtl;
+            overflow: hidden;
+            z-index: 10;
+            color: rgba(255, 255, 255, .92) !important;
+            border: 1px solid rgba(255, 255, 255, .14) !important;
+            border-radius: 1rem !important;
+            background: linear-gradient( 145deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .018) ) !important;
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -1px 0 rgba(255, 255, 255, .025), 0 12px 30px rgba(0, 0, 0, .12);
+            transition: border-color .3s ease, background .3s ease, box-shadow .3s ease, transform .3s ease;
+        }
+
+
+            /* ========================================================= */
+            /* MEETING INFORMATION CONTENT                               */
+            /* ========================================================= */
+
+            #EtelaatJalaseh .meeting-info-wrapper {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(0, 255, 255, .15) transparent;
+            }
+
+
+                #EtelaatJalaseh .meeting-info-wrapper::-webkit-scrollbar {
+                    width: 3px;
+                }
+
+
+                #EtelaatJalaseh .meeting-info-wrapper::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+
+
+                #EtelaatJalaseh .meeting-info-wrapper::-webkit-scrollbar-thumb {
+                    background: rgba(0, 255, 255, .16);
+                    border-radius: 10px;
+                }
+
+
+                    #EtelaatJalaseh .meeting-info-wrapper::-webkit-scrollbar-thumb:hover {
+                        background: rgba(0, 255, 255, .3);
+                    }
+
+
+            #EtelaatJalaseh .meeting-info-list {
+                padding: .1rem .75rem 0;
+            }
+
+
+            #EtelaatJalaseh .meeting-info-item {
+                min-height: 1.4rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: .5rem;
+                border-bottom: 1px solid rgba(255, 255, 255, .035);
+            }
+
+
+                #EtelaatJalaseh .meeting-info-item:last-child {
+                    border-bottom: 0;
+                }
+
+
+                #EtelaatJalaseh .meeting-info-item span {
+                    flex-shrink: 0;
+                    font-size: .56rem;
+                    color: rgba(255, 255, 255, .28);
+                }
+
+
+                #EtelaatJalaseh .meeting-info-item strong {
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-size: .58rem;
+                    font-weight: 500;
+                    color: rgba(255, 255, 255, .58);
+                }
+
+            #EtelaatJalaseh .meeting-info-members {
+                align-items: flex-start;
+                padding-top: .35rem;
+                padding-bottom: .35rem;
+            }
+
+
+            /* ========================================================= */
+            /* MEETING MEMBERS                                           */
+            /* ========================================================= */
+
+            #EtelaatJalaseh .meeting-members {
+                flex: 1;
+                min-width: 0;
+                /*            height:6rem;*/
+                /*            overflow-y:auto;*/
+                display: flex;
+                flex-direction: column;
+                gap: .15rem;
+            }
+
+
+            /* ========================================================= */
+            /* MEMBER ROW                                                */
+            /* ========================================================= */
+
+            #EtelaatJalaseh .meeting-member-row {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: .5rem;
+                min-height: 1.35rem;
+                border-bottom: 1px solid rgba(255, 255, 255, .035);
+            }
+
+
+                #EtelaatJalaseh .meeting-member-row:last-child {
+                    border-bottom: 0;
+                }
+
+
+                /* نام عضو */
+
+                #EtelaatJalaseh .meeting-member-row strong {
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-size: .57rem;
+                    font-weight: 500;
+                    color: rgba(255, 255, 255, .58);
+                }
+
+
+                /* نقش عضو */
+
+                #EtelaatJalaseh .meeting-member-row small {
+                    flex-shrink: 0;
+                    font-size: .52rem;
+                    color: rgba(0, 255, 255, .42);
+                    white-space: nowrap;
+                }
+
+        /* ========================================================= */
+        /* 06. GENERIC SCROLLBAR                                     */
+        /* ========================================================= */
+
+        .scrollbar {
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, .18) transparent;
+        }
+
+
+            .scrollbar::-webkit-scrollbar {
+                width: .4rem;
+            }
+
+
+            .scrollbar::-webkit-scrollbar-track {
+                margin: .5rem 0;
+                background: rgba(255, 255, 255, .025);
+                border-radius: 1rem;
+                box-shadow: inset 0 0 0 .0625rem rgba(255, 255, 255, .025);
+            }
+
+
+            .scrollbar::-webkit-scrollbar-thumb {
+                background: linear-gradient( 180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .10) );
+                border: .0625rem solid rgba(255, 255, 255, .12);
+                border-radius: 1rem;
+                box-shadow: inset 0 .0625rem 0 rgba(255, 255, 255, .18), 0 0 .5rem rgba(255, 255, 255, .05);
+                backdrop-filter: blur(.75rem);
+                -webkit-backdrop-filter: blur(.75rem);
+                transition: background .25s ease, border-color .25s ease, box-shadow .25s ease;
+            }
+
+
+                .scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: linear-gradient( 180deg, rgba(255, 255, 255, .32), rgba(255, 255, 255, .15) );
+                    border-color: rgba(255, 255, 255, .20);
+                    box-shadow: inset 0 .0625rem 0 rgba(255, 255, 255, .22), 0 0 .7rem rgba(255, 255, 255, .08);
+                }
+
+
+
+        /* ========================================================= */
+        /* 07. ANIMATIONS                                            */
+        /* ========================================================= */
+
+        @@keyframes timelinePulse {
+
+            0%, 100% {
+                opacity: .45;
+                transform: scale(.96);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.03);
+            }
+        }
+
+
+        /* =========================================================
+                AG — GLOBAL NEON GLASS ALERT SYSTEM
+                (منتقل‌شده از DashbordJalasat برای استفاده در همه صفحات)
+                ========================================================= */
+
+        /* =========================================================
+                GLOBAL NEON GLASS ALERT SYSTEM
+                ========================================================= */
+
+        .global-alert-container {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999999;
+            direction: rtl;
+            pointer-events: none;
+            padding: 1rem;
+        }
+
+
+        /* =========================================================
+                ALERT BOX
+                ========================================================= */
+
+        .global-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: min(32rem, calc(100vw - 2rem));
+            min-height: 6rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.1rem;
+            color: rgba(255,255,255,.94) !important;
+            background: linear-gradient( 135deg, rgba(255,255,255,.09), rgba(255,255,255,.025) ) !important;
+            border: 1px solid rgba(255,255,255,.18) !important;
+            border-radius: 1rem !important;
+            backdrop-filter: blur(22px) saturate(170%);
+            -webkit-backdrop-filter: blur(22px) saturate(170%);
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.25), inset 0 -1px 0 rgba(255,255,255,.04);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translate(-50%, -50%) translateY(-2rem) scale(.82);
+            transition: opacity .35s ease, visibility .35s ease, transform .5s cubic-bezier(.22,.61,.36,1);
+        }
+
+
+            /* =========================================================
+                SHOW
+                ========================================================= */
+
+            .global-alert.show {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+                transform: translate(-50%, -50%) translateY(0) scale(1);
+            }
+
+
+            /* =========================================================
+                NEON LIGHT
+                ========================================================= */
+
+            .global-alert::before {
+                content: "";
+                position: absolute;
+                width: 11rem;
+                height: 11rem;
+                top: -7rem;
+                right: -5rem;
+                border-radius: 50%;
+                filter: blur(45px);
+                opacity: .18;
+                pointer-events: none;
+            }
+
+
+            .global-alert::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 100%;
+                height: 1px;
+                background: linear-gradient( 90deg, transparent, rgba(255,255,255,.35), transparent );
+                opacity: .7;
+            }
+
+
+        /* =========================================================
+                ALERT ICON
+                ========================================================= */
+
+        .global-alert-icon {
+            position: relative;
+            flex: 0 0 3.4rem;
+            width: 3.4rem;
+            height: 3.4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .85rem;
+            font-size: 1.45rem;
+            background: rgba(255,255,255,.045);
+            border: 1px solid rgba(255,255,255,.14);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: transform .3s ease, box-shadow .3s ease;
+        }
+
+
+        .global-alert:hover .global-alert-icon {
+            transform: scale(1.06);
+        }
+
+
+        /* =========================================================
+                CONTENT
+                ========================================================= */
+
+        .global-alert-content {
+            flex: 1;
+            min-width: 0;
+            text-align: right;
+        }
+
+
+        .global-alert-title {
+            margin-bottom: .25rem;
+            font-size: .95rem;
+            font-weight: 800;
+            letter-spacing: -.01em;
+        }
+
+
+        .global-alert-message {
+            font-size: .76rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,.62);
+        }
+
+
+        /* =========================================================
+                CLOSE BUTTON
+                ========================================================= */
+
+        .global-alert-confirm,
+        .global-alert-close {
+            flex: 0 0 auto;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: .55rem;
+            background: rgba(255,255,255,.025);
+            color: rgba(255,255,255,.4);
+            cursor: pointer;
+            transition: color .25s ease, background .25s ease, border-color .25s ease, transform .25s ease;
+        }
+
+
+            .global-alert-close:hover {
+                color: var(--danger) !important;
+                background: rgba(255,77,109,.08) !important;
+                border-color: rgba(255,77,109,.35) !important;
+                box-shadow: 0 0 1.2rem rgba(255,77,109,.15);
+                transform: scale(1.08);
+            }
+
+
+        /* =========================================================
+                SUCCESS
+                ========================================================= */
+
+        .global-alert-success {
+            border-color: rgba(0,255,195,.3) !important;
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), 0 0 2.5rem rgba(0,255,195,.09), inset 0 1px 0 rgba(255,255,255,.25);
+        }
+
+
+            .global-alert-success::before {
+                background: #00ffc3;
+            }
+
+
+            .global-alert-success .global-alert-icon {
+                color: #00ffc3;
+                background: rgba(0,255,195,.07);
+                border-color: rgba(0,255,195,.3);
+                box-shadow: 0 0 1.5rem rgba(0,255,195,.18), inset 0 0 1rem rgba(0,255,195,.04);
+            }
+
+
+            .global-alert-success .global-alert-title {
+                color: #00ffc3 !important;
+                text-shadow: 0 0 .8rem rgba(0,255,195,.25);
+            }
+
+
+        /* =========================================================
+                WARNING
+                ========================================================= */
+
+        .global-alert-warning {
+            border-color: rgba(255,193,7,.3) !important;
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), 0 0 2.5rem rgba(255,193,7,.08), inset 0 1px 0 rgba(255,255,255,.25);
+        }
+
+
+            .global-alert-warning::before {
+                background: #ffc107;
+            }
+
+
+            .global-alert-warning .global-alert-icon {
+                color: #ffc107;
+                background: rgba(255,193,7,.07);
+                border-color: rgba(255,193,7,.3);
+                box-shadow: 0 0 1.5rem rgba(255,193,7,.16), inset 0 0 1rem rgba(255,193,7,.04);
+            }
+
+
+            .global-alert-warning .global-alert-title {
+                color: #ffc107 !important;
+                text-shadow: 0 0 .8rem rgba(255,193,7,.25);
+            }
+
+
+        /* =========================================================
+                ERROR
+                ========================================================= */
+
+        .global-alert-error {
+            border-color: rgba(255,75,95,.32) !important;
+            box-shadow: 0 1.5rem 4rem rgba(0,0,0,.35), 0 0 2.5rem rgba(255,75,95,.1), inset 0 1px 0 rgba(255,255,255,.25);
+        }
+
+
+            .global-alert-error::before {
+                background: #ff5368;
+            }
+
+
+            .global-alert-error .global-alert-icon {
+                color: #ff5368;
+                background: rgba(255,75,95,.07);
+                border-color: rgba(255,75,95,.3);
+                box-shadow: 0 0 1.5rem rgba(255,75,95,.18), inset 0 0 1rem rgba(255,75,95,.04);
+            }
+
+
+            .global-alert-error .global-alert-title {
+                color: #ff5368 !important;
+                text-shadow: 0 0 .8rem rgba(255,75,95,.25);
+            }
+
+
+        /* =========================================================
+                HOVER
+                ========================================================= */
+
+        .global-alert:hover {
+            transform: translate(-50%, -50%) translateY(-.2rem) scale(1.015);
+            background: linear-gradient( 135deg, rgba(255,255,255,.105), rgba(255,255,255,.035) ) !important;
+        }
+
+
+        /* =========================================================
+                MOBILE
+                ========================================================= */
+
+        @@media (max-width: 576px) {
+
+            .global-alert-container {
+                padding: .75rem;
+            }
+
+            .global-alert {
+                width: calc(100vw - 1.5rem);
+                min-height: 5.5rem;
+                padding: .85rem;
+                gap: .75rem;
+            }
+
+            .global-alert-icon {
+                flex: 0 0 3rem;
+                width: 3rem;
+                height: 3rem;
+                font-size: 1.25rem;
+            }
+
+            .global-alert-title {
+                font-size: .88rem;
+            }
+
+            .global-alert-message {
+                font-size: .7rem;
+            }
+        }
+
+        /* =========================================================
+                   AG — GLASS SELECT (سلکتور شیشه‌ای + جستجو)
+                   استفاده:
+                     <select class="glass-select-search"> ... </select>
+                     data-search="true"  → همیشه جستجو داشته باشد
+                     data-search="false" → هیچ‌وقت جستجو نداشته باشد
+                     (پیش‌فرض: اگر بیشتر از ۷ گزینه داشت، جستجو نمایش داده می‌شود)
+                   ظاهر کامل با کلاس‌های gs-ag-* در همین بخش قابل تغییر است
+                   ========================================================= */
+
+        /* قبل از فعال شدن JS (یا اگر JS خطا داد) هم ظاهر شیشه‌ای داشته باشد */
+        select.glass-select-search,
+        select.glass-select-serch {
+            width: 100%;
+            font-size: 12px;
+            padding: .375rem .75rem;
+            color: rgba(255,255,255,.92);
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: .55rem;
+            background-color: rgba(255,255,255,.035);
+        }
+
+            select.glass-select-search option,
+            select.glass-select-serch option {
+                color: #fff;
+                background: #0b1c26;
+            }
+
+        .gs-ag {
+            position: relative;
+            width: 100%;
+            direction: rtl;
+        }
+
+        /* -------- TRIGGER (شبیه glass-select-ag) -------- */
+
+        .gs-ag-trigger {
+            width: 100%;
+            min-height: 2.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            padding: .375rem .75rem;
+            font-size: 12px;
+            text-align: right;
+            color: rgba(255,255,255,.92);
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: .55rem;
+            background-color: rgba(255,255,255,.035);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 -1px 0 rgba(255,255,255,.02);
+            cursor: pointer;
+            transition: border-color .3s ease, background-color .3s ease, box-shadow .3s ease, transform .2s ease;
+        }
+
+            .gs-ag-trigger:hover {
+                border-color: rgba(0,255,255,.40);
+                background-color: rgba(0,255,255,.055);
+                box-shadow: inset 0 0 .6rem rgba(0,255,255,.05), 0 0 .5rem rgba(0,255,255,.03);
+            }
+
+            .gs-ag-trigger:focus,
+            .gs-ag-open .gs-ag-trigger {
+                outline: none;
+                color: #fff;
+                background: linear-gradient(135deg, rgba(0,255,255,.09), rgba(255,255,255,.035));
+                border-color: rgba(0,255,255,.65);
+                box-shadow: inset 0 0 .7rem rgba(0,255,255,.06), 0 0 .8rem rgba(0,255,255,.08);
+            }
+
+        .gs-ag-text {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+            .gs-ag-text.gs-ag-placeholder {
+                color: rgba(255,255,255,.45);
+            }
+
+        .gs-ag-arrow {
+            flex: 0 0 auto;
+            color: #00ffff;
+            font-size: .75rem;
+            transition: transform .25s ease;
+        }
+
+        .gs-ag-open .gs-ag-arrow {
+            transform: rotate(180deg);
+        }
+
+        .gs-ag-disabled .gs-ag-trigger {
+            opacity: .5;
+            cursor: not-allowed;
+            border-color: transparent;
+        }
+
+        /* -------- PANEL (لیست آبشاری) -------- */
+
+        .gs-ag-panel {
+            position: fixed;
+            z-index: 1000050;
+            display: none;
+            flex-direction: column;
+            direction: rtl;
+            overflow: hidden;
+            color: rgba(255,255,255,.92);
+            border: 1px solid rgba(0,255,255,.30);
+            border-radius: .65rem;
+            background: linear-gradient(145deg, rgba(12,35,45,.92), rgba(5,17,25,.95));
+            backdrop-filter: blur(18px) saturate(150%);
+            -webkit-backdrop-filter: blur(18px) saturate(150%);
+            box-shadow: 0 1rem 2.5rem rgba(0,0,0,.45), 0 0 1.2rem rgba(0,255,255,.08), inset 0 1px 0 rgba(255,255,255,.08);
+            opacity: 0;
+            transform: translateY(-.35rem);
+            transition: opacity .16s ease, transform .16s ease;
+        }
+
+            .gs-ag-panel.gs-ag-panel-open {
+                display: flex;
+            }
+
+            .gs-ag-panel.gs-ag-panel-visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .gs-ag-panel.gs-ag-panel-up {
+                transform: translateY(.35rem);
+            }
+
+                .gs-ag-panel.gs-ag-panel-up.gs-ag-panel-visible {
+                    transform: translateY(0);
+                }
+
+            /* -------- SEARCH -------- */
+
+            .gs-ag-panel .gs-ag-search {
+                position: relative;
+                flex: 0 0 auto;
+                margin: 0;
+                padding: .45rem;
+                border-bottom: 1px solid rgba(255,255,255,.08);
+            }
+
+                .gs-ag-panel .gs-ag-search i {
+                    position: absolute;
+                    top: 50%;
+                    right: 1rem;
+                    left: auto;
+                    margin: 0;
+                    transform: translateY(-50%);
+                    color: rgba(0,255,255,.75);
+                    font-size: .72rem;
+                    line-height: 1;
+                    pointer-events: none;
+                    z-index: 1;
+                }
+
+                /* با !important تا استایل‌های عمومی input پروژه روی آن اثر نگذارد */
+                .gs-ag-panel .gs-ag-search input {
+                    display: block;
+                    width: 100% !important;
+                    height: 1.9rem !important;
+                    min-height: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 1.9rem 0 .6rem !important;
+                    font-size: 11.5px !important;
+                    line-height: 1.9rem !important;
+                    color: #fff !important;
+                    border: 1px solid rgba(255,255,255,.14) !important;
+                    border-radius: .45rem !important;
+                    background: rgba(255,255,255,.04) !important;
+                    box-shadow: inset 0 1px 0 rgba(255,255,255,.08) !important;
+                    outline: none !important;
+                    transform: none !important;
+                    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+                }
+
+                    .gs-ag-panel .gs-ag-search input:hover {
+                        border-color: rgba(0,255,255,.35) !important;
+                    }
+
+                    .gs-ag-panel .gs-ag-search input:focus {
+                        border-color: rgba(0,255,255,.60) !important;
+                        background: rgba(0,255,255,.05) !important;
+                        box-shadow: inset 0 0 .6rem rgba(0,255,255,.06), 0 0 .6rem rgba(0,255,255,.08) !important;
+                    }
+
+                    .gs-ag-panel .gs-ag-search input::placeholder {
+                        color: rgba(255,255,255,.38) !important;
+                    }
+
+        /* -------- LIST -------- */
+
+        .gs-ag-list {
+            flex: 1 1 auto;
+            min-height: 0;
+            max-height: 15rem;
+            overflow-y: auto;
+            margin: 0;
+            padding: .3rem;
+            list-style: none;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,255,255,.25) transparent;
+        }
+
+        .gs-ag-option {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .42rem .6rem;
+            margin-bottom: 2px;
+            font-size: 11.5px;
+            border-radius: .45rem;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background .15s ease, border-color .15s ease, color .15s ease;
+        }
+
+        .gs-ag-option-text {
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .gs-ag-option-check {
+            flex: 0 0 auto;
+            font-size: .8rem;
+            color: #00ffff;
+            opacity: 0;
+        }
+
+        .gs-ag-option.gs-ag-active {
+            background: rgba(0,255,255,.07);
+            border-color: rgba(0,255,255,.18);
+        }
+
+        .gs-ag-option.gs-ag-selected {
+            color: #00ffff;
+            background: rgba(0,255,255,.10);
+            border-color: rgba(0,255,255,.28);
+        }
+
+            .gs-ag-option.gs-ag-selected .gs-ag-option-check {
+                opacity: 1;
+            }
+
+        .gs-ag-option.gs-ag-option-placeholder {
+            color: rgba(255,255,255,.5);
+        }
+
+        .gs-ag-option.gs-ag-option-disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        .gs-ag-option mark {
+            padding: 0;
+            color: #ffc857;
+            background: transparent;
+        }
+
+        .gs-ag-group {
+            padding: .35rem .6rem .15rem;
+            font-size: .6rem;
+            color: rgba(255,255,255,.45);
+        }
+
+        .gs-ag-empty {
+            display: none;
+            padding: .9rem .6rem;
+            text-align: center;
+            font-size: 11px;
+            color: rgba(255,255,255,.45);
+        }
+
+            .gs-ag-empty.gs-ag-empty-show {
+                display: block;
+            }
+
+        /* =========================================================
+                    HEADER (هم‌سبک صفحه ساختار سازمانی)
+                    ========================================================= */
+
+        .ag-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .ag-header-icon {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            color: #00ffff;
+            font-size: 22px;
+            background: rgba(0,255,255,.08);
+            border: 1px solid rgba(0,255,255,.25);
+            box-shadow: 0 0 18px rgba(0,255,255,.08), inset 0 0 12px rgba(0,255,255,.03);
+        }
+
+        .ag-header-text h4 {
+            margin: 0 0 4px 0;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .ag-header-text p {
+            margin: 0;
+            color: rgba(255,255,255,.52);
+            font-size: 11px;
+        }
+
+
+        /* =========================================================
+                    STATS CARDS
+                    ========================================================= */
+
+        .ag-stats {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: .6rem;
+            margin-bottom: 1rem;
+        }
+
+        .ag-stat {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .7rem .8rem;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: .55rem;
+            background: rgba(255,255,255,.035);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+        }
+
+        .ag-stat-icon {
+            width: 2.2rem;
+            height: 2.2rem;
+            flex: 0 0 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .6rem;
+            font-size: 1rem;
+            border: 1px solid currentColor;
+            background: rgba(255,255,255,.03);
+        }
+
+        .ag-stat-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .ag-stat-label {
+            font-size: .62rem;
+            color: rgba(255,255,255,.55);
+        }
+
+        .ag-stat-info .ag-stat-icon {
+            color: #00ffff;
+        }
+
+        .ag-stat-success .ag-stat-icon {
+            color: #32d583;
+        }
+
+        .ag-stat-warning .ag-stat-icon {
+            color: #ffc857;
+        }
+
+        .ag-stat-danger .ag-stat-icon {
+            color: #ff5a4f;
+        }
+
+        .ag-stat-users .ag-stat-icon {
+            color: #b692f6;
+        }
+
+
+        /* =========================================================
+                    MOBILE
+                    ========================================================= */
+
+        @@media (max-width: 992px) {
+
+            .ag-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+    </style>
+    @*==========================AG STYLE============================*@
+    <style>
+        /* ================================================================
+           Dashboard Builder + Restore - Base
+        ================================================================ */
+
+        #dashboardBuilder,
+        #restoreDashboardCanvas {
+            --db-accent: #00ffff;
+            --db-accent-soft: rgba(0, 255, 255, .12);
+            --db-panel: rgba(8, 20, 31, .78);
+            --db-card: rgba(18, 35, 49, .72);
+            --db-border: rgba(255, 255, 255, .10);
+            --db-border-strong: rgba(0, 255, 255, .38);
+            --db-text: #edfaff;
+            --db-muted: #91a9b7;
+            --db-danger: #ff4d6d;
+            --db-success: #32d583;
+            --db-radius: .75rem;
+            --db-gap: .65rem;
+            position: relative;
+            width: 100%;
+            direction: rtl;
+            color: var(--db-text);
+            font-family: inherit;
+        }
+
+        #dashboardBuilder {
+            height: 100%;
+            min-height: 620px;
+            overflow: hidden;
+        }
+
+        #restoreDashboardCanvas {
+            min-height: 600px;
+            margin-top: 15px;
+            overflow: auto;
+        }
+
+            #dashboardBuilder *,
+            #restoreDashboardCanvas * {
+                box-sizing: border-box;
+            }
+
+            #dashboardBuilder button,
+            #dashboardBuilder input,
+            #dashboardBuilder select,
+            #dashboardBuilder textarea,
+            #restoreDashboardCanvas button,
+            #restoreDashboardCanvas input,
+            #restoreDashboardCanvas select,
+            #restoreDashboardCanvas textarea {
+                font-family: inherit !important;
+            }
+
+            #dashboardBuilder .bi,
+            #restoreDashboardCanvas .bi {
+                font-family: "bootstrap-icons" !important;
+                font-style: normal !important;
+                font-weight: normal !important;
+                line-height: 1 !important;
+                speak: none !important;
+                text-rendering: auto !important;
+                -webkit-font-smoothing: antialiased !important;
+            }
+
+
+        /* ================================================================
+           Toolbar
+        ================================================================ */
+
+        #dashboardBuilder .db-toolbar {
+            margin: 0 0 10px !important;
+            align-items: center;
+        }
+
+            #dashboardBuilder .db-toolbar > .col-xl-8,
+            #dashboardBuilder .db-toolbar > .col-xl-4 {
+                display: flex;
+                align-items: center;
+            }
+
+        #dashboardBuilder .db-toolbar-actions {
+            justify-content: flex-end;
+            gap: .45rem;
+        }
+
+        #dashboardBuilder .db-brand {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+        }
+
+            #dashboardBuilder .db-brand .glass-field-icon {
+                flex: 0 0 2.2rem;
+            }
+
+        #dashboardBuilder .db-save-btn {
+            width: 8rem !important;
+            margin: 0 !important;
+        }
+
+
+        /* ================================================================
+           Workspace
+        ================================================================ */
+
+        #dashboardBuilder .db-workspace {
+            height: calc(100% - 68px);
+            display: grid;
+            grid-template-columns: 250px minmax(0, 1fr);
+            gap: var(--db-gap);
+            position: relative;
+            min-height: 0;
+        }
+
+        #dashboardBuilder .db-library,
+        #dashboardBuilder .db-canvas-wrap,
+        #dashboardBuilder .db-settings,
+        #dashboardBuilder .db-canvas-body {
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+
+        /* ================================================================
+           Widget Library
+        ================================================================ */
+
+        #dashboardBuilder .db-library {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #dashboardBuilder .db-library-body,
+        #dashboardBuilder .db-settings-body,
+        #dashboardBuilder .db-canvas-body {
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        #dashboardBuilder .db-library-body {
+            display: flex;
+            flex-direction: column;
+            padding: .55rem !important;
+        }
+
+        #dashboardBuilder .db-library-search {
+            position: relative;
+            margin-bottom: .55rem;
+        }
+
+            #dashboardBuilder .db-library-search .glass-input-ag {
+                padding-right: 2rem !important;
+                margin: 0 !important;
+            }
+
+            #dashboardBuilder .db-library-search i {
+                position: absolute;
+                right: .65rem;
+                top: 50%;
+                transform: translateY(-50%);
+                z-index: 2;
+                color: var(--db-muted);
+                pointer-events: none;
+            }
+
+        #dashboardBuilder .db-widget-list {
+            overflow: auto;
+            min-height: 0;
+            padding: .1rem .15rem .5rem;
+        }
+
+        #dashboardBuilder .db-widget-item {
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+            width: 100%;
+            min-height: 3rem;
+            margin: .3rem 0;
+            padding: .45rem;
+            border: 1px solid transparent;
+            border-radius: .65rem;
+            background: rgba(255, 255, 255, .025);
+            cursor: grab;
+            user-select: none;
+            transition: .2s;
+        }
+
+            #dashboardBuilder .db-widget-item:hover,
+            #dashboardBuilder .db-widget-item.db-dragging {
+                border-color: var(--db-border-strong);
+                background: var(--db-accent-soft);
+            }
+
+            #dashboardBuilder .db-widget-item:active {
+                cursor: grabbing;
+            }
+
+        #dashboardBuilder .db-widget-icon {
+            width: 2rem;
+            height: 2rem;
+            display: grid;
+            place-items: center;
+            flex: 0 0 2rem;
+            border-radius: .55rem;
+            color: var(--db-accent);
+            background: var(--db-accent-soft);
+        }
+
+        #dashboardBuilder .db-widget-item strong {
+            display: block;
+            font-size: .72rem;
+        }
+
+        #dashboardBuilder .db-widget-item small {
+            display: block;
+            color: var(--db-muted);
+            font-size: .6rem;
+            margin-top: 2px;
+        }
+
+
+        /* ================================================================
+           Canvas Wrapper
+        ================================================================ */
+
+        #dashboardBuilder .db-canvas-wrap {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+            #dashboardBuilder .db-canvas-wrap > .glass-field-header {
+                flex: 0 0 auto;
+            }
+
+        #dashboardBuilder .db-canvas-tools {
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            color: var(--db-muted);
+            font-size: .65rem;
+        }
+
+        #dashboardBuilder .db-status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--db-success);
+            box-shadow: 0 0 8px var(--db-success);
+            margin-left: 5px;
+        }
+
+        #dashboardBuilder .db-canvas-body {
+            padding: .65rem !important;
+            display: flex;
+        }
+
+        #dashboardBuilder .db-canvas-scroll {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
+        #dashboardBuilder .db-canvas {
+            position: relative;
+            min-width: 900px;
+            min-height: 900px;
+            border: 1px dashed rgba(255, 255, 255, .11);
+            border-radius: .7rem;
+            background-color: rgba(0, 0, 0, .08);
+            background-image: linear-gradient( rgba(255, 255, 255, .035) 1px, transparent 1px ), linear-gradient( 90deg, rgba(255, 255, 255, .035) 1px, transparent 1px );
+            background-size: 24px 24px;
+            padding: 12px;
+        }
+
+
+        /* ================================================================
+           Restore Canvas
+        ================================================================ */
+
+        #restoreDashboardCanvas {
+            position: relative;
+            min-width: 900px;
+            min-height: 600px;
+            border: 1px dashed rgba(255, 255, 255, .11);
+            border-radius: .7rem;
+            background-color: rgba(0, 0, 0, .08);
+            background-image: linear-gradient( rgba(255, 255, 255, .035) 1px, transparent 1px ), linear-gradient( 90deg, rgba(255, 255, 255, .035) 1px, transparent 1px );
+            background-size: 24px 24px;
+            padding: 12px;
+        }
+
+
+        /* ================================================================
+           Empty Canvas
+        ================================================================ */
+
+        #dashboardBuilder .db-empty {
+            position: absolute;
+            inset: 30% 20%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            gap: .45rem;
+            color: var(--db-muted);
+            pointer-events: none;
+        }
+
+            #dashboardBuilder .db-empty i {
+                font-size: 2rem;
+                color: var(--db-accent);
+            }
+
+            #dashboardBuilder .db-empty strong {
+                font-size: .85rem;
+                color: var(--db-text);
+            }
+
+            #dashboardBuilder .db-empty span {
+                font-size: .65rem;
+            }
+
+
+        /* ================================================================
+           Dashboard Widgets
+        ================================================================ */
+
+        #dashboardBuilder .db-widget,
+        #restoreDashboardCanvas .db-widget {
+            position: absolute;
+            overflow: visible;
+            z-index: 2;
+            cursor: default;
+        }
+
+            #dashboardBuilder .db-widget > .glass-field-ag,
+            #restoreDashboardCanvas .db-widget > .glass-field-ag {
+                height: 100%;
+                width: 100%;
+                margin: 0 !important;
+                overflow: hidden;
+            }
+
+            #dashboardBuilder .db-widget.is-selected > .glass-field-ag {
+                border-color: var(--db-border-strong);
+                box-shadow: 0 0 0 1px rgba(0, 255, 255, .09), 0 0 22px rgba(0, 255, 255, .08);
+            }
+
+            #dashboardBuilder .db-widget.is-dragging {
+                z-index: 100;
+                opacity: .92;
+            }
+
+        #dashboardBuilder .db-widget-head,
+        #restoreDashboardCanvas .db-widget-head {
+            cursor: move;
+            touch-action: none;
+        }
+
+            #dashboardBuilder .db-widget-head .glass-field-heading,
+            #restoreDashboardCanvas .db-widget-head .glass-field-heading {
+                min-width: 0;
+            }
+
+            #dashboardBuilder .db-widget-head .glass-field-title,
+            #restoreDashboardCanvas .db-widget-head .glass-field-title {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+        #dashboardBuilder .db-widget-type,
+        #restoreDashboardCanvas .db-widget-type {
+            font-size: .58rem;
+            color: var(--db-muted);
+            white-space: nowrap;
+        }
+
+        #dashboardBuilder .db-widget-drag,
+        #restoreDashboardCanvas .db-widget-drag {
+            color: var(--db-muted);
+            cursor: grab;
+            margin-left: .35rem;
+        }
+
+        #dashboardBuilder .db-widget-body,
+        #restoreDashboardCanvas .db-widget-body {
+            height: calc(100% - 3.2rem);
+            overflow: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, .18) transparent;
+        }
+
+
+        /* ================================================================
+           Widget Actions
+        ================================================================ */
+
+        #dashboardBuilder .db-widget-actions {
+            position: absolute;
+            left: .45rem;
+            top: .4rem;
+            display: none;
+            align-items: center;
+            gap: .25rem;
+            z-index: 8;
+        }
+
+        #dashboardBuilder .db-widget.is-selected .db-widget-actions {
+            display: flex;
+        }
+
+        #dashboardBuilder .db-widget-action {
+            font-size: .99rem;
+            width: 1.8rem;
+            height: 1.8rem;
+            border: 1px solid var(--db-border);
+            border-radius: .5rem;
+            background: rgba(5, 15, 23, .86);
+            color: var(--db-text);
+            display: grid;
+            place-items: center;
+            cursor: pointer;
+        }
+
+            #dashboardBuilder .db-widget-action:hover {
+                border-color: var(--db-border-strong);
+                color: var(--db-accent);
+            }
+
+
+        /* ================================================================
+           Resize Handles
+        ================================================================ */
+
+        #dashboardBuilder .db-resize-handle {
+            position: absolute;
+            display: none;
+            width: 14px;
+            height: 14px;
+            z-index: 30;
+            background: rgba(0, 255, 255, .12);
+            border: 1px solid var(--db-accent);
+            border-radius: 3px;
+            box-shadow: 0 0 8px rgba(0, 255, 255, .18);
+        }
+
+        #dashboardBuilder .db-widget.is-resize-mode .db-resize-handle {
+            display: block;
+        }
+
+        #dashboardBuilder .db-resize-handle.db-resize-nw {
+            left: -5px;
+            top: -5px;
+            cursor: nwse-resize;
+        }
+
+        #dashboardBuilder .db-resize-handle.db-resize-ne {
+            right: -5px;
+            top: -5px;
+            cursor: nesw-resize;
+        }
+
+        #dashboardBuilder .db-resize-handle.db-resize-sw {
+            left: -5px;
+            bottom: -5px;
+            cursor: nesw-resize;
+        }
+
+        #dashboardBuilder .db-resize-handle.db-resize-se {
+            right: -5px;
+            bottom: -5px;
+            cursor: nwse-resize;
+        }
+
+        #dashboardBuilder .db-widget.is-resizing {
+            z-index: 200;
+            opacity: .94;
+        }
+
+
+        /* ================================================================
+           Settings Panel
+        ================================================================ */
+
+        #dashboardBuilder .db-settings {
+            position: absolute;
+            z-index: 500;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: min(16rem, calc(100% - 20px));
+            transform: translateX(105%);
+            transition: transform .28s cubic-bezier(.22, .61, .36, 1);
+            box-shadow: -20px 0 45px rgba(0, 0, 0, .32);
+            background: rgba(7, 17, 27, .96);
+        }
+
+            #dashboardBuilder .db-settings.is-open {
+                transform: translateX(0);
+            }
+
+        #dashboardBuilder .db-settings-body {
+            overflow: auto !important;
+            padding: .7rem !important;
+        }
+
+        #dashboardBuilder .db-setting-section {
+            margin-bottom: .7rem;
+            padding: .65rem;
+            border: 1px solid var(--db-border);
+            border-radius: .7rem;
+            background: rgba(255, 255, 255, .025);
+        }
+
+        #dashboardBuilder .db-setting-title {
+            font-size: .72rem;
+            color: var(--db-accent);
+            margin-bottom: .55rem;
+        }
+
+        #dashboardBuilder .db-setting-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .55rem;
+        }
+
+        #dashboardBuilder .db-field {
+            margin-bottom: .55rem;
+        }
+
+            #dashboardBuilder .db-field:last-child {
+                margin-bottom: 0;
+            }
+
+            #dashboardBuilder .db-field > label {
+                display: block;
+                font-size: .62rem;
+                color: var(--db-muted);
+                margin-bottom: .3rem;
+            }
+
+            #dashboardBuilder .db-field .glass-input-ag,
+            #dashboardBuilder .db-field .glass-select-ag,
+            #dashboardBuilder .db-field .glass-textarea-ag {
+                width: 100%;
+                margin: 0 !important;
+            }
+
+        #dashboardBuilder .db-check {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .65rem;
+            color: var(--db-text);
+            min-height: 2rem;
+        }
+
+
+        /* ================================================================
+           Chart Settings / Series
+        ================================================================ */
+
+        #dashboardBuilder .db-series {
+            border-top: 1px solid var(--db-border);
+            margin-top: .55rem;
+            padding-top: .55rem;
+        }
+
+            #dashboardBuilder .db-series:first-child {
+                border-top: 0;
+                margin-top: 0;
+                padding-top: 0;
+            }
+
+        #dashboardBuilder .db-series-head {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            margin-bottom: .35rem;
+        }
+
+            #dashboardBuilder .db-series-head strong {
+                font-size: .65rem;
+                flex: 1;
+            }
+
+        #dashboardBuilder .db-series-values {
+            width: 100%;
+            min-height: 2.2rem;
+            resize: vertical;
+        }
+
+        #dashboardBuilder .db-labels-input {
+            min-height: 4rem;
+            resize: vertical;
+        }
+
+
+        /* ================================================================
+           Settings Actions
+        ================================================================ */
+
+        #dashboardBuilder .db-settings-actions {
+            position: sticky;
+            bottom: -.7rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .45rem;
+            margin: 0 !important;
+            padding: .65rem 0 .1rem;
+            background: linear-gradient( transparent, rgba(7, 17, 27, .98) 25% );
+            z-index: 5;
+        }
+
+            #dashboardBuilder .db-settings-actions button {
+                margin: 0 !important;
+                width: 100% !important;
+            }
+
+        #dashboardBuilder .db-full-btn {
+            width: 100% !important;
+            margin-top: .4rem !important;
+        }
+
+
+        /* ================================================================
+           KPI / Progress
+        ================================================================ */
+
+        #dashboardBuilder .db-kpi-value,
+        #restoreDashboardCanvas .db-kpi-value {
+            font-weight: 700;
+            letter-spacing: .3px;
+        }
+
+        #dashboardBuilder .db-kpi-label,
+        #restoreDashboardCanvas .db-kpi-label {
+            font-size: .65rem;
+            color: var(--db-muted);
+            margin-top: .4rem;
+        }
+
+        #dashboardBuilder .db-progress,
+        #restoreDashboardCanvas .db-progress {
+            height: 8px;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, .08);
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+            #dashboardBuilder .db-progress i,
+            #restoreDashboardCanvas .db-progress i {
+                display: block;
+                height: 100%;
+                border-radius: 99px;
+            }
+
+
+        /* ================================================================
+           Chart
+        ================================================================ */
+
+        #dashboardBuilder .db-chart,
+        #restoreDashboardCanvas .db-chart {
+            width: 100%;
+            height: 100%;
+            min-height: 130px;
+        }
+
+        #dashboardBuilder .db-chart-placeholder,
+        #restoreDashboardCanvas .db-chart-placeholder {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: .5rem;
+            color: var(--db-muted);
+            font-size: .7rem;
+        }
+
+
+        /* ================================================================
+           Data Table
+        ================================================================ */
+
+        #dashboardBuilder .db-table-wrap,
+        #restoreDashboardCanvas .db-table-wrap {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-radius: .7rem;
+            background: transparent;
+        }
+
+        #dashboardBuilder .db-table,
+        #restoreDashboardCanvas .db-table {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            border-collapse: separate;
+            border-spacing: 0;
+            direction: rtl;
+            color: #fff;
+            font-size: .62rem;
+            table-layout: fixed;
+        }
+
+            #dashboardBuilder .db-table thead,
+            #restoreDashboardCanvas .db-table thead {
+                display: table;
+                width: 100%;
+                table-layout: fixed;
+            }
+
+            #dashboardBuilder .db-table th,
+            #restoreDashboardCanvas .db-table th {
+                height: 2.5rem;
+                padding: .75rem 1rem;
+                text-align: center;
+                vertical-align: middle;
+                font-weight: 600;
+                white-space: nowrap;
+                color: #ecfbff;
+                background: linear-gradient( 135deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .045) );
+                border-top: 1px solid rgba(255, 255, 255, .18);
+                border-bottom: 1px solid rgba(0, 255, 255, .20);
+                border-left: 1px solid rgba(255, 255, 255, .08);
+                backdrop-filter: blur(15px) saturate(150%);
+                -webkit-backdrop-filter: blur(15px) saturate(150%);
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14);
+            }
+
+            #dashboardBuilder .db-table tbody,
+            #restoreDashboardCanvas .db-table tbody {
+                display: block;
+                width: 100%;
+                min-height: 0;
+                height: 100%;
+                overflow-y: auto;
+                overflow-x: hidden;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(255, 255, 255, .18) transparent;
+            }
+
+                #dashboardBuilder .db-table tbody tr,
+                #restoreDashboardCanvas .db-table tbody tr {
+                    display: table;
+                    width: 100%;
+                    table-layout: fixed;
+                    transition: background .25s ease;
+                }
+
+            #dashboardBuilder .db-table td,
+            #restoreDashboardCanvas .db-table td {
+                height: 2.5rem;
+                padding: .5rem .75rem;
+                text-align: center;
+                vertical-align: middle;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                background: transparent;
+                color: rgba(255, 255, 255, .88);
+                border: none;
+                border-bottom: 1px solid rgba(255, 255, 255, .06);
+                box-sizing: border-box;
+                transition: background .25s ease, color .25s ease, border-color .25s ease;
+            }
+
+                #dashboardBuilder .db-table td:not(:last-child),
+                #restoreDashboardCanvas .db-table td:not(:last-child) {
+                    border-left: 1px solid rgba(255, 255, 255, .045);
+                }
+
+            #dashboardBuilder .db-table tbody tr:last-child td,
+            #restoreDashboardCanvas .db-table tbody tr:last-child td {
+                border-bottom: none;
+            }
+
+            #dashboardBuilder .db-table tbody tr:hover td,
+            #restoreDashboardCanvas .db-table tbody tr:hover td {
+                color: #f2fcff;
+                border-bottom-color: rgba(0, 255, 255, .10);
+            }
+
+            #dashboardBuilder .db-table tbody::-webkit-scrollbar,
+            #restoreDashboardCanvas .db-table tbody::-webkit-scrollbar {
+                width: 5px;
+            }
+
+            #dashboardBuilder .db-table tbody::-webkit-scrollbar-track,
+            #restoreDashboardCanvas .db-table tbody::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            #dashboardBuilder .db-table tbody::-webkit-scrollbar-thumb,
+            #restoreDashboardCanvas .db-table tbody::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, .18);
+                border-radius: 10px;
+            }
+
+                #dashboardBuilder .db-table tbody::-webkit-scrollbar-thumb:hover,
+                #restoreDashboardCanvas .db-table tbody::-webkit-scrollbar-thumb:hover {
+                    background: rgba(0, 255, 255, .32);
+                }
+
+
+        /* ================================================================
+           Data Widget
+        ================================================================ */
+
+        #dashboardBuilder .db-data-widget,
+        #restoreDashboardCanvas .db-data-widget {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: .15rem .2rem;
+            direction: rtl;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.18) transparent;
+        }
+
+            #dashboardBuilder .db-data-widget::-webkit-scrollbar,
+            #restoreDashboardCanvas .db-data-widget::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            #dashboardBuilder .db-data-widget::-webkit-scrollbar-track,
+            #restoreDashboardCanvas .db-data-widget::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            #dashboardBuilder .db-data-widget::-webkit-scrollbar-thumb,
+            #restoreDashboardCanvas .db-data-widget::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,.18);
+                border-radius: 10px;
+            }
+
+        #dashboardBuilder .db-data-row,
+        #restoreDashboardCanvas .db-data-row {
+            width: 100%;
+            min-height: 2.45rem;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .45rem .65rem;
+            border-bottom: 1px solid rgba(255,255,255,.065);
+            transition: background .25s ease, border-color .25s ease;
+        }
+
+            #dashboardBuilder .db-data-row:last-child,
+            #restoreDashboardCanvas .db-data-row:last-child {
+                border-bottom: none;
+            }
+
+            #dashboardBuilder .db-data-row:hover,
+            #restoreDashboardCanvas .db-data-row:hover {
+                background: rgba(255,255,255,.035);
+                border-bottom-color: rgba(0,255,255,.15);
+            }
+
+        #dashboardBuilder .db-data-name,
+        #restoreDashboardCanvas .db-data-name {
+            flex: 1 1 auto;
+            min-width: 0;
+            text-align: right;
+            color: rgba(255,255,255,.78);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #dashboardBuilder .db-data-value,
+        #restoreDashboardCanvas .db-data-value {
+            flex: 0 0 auto;
+            text-align: left;
+            font-weight: 700;
+            white-space: nowrap;
+            direction: rtl;
+            text-shadow: 0 0 10px rgba(0,255,255,.18);
+        }
+
+
+        /* ================================================================
+           Text / List
+        ================================================================ */
+
+        #dashboardBuilder .db-text-content,
+        #restoreDashboardCanvas .db-text-content {
+            line-height: 1.9;
+            white-space: normal;
+        }
+
+        #dashboardBuilder .db-list-content,
+        #restoreDashboardCanvas .db-list-content {
+            margin: 0;
+            padding-right: 1.1rem;
+            line-height: 2;
+        }
+
+
+        /* ================================================================
+           Utility
+        ================================================================ */
+
+        #dashboardBuilder .scrollbar,
+        #restoreDashboardCanvas .scrollbar {
+            min-height: 0;
+        }
+
+
+        /* ================================================================
+           Responsive
+        ================================================================ */
+
+        @@media (max-width: 1100px) {
+
+            #dashboardBuilder .db-workspace {
+                grid-template-columns: 220px minmax(0, 1fr);
+            }
+        }
+
+        @@media (max-width: 850px) {
+
+            #dashboardBuilder .db-workspace {
+                grid-template-columns: 1fr;
+            }
+
+            #dashboardBuilder .db-library {
+                max-height: 250px;
+            }
+
+            #dashboardBuilder .db-settings {
+                width: min(390px, 95%);
+            }
+        }
+
+
+
+        #restoreDashboardCanvas .highcharts-legend-item:hover text {
+            fill: #00ffff !important;
+            color: #00ffff !important;
+        }
+    </style>
+    <style>
+        #restoreDashboardCanvas {
+            position: relative;
+            width: 100%;
+            min-height: 600px;
+            margin-top: 15px;
+            overflow: auto;
+        }
+
+            #restoreDashboardCanvas .db-widget {
+                position: absolute;
+                box-sizing: border-box;
+            }
+
+            #restoreDashboardCanvas .glass-field-ag {
+                width: 100%;
+                height: 100%;
+            }
+
+            #restoreDashboardCanvas .glass-field-body {
+                min-height: 0;
+            }
+
+            #restoreDashboardCanvas .db-chart {
+                width: 100%;
+                height: 100%;
+                min-height: 0;
+            }
+    </style>
+</head>
+<body>
+    <div class="tab-content tab-AG" id="pills-tabContent">
+
+
+        <div class="row row-input-AG">
+
+
+            <div class="col-xl-3">
+                <label class="glass-label-ag">نوع جلسه</label>
+                <select style="margin-bottom:0px !important" class="glass-select-ag" id="restoreDashboardSelect">
+                    <option value="0">انتخاب کنید...</option>
+                </select>
+            </div>
+            <div class="col-xl-2">
+                <button type="button"
+                        id="btnRestoreDashboard"
+                        class="glass-btn-ag glass-btn-ag-primary"
+                        style="width:100%;">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                    <p>بازگردانی داشبورد</p>
+                </button>
+            </div>
+
+        </div>
+        <div id="restoreDashboardCanvas"
+             class="restore-dashboard-canvas">
+        </div>
+
+    </div>
+    <script src="~/Scripts/highcharts.js"></script>
+    <script src="~/Scripts/highcharts-more.js"></script>
+    <script src="~/Scripts/highcharts-3d.js"></script>
+
+    <script>
+        (function () {
+
+            'use strict';
+
+            const select = document.getElementById('restoreDashboardSelect');
+            const restoreButton = document.getElementById('btnRestoreDashboard');
+            const canvas = document.getElementById('restoreDashboardCanvas');
+
+            if (!select || !restoreButton || !canvas) return;
+
+
+            /* =========================================================
+               Configuration
+            ========================================================= */
+
+            const CFG = {
+                columns: 12,
+                rowHeight: 34,
+                gap: 10,
+                canvasPadding: 12
+            };
+
+            const CHART_COLORS = [
+                '#00BFFF',
+                '#008CFF',
+                '#00A8D6',
+                '#00C8C8',
+                '#00D9A5',
+                '#00E676',
+                '#39D353',
+                '#7CFF4F'
+            ];
+
+
+            /* =========================================================
+               Load Dashboard List
+            ========================================================= */
+
+            loadDashboardList();
+
+
+            function loadDashboardList() {
+
+                fetch('/Setting/Orders/GetDashboardAIList', {
+                    method: 'GET',
+                    cache: 'no-cache'
+                })
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (result) {
+
+                        if (!result.success) {
+                            throw new Error(
+                                result.message || 'خطا در دریافت لیست داشبوردها'
+                            );
+                        }
+
+                        select.innerHTML =
+                            '<option value="">یک داشبورد را انتخاب کنید</option>';
+
+                        (result.data || []).forEach(function (dashboard) {
+
+                            const option = document.createElement('option');
+
+                            option.value = dashboard.ID;
+                            option.textContent = dashboard.DashboardName;
+
+                            select.appendChild(option);
+
+                        });
+
+                    })
+                    .catch(function (error) {
+
+                        console.error(error);
+
+                        select.innerHTML =
+                            '<option value="">خطا در دریافت داشبوردها</option>';
+
+                    });
+
+            }
+
+
+            /* =========================================================
+               Restore
+            ========================================================= */
+
+            restoreButton.addEventListener('click', function () {
+
+                const id = select.value;
+
+                if (!id) {
+                    alert('لطفاً یک داشبورد را انتخاب کنید.');
+                    return;
+                }
+
+                restoreButton.disabled = true;
+
+                fetch(
+                    '/Setting/Orders/GetDashboardAIById?id=' +
+                    encodeURIComponent(id),
+                    {
+                        method: 'GET',
+                        cache: 'no-cache'
+                    }
+                )
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (result) {
+
+                        if (!result.success) {
+                            throw new Error(
+                                result.message || 'داشبورد پیدا نشد.'
+                            );
+                        }
+
+                        const dashboard =
+                            typeof result.config === 'string'
+                                ? JSON.parse(result.config)
+                                : result.config;
+
+                        renderDashboard(dashboard);
+
+                    })
+                    .catch(function (error) {
+
+                        console.error(error);
+
+                        alert(
+                            error.message ||
+                            'خطا در بازگردانی داشبورد'
+                        );
+
+                    })
+                    .finally(function () {
+
+                        restoreButton.disabled = false;
+
+                    });
+
+            });
+
+
+            /* =========================================================
+               Render Dashboard
+            ========================================================= */
+
+            function renderDashboard(dashboard) {
+
+                canvas.innerHTML = '';
+                canvas.style.position = 'relative';
+                if (
+                    !dashboard ||
+                    !Array.isArray(dashboard.widgets)
+                ) {
+                    return;
+                }
+
+                const metrics = gridMetrics();
+
+                dashboard.widgets.forEach(function (widget) {
+
+                    const element =
+                        createWidget(widget, metrics);
+
+                    if (element) {
+                        canvas.appendChild(element);
+                    }
+
+                });
+
+                updateCanvasHeight(
+                    dashboard.widgets,
+                    metrics
+                );
+
+            }
+
+
+            /* =========================================================
+               Grid
+            ========================================================= */
+
+            function gridMetrics() {
+
+                const width =
+                    Math.max(
+                        canvas.clientWidth || 900,
+                        900
+                    ) -
+                    CFG.canvasPadding * 2;
+
+                return {
+                    cw:
+                        (
+                            width -
+                            CFG.gap * (CFG.columns - 1)
+                        ) /
+                        CFG.columns,
+
+                    rh:
+                        CFG.rowHeight
+                };
+
+            }
+
+
+            function pxRect(w) {
+
+                const m = gridMetrics();
+
+                return {
+
+                    left:
+                        CFG.canvasPadding +
+                        w.x * (m.cw + CFG.gap),
+
+                    top:
+                        CFG.canvasPadding +
+                        w.y * (m.rh + CFG.gap),
+
+                    width:
+                        w.w * m.cw +
+                        (w.w - 1) * CFG.gap,
+
+                    height:
+                        w.h * m.rh +
+                        (w.h - 1) * CFG.gap
+
+                };
+
+            }
+
+
+            function updateCanvasHeight(widgets, metrics) {
+
+                let maxBottom = 0;
+
+                widgets.forEach(function (w) {
+
+                    const bottom =
+                        Number(w.y || 0) +
+                        Number(w.h || 1);
+
+                    if (bottom > maxBottom) {
+                        maxBottom = bottom;
+                    }
+
+                });
+
+                const height =
+                    CFG.canvasPadding * 2 +
+                    maxBottom * metrics.rh +
+                    Math.max(0, maxBottom - 1) * CFG.gap;
+
+                canvas.style.height =
+                    Math.max(height, 600) + 'px';
+
+                canvas.style.minHeight =
+                    Math.max(height, 600) + 'px';
+
+            }
+
+
+            /* =========================================================
+               Create Widget
+               همان ساختار Builder
+            ========================================================= */
+
+            function createWidget(widget, metrics) {
+
+                if (!widget) return null;
+
+                const element =
+                    document.createElement('article');
+
+                element.className =
+                    'db-widget';
+                element.style.position = 'absolute';
+                element.dataset.id =
+                    widget.id || '';
+
+                element.dataset.type =
+                    widget.type || '';
+
+
+                const x =
+                    Number(widget.x || 0);
+
+                const y =
+                    Number(widget.y || 0);
+
+                const w =
+                    Math.max(
+                        Number(widget.w || 1),
+                        1
+                    );
+
+                const h =
+                    Math.max(
+                        Number(widget.h || 1),
+                        1
+                    );
+
+
+                element.style.left =
+                    CFG.canvasPadding +
+                    x * (metrics.cw + CFG.gap) +
+                    'px';
+
+                element.style.top =
+                    CFG.canvasPadding +
+                    y * (metrics.rh + CFG.gap) +
+                    'px';
+
+                element.style.width =
+                    w * metrics.cw +
+                    (w - 1) * CFG.gap +
+                    'px';
+
+                element.style.height =
+                    h * metrics.rh +
+                    (h - 1) * CFG.gap +
+                    'px';
+
+
+                const config =
+                    widget.config || {};
+
+                const core =
+                    config.core || {};
+
+                const registry =
+                    getWidgetInfo(widget.type);
+
+
+                const title =
+                    core.title ||
+                    registry.title;
+
+                const subtitle =
+                    core.subtitle ||
+                    registry.description;
+
+
+                /*
+                 * دقیقاً همان ساختار renderCanvas Builder
+                 */
+
+                element.innerHTML = `
+
+                <div class="glass-field-ag">
+
+                    <div class="glass-field-header db-widget-head">
+
+                        <div class="glass-field-icon">
+                            <i class="bi ${registry.icon}"></i>
+                        </div>
+
+                        <div class="glass-field-heading">
+
+                            <div class="glass-field-title">
+                                ${escapeHtml(title)}
+                            </div>
+
+                            <div class="glass-field-subtitle">
+                                ${escapeHtml(subtitle)}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="glass-field-body db-widget-body">
+
+                        ${widgetInner(widget)}
+
+                    </div>
+
+                </div>
+
+            `;
+
+
+                canvas.appendChild(element);
+
+
+                /*
+                 * نمودار بعد از قرار گرفتن داخل DOM ساخته می‌شود
+                 */
+
+                if (
+                    [
+                        'lineChart',
+                        'barChart',
+                        'pieChart'
+                    ].includes(widget.type)
+                ) {
+
+                    const chart =
+                        element.querySelector('.db-chart');
+
+                    if (chart) {
+                        renderChart(widget, chart);
+                    }
+
+                }
+
+
+                return element;
+
+            }
+
+
+            /* =========================================================
+               Widget Info
+               معادل Registry برای Restore
+            ========================================================= */
+
+            function getWidgetInfo(type) {
+
+                const registry = {
+
+                    kpi: {
+                        title: 'شاخص کلیدی',
+                        description: 'نمایش یک مقدار مهم',
+                        icon: 'bi-speedometer2'
+                    },
+
+                    progress: {
+                        title: 'پیشرفت',
+                        description: 'نمایش درصد پیشرفت',
+                        icon: 'bi-bar-chart-line'
+                    },
+
+                    lineChart: {
+                        title: 'نمودار خطی',
+                        description: 'نمایش روند داده‌ها',
+                        icon: 'bi-graph-up'
+                    },
+
+                    barChart: {
+                        title: 'نمودار مقایسه‌ای',
+                        description: 'مقایسه داده‌ها',
+                        icon: 'bi-bar-chart'
+                    },
+
+                    pieChart: {
+                        title: 'نمودار سهم',
+                        description: 'توزیع داده‌ها',
+                        icon: 'bi-pie-chart'
+                    },
+
+                    table: {
+                        title: 'جدول',
+                        description: 'نمایش داده‌های جدولی',
+                        icon: 'bi-table'
+                    },
+
+                    data: {
+                        title: 'داده',
+                        description: 'نمایش چند مقدار',
+                        icon: 'bi-list-columns'
+                    },
+
+                    text: {
+                        title: 'متن',
+                        description: 'نمایش متن آزاد',
+                        icon: 'bi-fonts'
+                    },
+
+                    list: {
+                        title: 'لیست',
+                        description: 'نمایش فهرست اطلاعات',
+                        icon: 'bi-list-ul'
+                    }
+
+                };
+
+                return registry[type] || {
+                    title: 'ویجت',
+                    description: '',
+                    icon: 'bi-grid'
+                };
+
+            }
+
+
+            /* =========================================================
+               Widget Inner
+               تقریباً همان widgetInner Builder
+            ========================================================= */
+
+            function widgetInner(widget) {
+
+                const c =
+                    widget.config || {};
+
+                const data =
+                    c.data || {};
+
+                const visual =
+                    c.visual || {};
+
+
+                /* ---------------- KPI ---------------- */
+
+                if (widget.type === 'kpi') {
+
+                    return `
+
+                    <div class="db-kpi-value"
+                         style="
+                            font-size:${Number(visual.fontSize) || 28}px;
+                            text-align:${visual.align || 'right'};
+                            color:${escapeHtml(
+                        visual.accent || '#00ffff'
+                    )};
+                         ">
+
+                        ${escapeHtml(data.value || '')}
+
+                    </div>
+
+                    <div class="db-kpi-label"
+                         style="
+                            text-align:${visual.align || 'right'};
+                         ">
+
+                        ${escapeHtml(data.label || '')}
+
+                    </div>
+
+                `;
+
+                }
+
+
+                /* ---------------- Progress ---------------- */
+
+                if (widget.type === 'progress') {
+
+                    const value =
+                        clamp(
+                            Number(data.value) || 0,
+                            0,
+                            100
+                        );
+
+                    return `
+
+                    <div class="db-kpi-value"
+                         style="
+                            font-size:${Number(visual.fontSize) || 22}px;
+                            text-align:${visual.align || 'right'};
+                         ">
+
+                        ${escapeHtml(value)}%
+
+                    </div>
+
+                    <div class="db-progress">
+
+                        <i style="
+                            width:${value}%;
+                            background:${escapeHtml(
+                        visual.accent || '#00ffff'
+                    )};
+                        "></i>
+
+                    </div>
+
+                    <div class="db-kpi-label">
+
+                        ${escapeHtml(data.label || '')}
+
+                    </div>
+
+                `;
+
+                }
+
+
+                /* ---------------- Charts ---------------- */
+
+                if (
+                    [
+                        'lineChart',
+                        'barChart',
+                        'pieChart'
+                    ].includes(widget.type)
+                ) {
+
+                    return `
+                    <div
+                        class="db-chart"
+                        data-chart-id="${escapeHtml(widget.id || '')}">
+                    </div>
+                `;
+
+                }
+
+
+                /* ---------------- Data ---------------- */
+
+                if (widget.type === 'data') {
+                    return renderDataWidget(widget);
+                }
+
+
+                /* ---------------- Table ---------------- */
+
+                if (widget.type === 'table') {
+                    return renderTable(widget);
+                }
+
+
+                /* ---------------- Text ---------------- */
+
+                if (widget.type === 'text') {
+
+                    return `
+
+                    <div class="db-text-content"
+                         style="
+                            font-size:${Number(visual.fontSize) || 13}px;
+                            text-align:${visual.align || 'right'};
+                         ">
+
+                        ${escapeHtml(
+                        data.text || ''
+                    ).replace(/\n/g, '<br>')}
+
+                    </div>
+
+                `;
+
+                }
+
+
+                /* ---------------- List ---------------- */
+
+                if (widget.type === 'list') {
+
+                    return `
+
+                    <ul class="db-list-content"
+                        style="
+                            font-size:${Number(visual.fontSize) || 11}px;
+                        ">
+
+                        ${(data.items || []).map(function (item) {
+
+                        return `
+                                <li>
+                                    ${escapeHtml(
+                            typeof item === 'string'
+                                ? item
+                                : (
+                                    item.label ||
+                                    item.title ||
+                                    ''
+                                )
+                        )}
+                                </li>
+                            `;
+
+                    }).join('')}
+
+                    </ul>
+
+                `;
+
+                }
+
+
+                return '';
+
+            }
+
+
+            /* =========================================================
+               Table
+               دقیقاً مطابق Builder
+            ========================================================= */
+
+            function renderTable(widget) {
+
+                const data =
+                    widget.config &&
+                        widget.config.data
+                        ? widget.config.data
+                        : {};
+
+                const cols =
+                    Array.isArray(data.columns)
+                        ? data.columns
+                        : [];
+
+                const rows =
+                    Array.isArray(data.rows)
+                        ? data.rows
+                        : [];
+
+
+                return `
+
+                <div class="db-table-wrap">
+
+                    <table class="db-table">
+
+                        <thead>
+
+                            <tr>
+
+                                ${cols.map(function (column) {
+
+                    return `
+                                        <th>
+                                            ${escapeHtml(column)}
+                                        </th>
+                                    `;
+
+                }).join('')}
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            ${rows.map(function (row) {
+
+                    return `
+
+                                    <tr>
+
+                                        ${cols.map(function (_, i) {
+
+                        const value =
+                            row[i] == null
+                                ? ''
+                                : row[i];
+
+                        return `
+
+                                                <td title="${escapeHtml(value)}">
+                                                    ${escapeHtml(value)}
+                                                </td>
+
+                                            `;
+
+                    }).join('')}
+
+                                    </tr>
+
+                                `;
+
+                }).join('')}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            `;
+
+            }
+
+
+            /* =========================================================
+               Data Widget
+               دقیقاً مطابق Builder
+            ========================================================= */
+
+            function renderDataWidget(widget) {
+
+                const data =
+                    widget.config &&
+                        widget.config.data
+                        ? widget.config.data
+                        : {};
+
+                const visual =
+                    widget.config &&
+                        widget.config.visual
+                        ? widget.config.visual
+                        : {};
+
+
+                const items =
+                    Array.isArray(data.items)
+                        ? data.items
+                        : [];
+
+
+                const fontSize =
+                    Number(visual.fontSize) || 11;
+
+                const accent =
+                    visual.accent || '#00ffff';
+
+
+                return `
+
+                <div class="db-data-widget"
+                     style="font-size:${fontSize}px">
+
+                    ${items.map(function (item) {
+
+                    return `
+
+                            <div class="db-data-row">
+
+                                <div class="db-data-name"
+                                     title="${escapeHtml(
+                        item.name || ''
+                    )}">
+
+                                    ${escapeHtml(
+                        item.name || ''
+                    )}
+
+                                </div>
+
+                                <div class="db-data-value"
+                                     style="color:${escapeHtml(accent)}"
+                                     title="${escapeHtml(
+                        item.value == null
+                            ? ''
+                            : item.value
+                    )}">
+
+                                    ${escapeHtml(
+                        item.value == null
+                            ? ''
+                            : item.value
+                    )}
+
+                                </div>
+
+                            </div>
+
+                        `;
+
+                }).join('')}
+
+                </div>
+
+            `;
+
+            }
+
+
+            /* =========================================================
+               Highcharts
+               تنظیمات ذخیره‌شده حفظ می‌شوند
+            ========================================================= */
+
+            function renderChart(widget, container) {
+
+                if (!container) return;
+
+                if (container.__dbChart) {
+                    try {
+                        container.__dbChart.destroy();
+                    } catch (ignore) { }
+
+                    container.__dbChart = null;
+                }
+
+                if (!window.Highcharts) {
+                    container.innerHTML =
+                        '<div class="db-chart-placeholder">' +
+                        '<i class="bi bi-exclamation-triangle"></i>' +
+                        '<span>Highcharts بارگذاری نشده است.</span>' +
+                        '</div>';
+                    return;
+                }
+
+                const config = widget.config || {};
+                const d = config.data || {};
+                const v = config.visual || {};
+
+                /* ============================================================
+                   نوع نمودار
+                   ============================================================ */
+
+                let type = d.chartType || 'line';
+
+                if (widget.type === 'lineChart') {
+
+                    type = d.chartType || 'line';
+
+                }
+                else if (widget.type === 'barChart') {
+
+                    type =
+                        d.barDirection === 'horizontal'
+                            ? 'bar'
+                            : 'column';
+
+                }
+                else if (widget.type === 'pieChart') {
+
+                    type = 'pie';
+
+                }
+
+
+                /* ============================================================
+                   رنگ سری‌ها
+                   ============================================================ */
+
+                function getSeriesColor(series, index) {
+
+                    if (
+                        series &&
+                        series.customColor === true &&
+                        series.color
+                    ) {
+                        return series.color;
+                    }
+
+                    return CHART_COLORS[
+                        index % CHART_COLORS.length
+                    ];
+                }
+
+
+                /* ============================================================
+                   سری‌ها
+                   ============================================================ */
+
+                const sourceSeries =
+                    Array.isArray(d.series)
+                        ? d.series
+                        : [];
+
+                const series =
+                    sourceSeries.map(function (item, index) {
+
+                        return {
+                            name:
+                                item.name ||
+                                ('سری ' + (index + 1)),
+
+                            data:
+                                Array.isArray(item.values)
+                                    ? item.values.map(Number)
+                                    : [],
+
+                            colors:
+                                Array.isArray(item.colors)
+                                    ? item.colors
+                                    : [],
+
+                            color:
+                                getSeriesColor(item, index),
+
+                            marker: {
+                                enabled:
+                                    d.marker !== false
+                            },
+
+                            shadow:
+                                !!d.shadow
+                        };
+
+                    });
+
+
+                /* ============================================================
+                   Legend
+                   ============================================================ */
+
+                const position =
+                    d.legendPosition || 'bottom';
+
+                const horizontalLegend =
+                    position === 'top' ||
+                    position === 'bottom';
+
+
+                /* ============================================================
+                   Options
+                   ============================================================ */
+
+                const options = {
+
+                    chart: {
+
+                        type: type,
+
+                        backgroundColor:
+                            'transparent',
+
+                        animation: false,
+
+                        spacing: [
+                            8,
+                            8,
+                            8,
+                            8
+                        ],
+
+                        style: {
+                            fontFamily: 'inherit'
+                        }
+                    },
+
+
+                    title: {
+                        text: null
+                    },
+
+
+                    credits: {
+                        enabled: false
+                    },
+
+
+                    accessibility: {
+                        enabled: false
+                    },
+
+
+                    /* ========================================================
+                       Legend
+                       ======================================================== */
+
+                    legend: {
+
+                        enabled:
+                            d.legend !== false,
+
+                        align:
+                            position === 'left'
+                                ? 'left'
+                                : position === 'right'
+                                    ? 'right'
+                                    : 'center',
+
+                        verticalAlign:
+                            position === 'top'
+                                ? 'top'
+                                : position === 'bottom'
+                                    ? 'bottom'
+                                    : 'middle',
+
+                        layout:
+                            horizontalLegend
+                                ? 'horizontal'
+                                : 'vertical',
+
+                        itemStyle: {
+                            color: '#d5e8ee',
+                            fontFamily: 'inherit',
+                            fontSize: '10px',
+                            fontWeight: 'normal'
+                        }
+                    },
+
+
+                    /* ========================================================
+                       X Axis
+                       ======================================================== */
+
+                    xAxis: {
+
+                        categories:
+                            Array.isArray(d.labels)
+                                ? d.labels
+                                : [],
+
+                        title: {
+
+                            text:
+                                d.xTitle || null,
+
+                            style: {
+                                color: '#a9c0cc',
+                                fontFamily: 'inherit'
+                            }
+                        },
+
+                        labels: {
+
+                            style: {
+                                color: '#b2c5ce',
+                                fontFamily: 'inherit',
+                                fontSize: '9px'
+                            }
+                        },
+
+                        gridLineWidth:
+                            d.grid === false
+                                ? 0
+                                : 1,
+
+                        gridLineColor:
+                            'rgba(255,255,255,.07)',
+
+                        lineColor:
+                            'rgba(255,255,255,.12)'
+                    },
+
+
+                    /* ========================================================
+                       Y Axis
+                       ======================================================== */
+
+                    yAxis: {
+
+                        min:
+                            d.yMin === '' ||
+                                d.yMin == null
+                                ? undefined
+                                : Number(d.yMin),
+
+                        max:
+                            d.yMax === '' ||
+                                d.yMax == null
+                                ? undefined
+                                : Number(d.yMax),
+
+                        title: {
+
+                            text:
+                                d.yTitle || null,
+
+                            style: {
+                                color: '#a9c0cc',
+                                fontFamily: 'inherit'
+                            }
+                        },
+
+                        labels: {
+
+                            style: {
+                                color: '#b2c5ce',
+                                fontFamily: 'inherit',
+                                fontSize: '9px'
+                            }
+                        },
+
+                        gridLineWidth:
+                            d.grid === false
+                                ? 0
+                                : 1,
+
+                        gridLineColor:
+                            'rgba(255,255,255,.07)'
+                    },
+
+
+                    /* ========================================================
+   Tooltip
+   ======================================================== */
+
+                    tooltip: {
+
+                        enabled:
+                            d.tooltip !== false,
+
+                        shared:
+                            type !== 'pie',
+
+                        useHTML: true,
+
+                        backgroundColor:
+                            'rgba(8, 20, 31, .96)',
+
+                        borderColor:
+                            'rgba(0, 255, 255, .45)',
+
+                        borderWidth: 1,
+
+                        borderRadius: 10,
+
+                        style: {
+                            color: '#edfaff',
+                            fontFamily: 'inherit',
+                            fontSize: '11px',
+                            fontWeight: '400'
+                        },
+
+                        headerFormat:
+                            '<span style="color:#91a9b7">{point.key}</span><br/>',
+
+                        pointFormat:
+                            '<div style="margin-top:3px;">' +
+                            '<span style="color:#edfaff">{series.name}</span>: ' +
+                            '<b style="color:#00ffff">{point.y}</b>' +
+                            '</div>'
+                    },
+
+
+                    /* ========================================================
+                       Plot Options
+                       ======================================================== */
+
+                    plotOptions: {
+
+                        series: {
+
+                            animation: false,
+
+                            lineWidth:
+                                Number(v.lineWidth) || 3,
+
+                            shadow:
+                                !!d.shadow,
+
+                            stacking:
+                                d.stacked
+                                    ? 'normal'
+                                    : undefined,
+
+                            dataLabels: {
+
+                                enabled:
+                                    d.dataLabels === true,
+
+                                style: {
+
+                                    fontFamily: 'inherit',
+
+                                    textOutline:
+                                        'none',
+
+                                    color:
+                                        '#fff'
+                                }
+                            }
+                        },
+
+
+                        /* ----------------------------------------------------
+                           Pie
+                           ---------------------------------------------------- */
+
+                        pie: {
+
+                            showInLegend:
+                                d.legend === true,
+
+                            borderWidth: 0,
+
+                            borderColor:
+                                'transparent',
+
+                            innerSize:
+                                d.donut === true
+                                    ? '55%'
+                                    : '0%',
+
+                            dataLabels: {
+
+                                enabled:
+                                    d.dataLabels === true,
+
+                                style: {
+
+                                    fontFamily:
+                                        'inherit',
+
+                                    textOutline:
+                                        'none',
+
+                                    color:
+                                        '#fff'
+                                }
+                            }
+                        },
+
+
+                        /* ----------------------------------------------------
+                           Column
+                           ---------------------------------------------------- */
+
+                        column: {
+
+                            borderWidth: 0
+                        },
+
+
+                        /* ----------------------------------------------------
+                           Horizontal Bar
+                           ---------------------------------------------------- */
+
+                        bar: {
+
+                            borderWidth: 0
+                        },
+
+
+                        /* ----------------------------------------------------
+                           Line
+                           ---------------------------------------------------- */
+
+                        line: {
+
+                            marker: {
+
+                                enabled:
+                                    d.marker !== false
+                            }
+                        },
+
+
+                        /* ----------------------------------------------------
+                           Spline
+                           ---------------------------------------------------- */
+
+                        spline: {
+
+                            marker: {
+
+                                enabled:
+                                    d.marker !== false
+                            }
+                        }
+                    },
+
+
+                    /* ========================================================
+                       Series
+                       ======================================================== */
+
+                    series:
+                        type === 'pie'
+
+                            ? buildPieSeries(
+                                series,
+                                Array.isArray(d.labels)
+                                    ? d.labels
+                                    : []
+                            )
+
+                            : series
+                };
+
+
+                /* ============================================================
+                   Pie Axis حذف شود
+                   ============================================================ */
+
+                if (type === 'pie') {
+
+                    delete options.xAxis;
+                    delete options.yAxis;
+                }
+
+
+                /* ============================================================
+                   Render
+                   ============================================================ */
+
+                try {
+
+                    container.innerHTML = '';
+
+                    container.__dbChart =
+                        Highcharts.chart(
+                            container,
+                            options
+                        );
+
+                }
+                catch (error) {
+
+                    console.error(
+                        'Restore Highcharts Error:',
+                        error
+                    );
+
+                    container.__dbChart = null;
+
+                    container.innerHTML =
+                        '<div class="db-chart-placeholder">' +
+                        'خطا در ساخت نمودار' +
+                        '</div>';
+                }
+            }
+            function buildPieSeries(series, labels) {
+
+                const first =
+                    series[0] || {};
+
+                const values =
+                    Array.isArray(first.data)
+                        ? first.data
+                        : [];
+
+                const sourceColors =
+                    Array.isArray(
+                        first.colors
+                    )
+                        ? first.colors
+                        : [];
+
+                return [{
+                    name:
+                        first.name || 'مقدار',
+
+                    data:
+                        labels.map(function (label, index) {
+
+                            const colorInfo =
+                                sourceColors[index] || {};
+
+                            const color =
+                                colorInfo.customColor === true &&
+                                    colorInfo.color
+                                    ? colorInfo.color
+                                    : CHART_COLORS[
+                                    index %
+                                    CHART_COLORS.length
+                                    ];
+
+                            return {
+                                name: label,
+
+                                y:
+                                    Number(
+                                        values[index] || 0
+                                    ),
+
+                                color: color
+                            };
+
+                        })
+                }];
+            }
+
+            /* =========================================================
+               Build Chart Series
+            ========================================================= */
+
+            function buildSeries(
+                sourceSeries,
+                labels,
+                chartType
+            ) {
+
+                if (chartType === 'pie') {
+
+                    const first =
+                        sourceSeries[0] || {};
+
+                    const values =
+                        Array.isArray(first.values)
+                            ? first.values
+                            : [];
+
+                    const sliceColors =
+                        Array.isArray(first.colors)
+                            ? first.colors
+                            : [];
+
+
+                    return [{
+
+                        name:
+                            first.name ||
+                            'مقدار',
+
+                        data:
+                            labels.map(function (label, index) {
+
+                                const slice =
+                                    sliceColors[index] || {};
+
+                                const color =
+                                    slice.customColor &&
+                                        slice.color
+                                        ? slice.color
+                                        : CHART_COLORS[
+                                        index %
+                                        CHART_COLORS.length
+                                        ];
+
+
+                                return {
+
+                                    name:
+                                        label,
+
+                                    y:
+                                        Number(
+                                            values[index] || 0
+                                        ),
+
+                                    color:
+                                        color
+
+                                };
+
+                            })
+
+                    }];
+
+                }
+
+
+                return sourceSeries.map(
+                    function (item, index) {
+
+                        const values =
+                            Array.isArray(item.values)
+                                ? item.values
+                                : [];
+
+
+                        const custom =
+                            item.customColor === true &&
+                            item.color;
+
+
+                        return {
+
+                            name:
+                                item.name ||
+                                ('سری ' + (index + 1)),
+
+                            color:
+                                custom
+                                    ? item.color
+                                    : CHART_COLORS[
+                                    index %
+                                    CHART_COLORS.length
+                                    ],
+
+                            data:
+                                labels.map(
+                                    function (_, i) {
+
+                                        return Number(
+                                            values[i] || 0
+                                        );
+
+                                    }
+                                )
+
+                        };
+
+                    }
+                );
+
+            }
+
+
+            /* =========================================================
+               Helpers
+            ========================================================= */
+
+            function clamp(value, min, max) {
+
+                return Math.max(
+                    min,
+                    Math.min(max, value)
+                );
+
+            }
+
+
+            function escapeHtml(value) {
+
+                return String(
+                    value == null
+                        ? ''
+                        : value
+                )
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+
+            }
+
+        })();
+    </script>
+
+</body>
+</html>

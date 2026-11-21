@@ -1,0 +1,841 @@
+﻿@using SaabWebProject.Models.DomainModels
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+
+@model IEnumerable<JBP_Notifications>
+
+@{
+    ViewBag.Title = "اعلان‌های من";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var items = Model != null ? Model.ToList() : new List<JBP_Notifications>();
+    int unreadCount = items.Count(x => !x.IsRead);
+
+    var pc = new PersianCalendar();
+
+    Func<DateTime?, string> fa = d =>
+        !d.HasValue ? "" :
+        pc.GetYear(d.Value).ToString("0000") + "/" + pc.GetMonth(d.Value).ToString("00") + "/" + pc.GetDayOfMonth(d.Value).ToString("00")
+        + " " + d.Value.ToString("HH:mm");
+
+    Func<string, string> icon = t =>
+        t == null ? "🔔"
+        : t.Contains("جلسه") ? "📅"
+        : t.Contains("امضا") ? "✍"
+        : t.Contains("ابلاغ") || t.Contains("نتیجه") || t.Contains("رای") ? "📜"
+        : t.Contains("بایگانی") ? "🗄"
+        : t.Contains("ارجاع") ? "🗂"
+        : t.Contains("پیام") || t.Contains("نظر") ? "💬"
+        : "🔔";
+}
+
+<style>
+
+    /* ================= PAGE ================= */
+
+    .jbp-page {
+        direction: rtl;
+        min-height: calc(100vh - 65px);
+        padding: 10px;
+        color: #fff;
+        font-size: 10px;
+        line-height: 1.7;
+        background: radial-gradient(circle at 8% 6%, rgba(0,225,255,.14), transparent 27%), radial-gradient(circle at 90% 12%, rgba(121,73,255,.16), transparent 30%), radial-gradient(circle at 50% 100%, rgba(0,255,170,.05), transparent 32%), linear-gradient(135deg, #06101d 0%, #0a1930 50%, #07111f 100%);
+    }
+
+    .jbp-page * { box-sizing: border-box; }
+    .jbp-wrap { max-width: 1580px; margin: auto; position: relative; z-index: 2; }
+
+    .jbp-glass {
+        background: linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.03));
+        border: 1px solid rgba(255,255,255,.11);
+        box-shadow: 0 12px 34px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.06);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border-radius: 14px;
+    }
+
+    /* ================= HEADER ================= */
+
+    .jbp-head { padding: 8px 12px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; overflow: hidden; }
+    .jbp-head::before { content: ""; position: absolute; width: 150px; height: 150px; right: -70px; top: -100px; border-radius: 50%; background: rgba(0,218,255,.1); filter: blur(25px); pointer-events: none; }
+    .jbp-brand { display: flex; align-items: center; gap: 9px; min-width: 0; position: relative; }
+    .jbp-logo { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: linear-gradient(135deg, #00d4ff, #3c7cff); box-shadow: 0 0 18px rgba(0,212,255,.35); }
+    .jbp-logo.purple { background: linear-gradient(135deg, #7b5cff, #b04cff); box-shadow: 0 0 18px rgba(150,90,255,.35); }
+    .jbp-logo.green { background: linear-gradient(135deg, #00b27c, #00d6a0); box-shadow: 0 0 18px rgba(0,200,150,.3); }
+    .jbp-title { margin: 0; font-size: 14px; font-weight: 900; line-height: 1.5; }
+    .jbp-subtitle { margin-top: 1px; color: rgba(255,255,255,.5); font-size: 9px; line-height: 1.6; }
+    .jbp-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; position: relative; }
+
+    /* ================= BUTTONS ================= */
+
+    .jbp-btn {
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.06);
+        color: #fff !important;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        transition: .2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 9.5px;
+        white-space: nowrap;
+    }
+
+    .jbp-btn:hover { transform: translateY(-1px); border-color: rgba(0,220,255,.4); box-shadow: 0 0 14px rgba(0,210,255,.18); }
+    .jbp-btn.primary { border: 0; background: linear-gradient(135deg, #02c6df, #087cff); box-shadow: 0 0 14px rgba(0,195,255,.3); }
+    .jbp-btn.green { border: 0; background: linear-gradient(135deg, #00ac78, #00cf97); box-shadow: 0 0 12px rgba(0,210,150,.25); }
+    .jbp-btn.red { border: 0; background: linear-gradient(135deg, #e44b64, #bd2346); box-shadow: 0 0 12px rgba(230,70,100,.25); }
+    .jbp-btn.purple { border: 0; background: linear-gradient(135deg, #755bff, #ad4cff); box-shadow: 0 0 12px rgba(150,90,255,.28); }
+    .jbp-btn.amber { border: 0; background: linear-gradient(135deg, #e6a100, #ff7a1a); box-shadow: 0 0 12px rgba(255,160,40,.28); }
+    .jbp-btn.sm { min-height: 22px; padding: 0 7px; font-size: 8.5px; border-radius: 6px; }
+    .jbp-btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+    .jbp-count { display: inline-flex; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; align-items: center; justify-content: center; background: #ff4d6d; font-size: 8px; font-weight: 900; box-shadow: 0 0 8px rgba(255,77,109,.6); }
+
+    /* ================= STATS ================= */
+
+    .jbp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px; margin-bottom: 7px; }
+    .jbp-stat { padding: 7px 10px; position: relative; overflow: hidden; transition: .2s; }
+    .jbp-stat:hover { transform: translateY(-1px); border-color: rgba(0,220,255,.3); }
+    .jbp-stat::before { content: ""; position: absolute; width: 55px; height: 55px; border-radius: 50%; top: -22px; left: -14px; background: rgba(0,210,255,.1); }
+    .jbp-stat.hot { border-color: rgba(255,200,80,.45); box-shadow: 0 0 18px rgba(255,190,60,.14); }
+    .jbp-stat-label { color: rgba(255,255,255,.55); font-size: 8.5px; }
+    .jbp-stat-value { font-size: 17px; font-weight: 900; line-height: 1.4; text-shadow: 0 0 10px rgba(0,210,255,.35); }
+    .jbp-stat-icon { position: absolute; left: 8px; bottom: 5px; font-size: 15px; opacity: .3; }
+
+    /* ================= SECTIONS ================= */
+
+    .jbp-section { padding: 9px 10px; margin-bottom: 7px; }
+    .jbp-section-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+    .jbp-section-title { margin: 0; font-size: 11px; font-weight: 900; color: #8ceeff; }
+    .jbp-section-sub { margin-top: 1px; color: rgba(255,255,255,.45); font-size: 9px; line-height: 1.7; }
+    .jbp-panel { padding: 7px 8px; border-radius: 10px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.055); }
+    .jbp-panel-title { margin-bottom: 5px; color: #88ecff; font-size: 9.5px; font-weight: 800; }
+
+    .jbp-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+    .jbp-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px; }
+    .jbp-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+    .jbp-span-2 { grid-column: span 2; }
+    .jbp-span-3 { grid-column: span 3; }
+    .jbp-span-all { grid-column: 1 / -1; }
+
+    /* ================= FORM ================= */
+
+    .jbp-field > label { display: block; margin-bottom: 2px; color: #8cecff; font-size: 9px; font-weight: 700; }
+    .jbp-field .hint { margin-top: 2px; color: rgba(255,255,255,.4); font-size: 8.5px; line-height: 1.6; }
+
+    .jbp-control {
+        width: 100%;
+        min-height: 28px;
+        padding: 4px 8px;
+        border: 1px solid rgba(255,255,255,.11);
+        border-radius: 8px;
+        background: rgba(255,255,255,.045);
+        color: #fff;
+        outline: none;
+        font-family: inherit;
+        font-size: 10px;
+        transition: .15s;
+    }
+
+    .jbp-control:focus { border-color: rgba(0,215,255,.7); box-shadow: 0 0 0 2px rgba(0,210,255,.08), 0 0 12px rgba(0,210,255,.12); }
+    .jbp-control::placeholder { color: rgba(255,255,255,.28); }
+    select.jbp-control option { color: #fff; background: #102039; }
+    textarea.jbp-control { min-height: 58px; resize: vertical; line-height: 1.8; }
+    input[type="file"].jbp-control { padding: 3px 6px; font-size: 9px; }
+    .jbp-check { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 6px; background: rgba(255,255,255,.025); cursor: pointer; font-size: 9px; line-height: 1.6; }
+    .jbp-check input { accent-color: #00caec; margin: 0; }
+    .jbp-scroll-list { max-height: 150px; overflow-y: auto; padding: 3px; border-radius: 8px; background: rgba(2,12,23,.34); }
+
+    /* ================= TABLE ================= */
+
+    .jbp-table-wrap { overflow-x: auto; border-radius: 9px; border: 1px solid rgba(255,255,255,.05); }
+    .jbp-table { width: 100%; min-width: 760px; border-collapse: collapse; }
+    .jbp-table th { padding: 6px 6px; color: #85ecff; font-size: 9px; font-weight: 700; background: rgba(0,210,255,.05); border-bottom: 1px solid rgba(255,255,255,.07); text-align: right; white-space: nowrap; }
+    .jbp-table td { padding: 5px 6px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; font-size: 9.5px; line-height: 1.6; }
+    .jbp-table tbody tr { transition: .15s; }
+    .jbp-table tbody tr:hover { background: rgba(0,210,255,.035); }
+    .jbp-table tr.highlight { background: rgba(255,200,80,.05); box-shadow: inset -2px 0 0 rgba(255,190,60,.55); }
+    .jbp-num { color: #70e9ff; font-weight: 900; text-shadow: 0 0 8px rgba(0,210,255,.3); }
+    .jbp-ltr { direction: ltr; text-align: right; unicode-bidi: plaintext; }
+    .jbp-empty { text-align: center; padding: 16px !important; color: rgba(255,255,255,.4); }
+    .jbp-muted { color: rgba(255,255,255,.45); }
+
+    /* ================= BADGES / ALERTS ================= */
+
+    .jbp-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 9px; font-size: 8.5px; line-height: 1.7; white-space: nowrap; color: #86ebff; background: rgba(0,210,255,.08); border: 1px solid rgba(0,210,255,.15); }
+    .jbp-badge.ok { color: #71eab5; background: rgba(0,210,140,.08); border-color: rgba(0,210,140,.18); }
+    .jbp-badge.warn { color: #ffd884; background: rgba(255,190,60,.08); border-color: rgba(255,190,60,.18); }
+    .jbp-badge.danger { color: #ff9aaa; background: rgba(255,72,100,.08); border-color: rgba(255,72,100,.2); }
+    .jbp-badge.purple { color: #cdb8ff; background: rgba(140,90,255,.1); border-color: rgba(140,90,255,.22); }
+    .jbp-badge.muted { color: rgba(255,255,255,.55); background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
+
+    .jbp-alert-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px; margin-bottom: 7px; }
+    .jbp-alert-grid:empty { display: none; }
+    .jbp-alert-grid .jbp-alert { margin-bottom: 0; }
+    .jbp-alert { padding: 6px 9px; margin-bottom: 7px; border-radius: 10px; line-height: 1.8; font-size: 9.5px; display: flex; gap: 7px; align-items: flex-start; flex-wrap: wrap; }
+    .jbp-alert > div:first-child[style*="font-size"] { font-size: 14px !important; }
+    .jbp-alert.info { color: #b8f3ff; background: rgba(0,210,255,.06); border: 1px solid rgba(0,210,255,.2); box-shadow: 0 0 14px rgba(0,210,255,.06); }
+    .jbp-alert.warn { color: #ffe3a6; background: rgba(255,190,60,.07); border: 1px solid rgba(255,190,60,.22); box-shadow: 0 0 14px rgba(255,190,60,.06); }
+    .jbp-alert.ok { color: #b3f5d8; background: rgba(0,210,140,.07); border: 1px solid rgba(0,210,140,.22); }
+    .jbp-alert.danger { color: #ffd2d9; background: rgba(255,72,100,.07); border: 1px solid rgba(255,72,100,.22); box-shadow: 0 0 14px rgba(255,72,100,.06); }
+    .jbp-alert .grow { flex: 1; min-width: 160px; }
+    .jbp-alert .jbp-list { line-height: 1.9; }
+
+    /* ================= WORKFLOW STEPPER (دایره + خط) ================= */
+
+    .jbp-path {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 6px 2px 3px;
+        counter-reset: jstep;
+        direction: rtl;
+    }
+
+    .jbp-path::-webkit-scrollbar { height: 4px; }
+    .jbp-path::-webkit-scrollbar-thumb { border-radius: 10px; background: linear-gradient(90deg, rgba(0,210,255,.3), rgba(125,75,255,.3)); }
+
+    .jbp-arrow { display: none !important; }
+
+    .jbp-step {
+        --c: rgba(0,210,255,.55);
+        counter-increment: jstep;
+        position: relative;
+        flex: 0 0 104px;
+        width: 104px;
+        min-width: 104px;
+        padding: 0 3px !important;
+        text-align: center;
+        color: #fff;
+        text-decoration: none !important;
+        background: none;
+        border: 0;
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        align-self: flex-start;
+    }
+
+    .jbp-step.jk-dana { --c: #9b6bff; }
+    .jbp-step.jk-register { --c: #00c8ef; }
+    .jbp-step.jk-review { --c: #00d6a0; }
+    .jbp-step.jk-appeal { --c: #ffb640; }
+
+    /* دایره */
+    .jbp-step::before {
+        content: counter(jstep);
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin: 0 auto 4px;
+        border-radius: 50%;
+        font-size: 9px;
+        font-weight: 900;
+        color: var(--c);
+        background: #0b1a2e;
+        border: 2px solid var(--c);
+        box-shadow: 0 0 0 3px rgba(255,255,255,.02), 0 0 8px rgba(0,0,0,.3);
+        transition: .2s;
+    }
+
+    /* خط بین مراحل */
+    .jbp-step:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        top: 11px;
+        left: -50%;
+        width: 100%;
+        height: 2px;
+        border-radius: 3px;
+        background: rgba(255,255,255,.09);
+    }
+
+    .jbp-step .t { font-size: 8.5px; font-weight: 800; line-height: 1.5; color: rgba(255,255,255,.78); }
+    .jbp-step .d { font-size: 7.5px; line-height: 1.5; color: rgba(255,255,255,.42); margin-top: 1px; }
+    .jbp-step .x { font-size: 7.5px; line-height: 1.5; margin-top: 1px; }
+
+    /* مرحله انجام‌شده */
+    .jbp-step.done::before {
+        content: "✓";
+        color: #dfffee;
+        border-color: rgba(0,225,155,.7);
+        background: linear-gradient(135deg, rgba(0,190,130,.45), rgba(0,220,160,.2));
+        box-shadow: 0 0 10px rgba(0,220,155,.3);
+    }
+
+    .jbp-step.done:not(:last-child)::after {
+        background: linear-gradient(90deg, rgba(0,210,255,.45), rgba(0,220,160,.75));
+        box-shadow: 0 0 6px rgba(0,210,180,.35);
+    }
+
+    .jbp-step.done .t { color: rgba(180,255,225,.8); }
+
+    /* مرحله جاری */
+    .jbp-step.active::before {
+        color: #fff;
+        border-color: #45eaff;
+        background: linear-gradient(135deg, #00c8df, #087cff);
+        animation: jbpPulse 1.8s infinite;
+    }
+
+    .jbp-step.active .t { color: #8ceeff; font-weight: 900; text-shadow: 0 0 8px rgba(0,220,255,.5); }
+
+    /* مرحله آینده */
+    .jbp-step.pending::before { opacity: .45; }
+    .jbp-step.pending .t, .jbp-step.pending .d { opacity: .5; }
+
+    a.jbp-step:hover::before { transform: scale(1.1); box-shadow: 0 0 14px var(--c); }
+
+    @@keyframes jbpPulse {
+        0% { box-shadow: 0 0 6px rgba(0,225,255,.55), 0 0 14px rgba(0,190,255,.22), 0 0 0 3px rgba(0,210,255,.05); }
+        50% { box-shadow: 0 0 11px rgba(0,225,255,.95), 0 0 24px rgba(0,190,255,.45), 0 0 0 6px rgba(0,210,255,.09); }
+        100% { box-shadow: 0 0 6px rgba(0,225,255,.55), 0 0 14px rgba(0,190,255,.22), 0 0 0 3px rgba(0,210,255,.05); }
+    }
+
+    /* ================= TABS ================= */
+
+    .jbp-tabs { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 7px; }
+    .jbp-tab { padding: 4px 9px; border-radius: 7px; cursor: pointer; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.72); font-size: 9.5px; font-family: inherit; transition: .15s; }
+    .jbp-tab:hover { border-color: rgba(0,210,255,.3); }
+    .jbp-tab.active { color: #fff; background: linear-gradient(135deg, rgba(0,198,223,.35), rgba(8,124,255,.35)); border-color: rgba(0,210,255,.5); box-shadow: 0 0 12px rgba(0,210,255,.2); }
+    .jbp-tab-pane { display: none; }
+    .jbp-tab-pane.active { display: block; }
+
+    /* ================= MISC ================= */
+
+    .jbp-text-block { white-space: pre-wrap; line-height: 1.95; font-size: 10px; padding: 7px 9px; border-radius: 9px; background: rgba(0,0,0,.14); border: 1px solid rgba(255,255,255,.05); max-height: 260px; overflow-y: auto; }
+    .jbp-kv { display: grid; grid-template-columns: 105px 1fr; gap: 2px 8px; font-size: 9.5px; line-height: 1.8; }
+    .jbp-kv .k { color: rgba(255,255,255,.48); }
+    .jbp-files { display: flex; flex-wrap: wrap; gap: 4px; }
+    .jbp-file { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 7px; color: #bdf3ff !important; text-decoration: none !important; background: rgba(0,210,255,.07); border: 1px solid rgba(0,210,255,.15); font-size: 9px; transition: .15s; }
+    .jbp-file:hover { background: rgba(0,210,255,.14); box-shadow: 0 0 10px rgba(0,210,255,.2); }
+    .jbp-list { margin: 0; padding: 0 14px 0 0; line-height: 1.9; }
+    .jbp-timeline { position: relative; padding-right: 12px; max-height: 360px; overflow-y: auto; }
+    .jbp-timeline::before { content: ""; position: absolute; right: 3px; top: 4px; bottom: 4px; width: 2px; background: linear-gradient(rgba(0,210,255,.35), rgba(125,75,255,.2)); }
+    .jbp-tl-item { position: relative; padding: 0 6px 7px 0; }
+    .jbp-tl-item::before { content: ""; position: absolute; right: -12px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #00c8ef; box-shadow: 0 0 8px rgba(0,210,255,.7); }
+    .jbp-tl-title { font-weight: 800; font-size: 9.5px; }
+    .jbp-tl-meta { font-size: 8.5px; color: rgba(255,255,255,.42); }
+    .jbp-tl-desc { font-size: 9px; color: rgba(255,255,255,.72); line-height: 1.8; white-space: pre-wrap; }
+    .jbp-msg { padding: 5px 8px; border-radius: 8px; margin-bottom: 4px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.06); font-size: 9.5px; }
+    .jbp-msg.mine { background: rgba(0,210,255,.07); border-color: rgba(0,210,255,.17); }
+    .jbp-msg .meta { font-size: 8.5px; color: rgba(255,255,255,.42); }
+    .jbp-stepper { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 7px; }
+    .jbp-stepper span { flex: 1; min-width: 90px; text-align: center; padding: 4px; border-radius: 7px; font-size: 9px; background: rgba(255,255,255,.04); color: rgba(255,255,255,.42); }
+    .jbp-stepper span.done { background: rgba(0,210,140,.12); color: #8ff0c6; }
+    .jbp-stepper span.now { background: rgba(0,210,255,.18); color: #fff; box-shadow: 0 0 0 1px rgba(0,210,255,.55), 0 0 12px rgba(0,210,255,.25); }
+
+    /* ================= MODAL ================= */
+
+    .jbp-modal { position: fixed; inset: 0; z-index: 99999; display: none; align-items: flex-start; justify-content: center; padding: 22px 10px; overflow-y: auto; background: rgba(2,8,18,.74); backdrop-filter: blur(8px); }
+    .jbp-modal.show { display: flex; }
+    .jbp-modal-card { direction: rtl; width: 100%; max-width: 720px; padding: 12px 14px; color: #fff; font-size: 10px; border-radius: 16px; border: 1px solid rgba(0,220,255,.25); background: linear-gradient(145deg, rgba(12,32,55,.97), rgba(15,18,45,.97)); box-shadow: 0 25px 70px rgba(0,0,0,.5), 0 0 35px rgba(0,210,255,.1); }
+    .jbp-modal-card * { box-sizing: border-box; }
+    .jbp-modal-card.sm { max-width: 440px; }
+    .jbp-modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .jbp-modal-head h3 { margin: 0; font-size: 12.5px; color: #8ceeff; }
+    .jbp-modal-close { width: 26px; height: 26px; border: 0; border-radius: 7px; color: #fff; cursor: pointer; background: rgba(255,255,255,.08); font-size: 14px; }
+    .jbp-modal-foot { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+
+    /* ================= JALALI PICKER ================= */
+
+    .jbp-cal { display: none; position: absolute; z-index: 999999; top: calc(100% + 3px); right: 0; width: 230px; padding: 7px; border-radius: 11px; background: rgba(7,22,40,.99); border: 1px solid rgba(0,210,255,.25); box-shadow: 0 18px 45px rgba(0,0,0,.55), 0 0 18px rgba(0,210,255,.1); }
+    .jbp-cal.open { display: block; }
+    .jbp-cal-head { display: grid; grid-template-columns: 24px 1fr 24px; gap: 3px; align-items: center; }
+    .jbp-cal-head b { text-align: center; color: #84edff; font-size: 10px; }
+    .jbp-cal button { border: 0; border-radius: 6px; color: #fff; background: transparent; cursor: pointer; font-family: inherit; }
+    .jbp-cal-head button { height: 22px; background: rgba(255,255,255,.07); }
+    .jbp-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; margin-top: 4px; }
+    .jbp-cal-grid span { text-align: center; color: rgba(255,255,255,.4); font-size: 8.5px; }
+    .jbp-cal-grid button { height: 24px; font-size: 9.5px; }
+    .jbp-cal-grid button:hover { background: rgba(0,210,255,.14); }
+    .jbp-cal-grid button.today { border: 1px solid rgba(0,210,255,.5); box-shadow: 0 0 6px rgba(0,210,255,.3); }
+    .jbp-cal-grid button[disabled] { opacity: .25; cursor: not-allowed; }
+
+    /* ================= TOAST ================= */
+
+    .jbp-toast { position: fixed; z-index: 1000000; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: 92vw; padding: 8px 13px; border-radius: 10px; color: #fff; font-size: 10.5px; line-height: 1.8; white-space: pre-wrap; direction: rtl; box-shadow: 0 12px 35px rgba(0,0,0,.45), 0 0 16px rgba(0,210,150,.3); background: #0f7a5a; }
+    .jbp-toast.err { background: #b3263f; box-shadow: 0 12px 35px rgba(0,0,0,.45), 0 0 16px rgba(230,60,90,.35); }
+
+    /* ================= SIDE BY SIDE ================= */
+
+    .jbp-side { display: grid; grid-template-columns: minmax(230px, 1fr) 3fr; gap: 7px; align-items: start; }
+    .jbp-auto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 7px; align-items: start; }
+
+    /* ================= RESPONSIVE ================= */
+
+    @@media (max-width: 1100px) {
+        .jbp-grid-3, .jbp-grid-4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        .jbp-span-3 { grid-column: span 2; }
+    }
+
+    @@media (max-width: 700px) {
+        .jbp-page { padding: 6px; }
+        .jbp-head { flex-direction: column; align-items: stretch; }
+        .jbp-actions .jbp-btn { flex: 1; }
+        .jbp-grid-2, .jbp-grid-3, .jbp-grid-4 { grid-template-columns: 1fr !important; }
+        .jbp-span-2, .jbp-span-3 { grid-column: auto; }
+        .jbp-kv { grid-template-columns: 1fr; }
+        .jbp-side, .jbp-auto-grid { grid-template-columns: 1fr !important; }
+    }
+</style>
+
+<style>
+    .ntf-item { padding: 14px 16px; margin-bottom:5px; position: relative; overflow: hidden; display: flex; gap: 12px; align-items: flex-start; transition: .2s; }
+    .ntf-item:hover { transform: translateY(-1px); }
+    .ntf-item.unread { border-color: rgba(0,220,255,.3); }
+    .ntf-item.unread::before { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(#00d6ff, #087cff); box-shadow: 0 0 15px rgba(0,210,255,.45); }
+    .ntf-icon { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 17px; background: rgba(0,210,255,.08); border: 1px solid rgba(0,210,255,.15); }
+    .ntf-body { flex: 1; min-width: 0; }
+    .ntf-title { font-size: 13px; font-weight: 800; }
+    .ntf-message { margin-top: 5px; color: rgba(255,255,255,.65); line-height: 1.9; }
+    .ntf-footer { margin-top:5px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+</style>
+
+<div class="jbp-page">
+    <div class="jbp-wrap" style="max-width:1050px;">
+
+        <form id="jbpTokenForm">@Html.AntiForgeryToken()</form>
+
+        <div class="jbp-glass jbp-head">
+            <div class="jbp-brand">
+                <div class="jbp-logo">🔔</div>
+                <div>
+                    <h1 class="jbp-title">اعلان‌های من</h1>
+                    <div class="jbp-subtitle">ارجاع پرونده، دعوت به جلسه، امضای رای، ابلاغ نتیجه و سایر رویدادها (@unreadCount خوانده‌نشده)</div>
+                </div>
+            </div>
+            <div class="jbp-actions">
+                @if (unreadCount > 0)
+                {
+                    <button type="button" class="jbp-btn primary" id="btnReadAll">✓ علامت‌گذاری همه به‌عنوان خوانده‌شده</button>
+                }
+                <a class="jbp-btn" href="@Url.Action("JusticeDashboard", "Orders", new { area = "Setting" })">← بازگشت</a>
+            </div>
+        </div>
+
+        <div class="jbp-glass jbp-section" style="display:grid; grid-template-columns: 1fr auto; gap:8px;">
+            <input type="text" id="ntfSearch" class="jbp-control" placeholder="جستجو در اعلان‌ها..." />
+            <div class="jbp-tabs" style="margin:0;" id="ntfTabs">
+                <button type="button" class="jbp-tab active" data-filter="all">همه (@items.Count)</button>
+                <button type="button" class="jbp-tab" data-filter="unread">خوانده‌نشده (@unreadCount)</button>
+            </div>
+        </div>
+
+        @if (!items.Any())
+        {
+            <div class="jbp-glass jbp-section jbp-empty">اعلانی وجود ندارد.</div>
+        }
+
+        @foreach (var item in items)
+        {
+            <div class="jbp-glass ntf-item @(item.IsRead ? "" : "unread")" data-id="@item.NotificationID" data-unread="@(item.IsRead ? "0" : "1")">
+                <div class="ntf-icon">@icon(item.Title)</div>
+                <div class="ntf-body">
+                    <div class="ntf-title">
+                        @if (!item.IsRead)
+                        {
+                            <span style="color:#75e9ff;">●</span>
+                        }
+                        @item.Title
+                    </div>
+                    <div class="ntf-message">@item.Message</div>
+                    <div class="ntf-footer">
+                        <span class="jbp-muted jbp-ltr" style="font-size:11px;">@fa(item.CreatedAt)</span>
+                        <div class="jbp-actions">
+                            @if (!item.IsRead)
+                            {
+                                <button type="button" class="jbp-btn sm" onclick="markRead(@item.NotificationID, this)">خوانده شد</button>
+                            }
+                            @if (item.FK_Case.HasValue)
+                            {
+                                <a class="jbp-btn sm primary" onclick="markRead(@item.NotificationID)"
+                                   href="@Url.Action("JusticeCaseDetails", "Orders", new { area = "Setting", id = item.FK_Case.Value })">مشاهده پرونده</a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="jbp-glass jbp-section jbp-empty" id="noNtfResult" style="display:none;">موردی یافت نشد.</div>
+
+    </div>
+</div>
+
+<script>
+
+    /* ================= TEXT ================= */
+
+    function jbpNormalize(value) {
+        return (value || "").toString()
+            .replace(/[۰-۹]/g, function (c) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(c); })
+            .replace(/[٠-٩]/g, function (c) { return "٠١٢٣٤٥٦٧٨٩".indexOf(c); })
+            .replace(/ي/g, "ی").replace(/ك/g, "ک")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toLowerCase();
+    }
+
+    /* فیلتر ساده فهرست: input + selector آیتم‌ها (data-search یا متن) */
+    function jbpBindFilter(inputId, itemSelector, displayValue) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        input.addEventListener("input", function () {
+            var q = jbpNormalize(input.value);
+            document.querySelectorAll(itemSelector).forEach(function (item) {
+                var text = jbpNormalize(item.getAttribute("data-search") || item.innerText);
+                item.style.display = !q || text.indexOf(q) >= 0 ? (displayValue || "") : "none";
+            });
+        });
+    }
+
+
+    /* ================= TOAST / AJAX ================= */
+
+    function jbpToast(message, isError) {
+        var t = document.createElement("div");
+        t.className = "jbp-toast" + (isError ? " err" : "");
+        t.textContent = message;
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, isError ? 6000 : 3500);
+    }
+
+    function jbpToken() {
+        var t = document.querySelector('input[name="__RequestVerificationToken"]');
+        return t ? t.value : "";
+    }
+
+    /* data: FormData یا شیء ساده */
+    function jbpPost(url, data) {
+        var fd;
+
+        if (data instanceof FormData) {
+            fd = data;
+        } else {
+            fd = new FormData();
+            Object.keys(data || {}).forEach(function (k) {
+                var v = data[k];
+                if (Array.isArray(v)) v.forEach(function (i) { fd.append(k, i); });
+                else if (v !== null && v !== undefined) fd.append(k, v);
+            });
+        }
+
+        if (!fd.has("__RequestVerificationToken")) {
+            fd.append("__RequestVerificationToken", jbpToken());
+        }
+
+        return fetch(url, { method: "POST", body: fd, credentials: "same-origin" })
+            .then(function (r) { return r.text(); })
+            .then(function (raw) {
+                try { return JSON.parse(raw); }
+                catch (e) { throw new Error("پاسخ نامعتبر از سرور:\n" + raw.substring(0, 300)); }
+            });
+    }
+
+    /* ارسال + پیام + رفرش صفحه در صورت موفقیت */
+    function jbpSubmit(url, data, button, confirmText) {
+        if (confirmText && !confirm(confirmText)) return Promise.resolve();
+
+        if (button) button.disabled = true;
+
+        return jbpPost(url, data)
+            .then(function (r) {
+                jbpToast(r.message || (r.success ? "انجام شد." : "عملیات انجام نشد."), !r.success);
+                if (r.success) setTimeout(function () { location.reload(); }, 900);
+                else if (button) button.disabled = false;
+                return r;
+            })
+            .catch(function (err) {
+                jbpToast(err.message || "خطا در ارتباط با سرور.", true);
+                if (button) button.disabled = false;
+            });
+    }
+
+
+    /* ================= MODAL / TABS ================= */
+
+    function jbpOpenModal(id) { var m = document.getElementById(id); if (m) m.classList.add("show"); }
+    function jbpCloseModal(id) { var m = document.getElementById(id); if (m) m.classList.remove("show"); }
+
+    document.addEventListener("click", function (e) {
+        if (e.target.classList && e.target.classList.contains("jbp-modal")) e.target.classList.remove("show");
+        var closeBtn = e.target.closest ? e.target.closest("[data-close-modal]") : null;
+        if (closeBtn) jbpCloseModal(closeBtn.getAttribute("data-close-modal"));
+    });
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") document.querySelectorAll(".jbp-modal.show").forEach(function (m) { m.classList.remove("show"); });
+    });
+
+    function jbpInitTabs(containerId) {
+        var box = document.getElementById(containerId);
+        if (!box) return;
+
+        box.querySelectorAll(".jbp-tab").forEach(function (tab) {
+            tab.addEventListener("click", function () {
+                box.querySelectorAll(".jbp-tab").forEach(function (t) { t.classList.remove("active"); });
+                box.querySelectorAll(".jbp-tab-pane").forEach(function (p) { p.classList.remove("active"); });
+                tab.classList.add("active");
+                var pane = document.getElementById(tab.getAttribute("data-tab"));
+                if (pane) pane.classList.add("active");
+                try { sessionStorage.setItem("jbpTab_" + containerId, tab.getAttribute("data-tab")); } catch (e) { }
+            });
+        });
+
+        try {
+            var saved = sessionStorage.getItem("jbpTab_" + containerId);
+            var savedTab = saved ? box.querySelector('.jbp-tab[data-tab="' + saved + '"]') : null;
+            if (savedTab) savedTab.click();
+        } catch (e) { }
+    }
+
+
+    /* ================= JALALI CALENDAR ================= */
+
+    function jdiv(a, b) { return ~~(a / b); }
+    function jmod(a, b) { return a - ~~(a / b) * b; }
+
+    function jalCal(jy) {
+        var breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+        var bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump = 0, leap, leapG, march, n, i;
+
+        for (i = 1; i < bl; i++) {
+            jm = breaks[i];
+            jump = jm - jp;
+            if (jy < jm) break;
+            leapJ += jdiv(jump, 33) * 8 + jdiv(jmod(jump, 33), 4);
+            jp = jm;
+        }
+
+        n = jy - jp;
+        leapJ += jdiv(n, 33) * 8 + jdiv(jmod(n, 33) + 3, 4);
+        if (jmod(jump, 33) === 4 && jump - n === 4) leapJ++;
+
+        leapG = jdiv(gy, 4) - jdiv((jdiv(gy, 100) + 1) * 3, 4) - 150;
+        march = 20 + leapJ - leapG;
+
+        if (jump - n < 6) n = n - jump + jdiv(jump + 4, 33) * 33;
+        leap = jmod(jmod(n + 1, 33) - 1, 4);
+        if (leap === -1) leap = 4;
+
+        return { leap: leap, gy: gy, march: march };
+    }
+
+    function g2d(gy, gm, gd) {
+        var d = jdiv((gy + jdiv(gm - 8, 6) + 100100) * 1461, 4) + jdiv(153 * jmod(gm + 9, 12) + 2, 5) + gd - 34840408;
+        return d - jdiv(jdiv(gy + 100100 + jdiv(gm - 8, 6), 100) * 3, 4) + 752;
+    }
+
+    function d2g(jdn) {
+        var j = 4 * jdn + 139361631;
+        j = j + jdiv(jdiv(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+        var i = jdiv(jmod(j, 1461), 4) * 5 + 308;
+        var gd = jdiv(jmod(i, 153), 5) + 1;
+        var gm = jmod(jdiv(i, 153), 12) + 1;
+        var gy = jdiv(j, 1461) - 100100 + jdiv(8 - gm, 6);
+        return { gy: gy, gm: gm, gd: gd };
+    }
+
+    function j2d(jy, jm, jd) {
+        var r = jalCal(jy);
+        return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - jdiv(jm, 7) * (jm - 7) + jd - 1;
+    }
+
+    function d2j(jdn) {
+        var g = d2g(jdn), jy = g.gy - 621, r = jalCal(jy), jdn1f = g2d(g.gy, 3, r.march), k = jdn - jdn1f, jm, jd;
+
+        if (k >= 0) {
+            if (k <= 185) {
+                jm = 1 + jdiv(k, 31);
+                jd = jmod(k, 31) + 1;
+                return { jy: jy, jm: jm, jd: jd };
+            }
+            k -= 186;
+        } else {
+            jy--;
+            k += 179;
+            if (r.leap === 1) k++;
+        }
+
+        jm = 7 + jdiv(k, 30);
+        jd = jmod(k, 30) + 1;
+        return { jy: jy, jm: jm, jd: jd };
+    }
+
+    var JBP_MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+
+    function jbpPad(v) { return v < 10 ? "0" + v : "" + v; }
+
+    function jbpTodayJalali() {
+        var n = new Date();
+        return d2j(g2d(n.getFullYear(), n.getMonth() + 1, n.getDate()));
+    }
+
+    /* options.minToday = true → روزهای گذشته غیرفعال */
+    function jbpDatePicker(inputId, options) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+
+        options = options || {};
+        input.readOnly = true;
+        input.parentNode.style.position = "relative";
+
+        var box = document.createElement("div");
+        box.className = "jbp-cal";
+        input.parentNode.appendChild(box);
+
+        var today = jbpTodayJalali();
+        var todayKey = today.jy * 10000 + today.jm * 100 + today.jd;
+        var y = today.jy, m = today.jm;
+
+        function monthLength(yy, mm) {
+            if (mm <= 6) return 31;
+            if (mm <= 11) return 30;
+            return jalCal(yy).leap === 0 ? 30 : 29;
+        }
+
+        function render() {
+            var g = d2g(j2d(y, m, 1));
+            var offset = (new Date(g.gy, g.gm - 1, g.gd).getDay() + 1) % 7;
+
+            var html = '<div class="jbp-cal-head"><button type="button" data-nav="-1">›</button><b>'
+                + JBP_MONTHS[m - 1] + " " + y + '</b><button type="button" data-nav="1">‹</button></div>'
+                + '<div class="jbp-cal-grid"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span>';
+
+            for (var i = 0; i < offset; i++) html += "<span></span>";
+
+            for (var d = 1; d <= monthLength(y, m); d++) {
+                var key = y * 10000 + m * 100 + d;
+                var cls = key === todayKey ? "today" : "";
+                var dis = options.minToday && key < todayKey ? " disabled" : "";
+                html += '<button type="button" class="' + cls + '" data-day="' + d + '"' + dis + ">" + d + "</button>";
+            }
+
+            html += "</div>";
+            box.innerHTML = html;
+        }
+
+        box.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var nav = e.target.getAttribute("data-nav");
+            var day = e.target.getAttribute("data-day");
+
+            if (nav) {
+                m += parseInt(nav, 10);
+                if (m < 1) { m = 12; y--; }
+                if (m > 12) { m = 1; y++; }
+                render();
+            } else if (day && !e.target.disabled) {
+                input.value = y + "/" + jbpPad(m) + "/" + jbpPad(parseInt(day, 10));
+                input.dispatchEvent(new Event("change"));
+                box.classList.remove("open");
+            }
+        });
+
+        input.addEventListener("click", function (e) {
+            e.stopPropagation();
+            render();
+            box.classList.toggle("open");
+        });
+
+        document.addEventListener("click", function () { box.classList.remove("open"); });
+    }
+
+</script>
+
+<script>
+
+    var READ_URL = '@Url.Action("ReadJusticeNotification", "Orders", new { area = "Setting" })';
+    var ntfFilter = "all";
+
+    function setAsRead(card) {
+        if (!card) return;
+        card.classList.remove("unread");
+        card.setAttribute("data-unread", "0");
+        var dot = card.querySelector(".ntf-title span");
+        if (dot) dot.remove();
+        var btn = card.querySelector('button.jbp-btn.sm:not(.primary)');
+        if (btn) btn.remove();
+    }
+
+    function markRead(id, btn) {
+        var card = document.querySelector('.ntf-item[data-id="' + id + '"]');
+        if (!card || card.getAttribute("data-unread") !== "1") return;
+
+        if (btn) btn.disabled = true;
+
+        /* keepalive: در صورت رفتن به صفحه پرونده، درخواست قطع نشود */
+        var fd = new FormData();
+        fd.append("id", id);
+        fd.append("__RequestVerificationToken", jbpToken());
+
+        fetch(READ_URL, { method: "POST", body: fd, credentials: "same-origin", keepalive: true })
+            .then(function (r) { return r.json(); })
+            .then(function (r) { if (r.success) setAsRead(card); else if (btn) btn.disabled = false; })
+            .catch(function () { if (btn) btn.disabled = false; });
+    }
+
+    var readAll = document.getElementById("btnReadAll");
+
+    if (readAll) {
+        readAll.addEventListener("click", function () {
+            readAll.disabled = true;
+            var cards = document.querySelectorAll('.ntf-item[data-unread="1"]');
+            var jobs = [];
+
+            cards.forEach(function (card) {
+                jobs.push(jbpPost(READ_URL, { id: card.getAttribute("data-id") })
+                    .then(function (r) { if (r.success) setAsRead(card); }));
+            });
+
+            Promise.all(jobs).then(function () {
+                jbpToast("همه اعلان‌ها خوانده شدند.");
+                setTimeout(function () { location.reload(); }, 800);
+            });
+        });
+    }
+
+    function filterNtf() {
+        var q = jbpNormalize(document.getElementById("ntfSearch").value);
+        var cards = document.querySelectorAll(".ntf-item");
+        var visible = 0;
+
+        cards.forEach(function (card) {
+            var ok = (ntfFilter === "all" || card.getAttribute("data-unread") === "1")
+                  && (!q || jbpNormalize(card.innerText).indexOf(q) >= 0);
+            card.style.display = ok ? "" : "none";
+            if (ok) visible++;
+        });
+
+        document.getElementById("noNtfResult").style.display = cards.length && !visible ? "block" : "none";
+    }
+
+    document.getElementById("ntfSearch").addEventListener("input", filterNtf);
+
+    document.querySelectorAll("#ntfTabs .jbp-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+            document.querySelectorAll("#ntfTabs .jbp-tab").forEach(function (t) { t.classList.remove("active"); });
+            tab.classList.add("active");
+            ntfFilter = tab.getAttribute("data-filter");
+            filterNtf();
+        });
+    });
+
+</script>

@@ -1,0 +1,5315 @@
+﻿@using System
+@using System.Linq
+@using System.Collections.Generic
+@using SaabWebProject.Models.DomainModels
+
+@{
+    ViewBag.Title = "مدیریت تخصیص نیرو";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    /* =========================================================
+       TAB 1
+       ========================================================= */
+
+    var users =
+        ViewBag.Users as List<tbUsers>
+        ?? new List<tbUsers>();
+
+    var activityTypes =
+        ViewBag.ActivityTypes as List<tbOrderActivityType>
+        ?? new List<tbOrderActivityType>();
+
+    var assignments =
+        ViewBag.Assignments as List<tbOrderAssignment>
+        ?? new List<tbOrderAssignment>();
+
+    var assignmentActivities =
+        ViewBag.AssignmentActivities as List<tbOrderAssignmentActivity>
+        ?? new List<tbOrderAssignmentActivity>();
+
+    var savedActivityPairKeys =
+        new HashSet<string>(
+            assignmentActivities.Select(x =>
+                x.UserID.ToString()
+                + "_"
+                + x.ActivityTypeID.ToString())
+        );
+
+
+    /* =========================================================
+       TAB 2
+       ========================================================= */
+
+    var tab2Users =
+        ViewBag.Tab2Users as List<tbUsers>
+        ?? new List<tbUsers>();
+
+    var allowedRegions =
+        ViewBag.AllowedRegions as List<int>
+        ?? new List<int>();
+
+    var agentScopes =
+        ViewBag.AgentScopes as List<tbOrderAgentScope>
+        ?? new List<tbOrderAgentScope>();
+
+    var agentScopeRegions =
+        ViewBag.AgentScopeRegions as List<tbOrderAgentScopeRegion>
+        ?? new List<tbOrderAgentScopeRegion>();
+
+    var agentScopeWorkDays =
+        ViewBag.AgentScopeWorkDays as List<tbOrderAgentScopeWorkDay>
+        ?? new List<tbOrderAgentScopeWorkDay>();
+
+
+    /* =========================================================
+       TAB 3
+       ========================================================= */
+
+    var excelImportBatches =
+        ViewBag.ExcelImportBatches as List<tbOrderExcelImportBatch>
+        ?? new List<tbOrderExcelImportBatch>();
+
+    var excelComponents =
+        new Dictionary<int, string>
+        {
+            { 1, "شناسه قبض" },
+            { 2, "پرونده" },
+            { 3, "روزکار" },
+            { 4, "محدوده" }
+                };
+}
+
+
+<style>
+
+    /* =========================================================
+       ROOT
+       ========================================================= */
+
+    .order-page {
+        --cyan: #22d3ee;
+        --blue: #2563eb;
+        --purple: #8b5cf6;
+        --green: #34d399;
+        --red: #fb7185;
+        --yellow: #fbbf24;
+        direction: rtl;
+        text-align: right;
+        min-height: 100vh;
+        padding: 22px;
+        color: #e2e8f0;
+        background: radial-gradient( circle at 5% 5%, rgba(14,165,233,.16), transparent 28% ), radial-gradient( circle at 95% 10%, rgba(139,92,246,.14), transparent 28% ), radial-gradient( circle at 50% 100%, rgba(16,185,129,.05), transparent 30% ), #050914;
+    }
+
+        .order-page * {
+            box-sizing: border-box;
+        }
+
+
+    /* =========================================================
+       GUIDE HEADER
+       ========================================================= */
+
+    .guide-header {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 16px 18px;
+        overflow: hidden;
+        background: linear-gradient( 135deg, rgba(15,23,42,.88), rgba(2,6,23,.70) );
+        border: 1px solid rgba(34,211,238,.14);
+        border-radius: 18px;
+        box-shadow: 0 22px 60px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+        .guide-header:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 30px;
+            left: 30px;
+            height: 1px;
+            background: linear-gradient( 90deg, transparent, #22d3ee, #8b5cf6, transparent );
+        }
+
+    .guide-main-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-width: 170px;
+        padding: 10px 20px;
+        color: #e0f2fe;
+        cursor: pointer;
+        background: linear-gradient( 135deg, rgba(8,145,178,.22), rgba(79,70,229,.20) );
+        border: 1px solid rgba(34,211,238,.30);
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 900;
+        transition: .18s;
+        box-shadow: 0 0 20px rgba(34,211,238,.06);
+    }
+
+        .guide-main-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(34,211,238,.60);
+            box-shadow: 0 0 22px rgba(34,211,238,.13);
+        }
+
+    .guide-main-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 25px;
+        height: 25px;
+        color: #67e8f9;
+        background: rgba(34,211,238,.08);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 50%;
+        font-size: 14px;
+        font-weight: 900;
+    }
+
+    .guide-header-description {
+        color: #64748b;
+        font-size: 10px;
+    }
+
+
+    /* =========================================================
+       NATIVE GUIDE DIALOG
+       کاملاً مستقل از JavaScript اصلی صفحه
+       ========================================================= */
+
+    .oa-native-guide {
+        width: min(850px, calc(100% - 30px));
+        max-width: 850px;
+        max-height: 90vh;
+        margin: auto;
+        padding: 0;
+        direction: rtl;
+        text-align: right;
+        color: #e2e8f0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        border-radius: 18px;
+        overflow: visible;
+    }
+
+        .oa-native-guide[open] {
+            display: block;
+        }
+
+        .oa-native-guide::backdrop {
+            background: rgba(2,6,23,.90);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+    .oa-native-guide-card {
+        position: relative;
+        width: 100%;
+        max-height: 88vh;
+        overflow-y: auto;
+        padding: 24px;
+        color: #e2e8f0;
+        background: linear-gradient( 145deg, #111c30, #050b18 );
+        border: 1px solid rgba(34,211,238,.32);
+        border-radius: 18px;
+        box-shadow: 0 30px 100px rgba(0,0,0,.75);
+    }
+
+        .oa-native-guide-card:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 35px;
+            left: 35px;
+            height: 1px;
+            background: linear-gradient( 90deg, transparent, #22d3ee, #8b5cf6, transparent );
+        }
+
+    .oa-native-guide-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 15px;
+        padding-bottom: 14px;
+        margin-bottom: 17px;
+        border-bottom: 1px solid rgba(148,163,184,.13);
+    }
+
+    .oa-native-guide-title {
+        color: #f8fafc;
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.9;
+    }
+
+    .oa-native-guide-subtitle {
+        margin-top: 4px;
+        color: #67e8f9;
+        font-size: 10px;
+        line-height: 1.9;
+    }
+
+    .oa-native-guide-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        color: #e2e8f0;
+        cursor: pointer;
+        background: rgba(30,41,59,.85);
+        border: 1px solid rgba(148,163,184,.22);
+        border-radius: 9px;
+        font-size: 21px;
+        font-weight: bold;
+        transition: .15s;
+    }
+
+        .oa-native-guide-close:hover {
+            color: #fecaca;
+            background: rgba(127,29,29,.20);
+            border-color: rgba(244,63,94,.35);
+        }
+
+    .oa-native-guide-intro {
+        margin-bottom: 14px;
+        padding: 12px 14px;
+        color: #e0f2fe;
+        background: rgba(14,165,233,.08);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .oa-native-guide-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 14px 15px;
+        color: #e2e8f0;
+        background: rgba(15,23,42,.72);
+        border: 1px solid rgba(148,163,184,.12);
+        border-radius: 11px;
+    }
+
+    .oa-native-guide-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 30px;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        color: #67e8f9;
+        background: rgba(6,182,212,.12);
+        border: 1px solid rgba(34,211,238,.23);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .oa-native-guide-text {
+        flex: 1;
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 2.2;
+    }
+
+    .oa-native-guide-highlight {
+        color: #fbbf24;
+        font-weight: 900;
+    }
+
+    .oa-native-guide-footer {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 18px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(148,163,184,.10);
+    }
+
+    .oa-native-guide-ok {
+        min-width: 125px;
+        padding: 9px 18px;
+        color: #fff;
+        cursor: pointer;
+        background: linear-gradient( 135deg, #0891b2, #4f46e5 );
+        border: 1px solid rgba(34,211,238,.25);
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+
+    /* =========================================================
+       TABS
+       ========================================================= */
+
+    .order-tabs {
+        display: flex;
+        gap: 7px;
+        margin-bottom: 17px;
+        padding: 6px;
+        background: rgba(15,23,42,.62);
+        border: 1px solid rgba(255,255,255,.06);
+        border-radius: 13px;
+    }
+
+    .order-tab {
+        min-width: 190px;
+        padding: 10px 18px;
+        color: #94a3b8;
+        cursor: pointer;
+        background: transparent;
+        border: 0;
+        border-radius: 9px;
+        transition: .18s;
+    }
+
+        .order-tab:hover {
+            color: #e0f2fe;
+            background: rgba(14,165,233,.05);
+        }
+
+        .order-tab.active {
+            color: #e0f2fe;
+            background: linear-gradient( 135deg, rgba(14,165,233,.20), rgba(99,102,241,.17) );
+            box-shadow: inset 0 0 0 1px rgba(34,211,238,.25);
+        }
+
+
+    /* =========================================================
+       GLASS CARD
+       ========================================================= */
+
+    .glass-card {
+        position: relative;
+        margin-bottom: 17px;
+        padding: 19px;
+        background: linear-gradient( 145deg, rgba(15,23,42,.77), rgba(2,6,23,.59) );
+        border: 1px solid rgba(255,255,255,.075);
+        border-radius: 17px;
+        box-shadow: 0 22px 60px rgba(0,0,0,.28);
+    }
+
+
+    /* =========================================================
+       STATS
+       ========================================================= */
+
+    .order-stats {
+        display: grid;
+        grid-template-columns: repeat(4,minmax(0,1fr));
+        gap: 11px;
+        margin-bottom: 17px;
+    }
+
+    .stat-card {
+        position: relative;
+        padding: 14px 15px;
+        background: rgba(15,23,42,.74);
+        border: 1px solid rgba(255,255,255,.07);
+        border-radius: 14px;
+    }
+
+        .stat-card:after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient( #22d3ee, #6366f1 );
+        }
+
+    .stat-title {
+        color: #94a3b8;
+        font-size: 10px;
+    }
+
+    .stat-value {
+        margin-top: 4px;
+        color: #f8fafc;
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+
+    /* =========================================================
+       SECTION
+       ========================================================= */
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+        .section-header h2 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .section-header p {
+            margin: 5px 0 0;
+            color: #64748b;
+            font-size: 10px;
+        }
+
+
+    /* =========================================================
+       INPUT
+       ========================================================= */
+
+    .order-input {
+        width: 100%;
+        padding: 9px 11px;
+        color: #e2e8f0;
+        outline: none;
+        background: rgba(2,6,23,.60);
+        border: 1px solid rgba(148,163,184,.16);
+        border-radius: 8px;
+    }
+
+        .order-input:focus {
+            border-color: rgba(34,211,238,.65);
+            box-shadow: 0 0 0 3px rgba(34,211,238,.04);
+        }
+
+
+    /* =========================================================
+       TAB 1 TOOLBAR
+       ========================================================= */
+
+    .tab-one-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        margin-bottom: 14px;
+        padding: 11px 12px;
+        background: rgba(2,6,23,.35);
+        border: 1px solid rgba(148,163,184,.09);
+        border-radius: 12px;
+    }
+
+    .tab-one-info-title {
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .tab-one-info-subtitle {
+        margin-top: 2px;
+        color: #64748b;
+        font-size: 8px;
+    }
+
+
+    /* =========================================================
+       MATRIX
+       ========================================================= */
+
+    .matrix-area {
+        overflow: hidden;
+        background: rgba(2,6,23,.38);
+        border: 1px solid rgba(148,163,184,.09);
+        border-radius: 14px;
+    }
+
+    .matrix-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 11px 13px;
+        border-bottom: 1px solid rgba(148,163,184,.08);
+    }
+
+    .matrix-toolbar-title {
+        color: #e0f2fe;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .matrix-toolbar-info {
+        color: #64748b;
+        font-size: 9px;
+    }
+
+    .matrix-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .activity-matrix {
+        width: 100%;
+        min-width: 850px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+        .activity-matrix th {
+            padding: 10px 8px;
+            text-align: center;
+            color: #94a3b8;
+            background: rgba(15,23,42,.99);
+            border-bottom: 1px solid rgba(34,211,238,.12);
+            font-size: 10px;
+        }
+
+        .activity-matrix td {
+            padding: 9px 8px;
+            text-align: center;
+            color: #cbd5e1;
+            border-bottom: 1px solid rgba(148,163,184,.065);
+            font-size: 10px;
+        }
+
+
+    /* =========================================================
+       MATRIX SCROLL
+       ========================================================= */
+
+    .matrix-scroll-20 {
+        position: relative;
+        max-height: 966px;
+        overflow-x: auto;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(34,211,238,.55) rgba(2,6,23,.35);
+    }
+
+        .matrix-scroll-20::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .matrix-scroll-20::-webkit-scrollbar-thumb {
+            background: linear-gradient( #22d3ee, #6366f1 );
+            border-radius: 20px;
+        }
+
+        .matrix-scroll-20 .activity-matrix thead th {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(15,23,42,.995);
+        }
+
+        .matrix-scroll-20 .select-all-row td {
+            position: sticky;
+            top: 76px;
+            z-index: 18;
+            background: rgba(8,47,73,.98);
+        }
+
+
+    /* =========================================================
+       SEARCH UNDER USER NAME
+       ========================================================= */
+
+    .user-column-header-cell {
+        min-width: 240px !important;
+        width: 240px;
+        padding: 8px 10px !important;
+        text-align: right !important;
+        vertical-align: top;
+    }
+
+    .user-column-title {
+        margin-bottom: 7px;
+        color: #e2e8f0;
+        text-align: right;
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    .user-column-search {
+        position: relative;
+        width: 100%;
+    }
+
+    .user-column-search-icon {
+        position: absolute;
+        top: 50%;
+        right: 9px;
+        transform: translateY(-50%);
+        z-index: 2;
+        color: #22d3ee;
+        pointer-events: none;
+        font-size: 13px;
+    }
+
+    .user-column-search-input {
+        width: 100%;
+        height: 31px;
+        padding: 5px 29px 5px 8px;
+        color: #e0f2fe;
+        outline: none;
+        background: rgba(2,6,23,.82);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 7px;
+        font-size: 8px;
+    }
+
+        .user-column-search-input::placeholder {
+            color: #64748b;
+        }
+
+        .user-column-search-input:focus {
+            border-color: rgba(34,211,238,.70);
+            box-shadow: 0 0 10px rgba(34,211,238,.08);
+        }
+
+
+    /* =========================================================
+       PERSON
+       ========================================================= */
+
+    .person-cell {
+        min-width: 240px;
+        text-align: right !important;
+    }
+
+    .person-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .person-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        color: #7dd3fc;
+        background: rgba(14,165,233,.15);
+        border: 1px solid rgba(34,211,238,.15);
+        border-radius: 8px;
+    }
+
+    .person-name {
+        display: block;
+        color: #e2e8f0;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .person-national {
+        display: block;
+        margin-top: 2px;
+        color: #64748b;
+        font-size: 8px;
+    }
+
+
+    /* =========================================================
+       CHECKBOX
+       ========================================================= */
+
+    .neon-check {
+        position: relative;
+        display: inline-flex;
+        width: 22px;
+        height: 22px;
+        cursor: pointer;
+    }
+
+        .neon-check input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .neon-check span {
+            position: absolute;
+            inset: 0;
+            background: rgba(2,6,23,.78);
+            border: 1px solid rgba(148,163,184,.34);
+            border-radius: 6px;
+        }
+
+        .neon-check input:checked + span {
+            background: linear-gradient( 135deg, #06b6d4, #4f46e5 );
+            border-color: #22d3ee;
+            box-shadow: 0 0 10px rgba(34,211,238,.30);
+        }
+
+            .neon-check input:checked + span:after {
+                content: "✓";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%,-53%);
+                color: white;
+                font-size: 13px;
+                font-weight: 900;
+            }
+
+
+    /* =========================================================
+       BUTTONS
+       ========================================================= */
+
+    .form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 14px;
+    }
+
+    .order-btn {
+        padding: 8px 15px;
+        color: #fff;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 8px;
+    }
+
+    .btn-main {
+        background: linear-gradient( 135deg, #0891b2, #4f46e5 );
+    }
+
+    .btn-secondary {
+        background: rgba(71,85,105,.40);
+        border-color: rgba(148,163,184,.14);
+    }
+
+    .btn-cancel {
+        color: #fde68a;
+        background: rgba(245,158,11,.09);
+        border-color: rgba(245,158,11,.18);
+    }
+
+    .action-edit {
+        padding: 6px 9px;
+        color: #c4b5fd;
+        cursor: pointer;
+        background: rgba(2,6,23,.35);
+        border: 1px solid rgba(139,92,246,.24);
+        border-radius: 6px;
+    }
+
+
+    /* =========================================================
+       TAB 1 SUMMARY
+       ========================================================= */
+
+    .summary-cell-box {
+        min-width: 155px;
+        padding: 6px;
+        background: rgba(2,6,23,.20);
+        border: 1px solid rgba(148,163,184,.05);
+        border-radius: 9px;
+    }
+
+    .summary-count-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 5px;
+        margin-bottom: 5px;
+    }
+
+    .summary-person-count {
+        padding: 3px 7px;
+        color: #67e8f9;
+        background: rgba(6,182,212,.08);
+        border: 1px solid rgba(34,211,238,.14);
+        border-radius: 20px;
+        font-size: 8px;
+    }
+
+    .summary-search-result-count {
+        color: #64748b;
+        font-size: 7px;
+    }
+
+    .summary-search-box {
+        position: relative;
+        margin-bottom: 6px;
+    }
+
+    .summary-search-icon {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        color: #22d3ee;
+        pointer-events: none;
+    }
+
+    .summary-cell-search {
+        width: 100%;
+        height: 29px;
+        padding: 5px 26px 5px 7px;
+        color: #dbeafe;
+        outline: none;
+        background: rgba(2,6,23,.72);
+        border: 1px solid rgba(34,211,238,.13);
+        border-radius: 6px;
+        font-size: 8px;
+    }
+
+        .summary-cell-search:focus {
+            border-color: rgba(34,211,238,.55);
+        }
+
+    .summary-person-scroll {
+        max-height: 92px;
+        min-height: 30px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(34,211,238,.50) rgba(2,6,23,.20);
+    }
+
+    .summary-person-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .summary-person-item {
+        padding: 5px 7px;
+        text-align: right;
+        color: #bae6fd;
+        background: rgba(14,165,233,.07);
+        border: 1px solid rgba(34,211,238,.08);
+        border-radius: 6px;
+        font-size: 8px;
+    }
+
+    .summary-no-result {
+        display: none;
+        padding: 14px 6px;
+        text-align: center;
+        color: #64748b;
+        font-size: 8px;
+    }
+
+
+    /* =========================================================
+       TAB 2 GRID - 5 ITEMS
+       ========================================================= */
+
+    .scope-grid {
+        display: grid;
+        grid-template-columns: repeat(5,minmax(0,1fr));
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    .scope-card {
+        min-height: 340px;
+        overflow: hidden;
+        background: rgba(2,6,23,.66);
+        border: 1px solid rgba(34,211,238,.17);
+        border-radius: 12px;
+    }
+
+    .scope-card-title {
+        padding: 11px 13px;
+        color: #e0f2fe;
+        border-bottom: 1px solid rgba(148,163,184,.08);
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .scope-selector-search {
+        padding: 8px 9px 0;
+    }
+
+    .scope-selector-search-input {
+        width: 100%;
+        height: 31px;
+        padding: 6px 9px;
+        color: #dbeafe;
+        outline: none;
+        background: rgba(2,6,23,.72);
+        border: 1px solid rgba(34,211,238,.13);
+        border-radius: 7px;
+        font-size: 9px;
+    }
+
+        .scope-selector-search-input:focus {
+            border-color: rgba(34,211,238,.55);
+        }
+
+    .scope-card-body {
+        max-height: 270px;
+        padding: 9px;
+        overflow-y: auto;
+    }
+
+    .scope-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 5px 8px;
+        cursor: pointer;
+    }
+
+        .scope-item input {
+            position: absolute;
+            opacity: 0;
+        }
+
+    .scope-check {
+        position: relative;
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
+        background: rgba(2,6,23,.90);
+        border: 1px solid rgba(148,163,184,.35);
+        border-radius: 4px;
+    }
+
+    .scope-item input:checked + .scope-check {
+        background: linear-gradient( 135deg, #06b6d4, #2563eb );
+        border-color: #22d3ee;
+    }
+
+        .scope-item input:checked + .scope-check:after {
+            content: "✓";
+            position: absolute;
+            right: 3px;
+            top: -1px;
+            color: white;
+        }
+
+    .scope-item input:disabled + .scope-check {
+        opacity: .35;
+    }
+
+    .scope-text {
+        color: #cbd5e1;
+        font-size: 10px;
+    }
+
+    .workday-grid {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 2px;
+    }
+
+
+    /* =========================================================
+       DISABLED CARDS
+       ========================================================= */
+
+    .scope-card-disabled {
+        opacity: .70;
+        pointer-events: none;
+        border-style: dashed;
+    }
+
+    .scope-disabled-body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 285px;
+        padding: 15px;
+    }
+
+    .scope-disabled-box {
+        width: 100%;
+        padding: 18px 10px;
+        text-align: center;
+        background: rgba(2,6,23,.35);
+        border: 1px dashed rgba(148,163,184,.15);
+        border-radius: 10px;
+    }
+
+    .scope-disabled-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        color: #fbbf24;
+        background: rgba(245,158,11,.08);
+        border: 1px solid rgba(245,158,11,.16);
+        border-radius: 20px;
+        font-size: 9px;
+    }
+
+    .scope-disabled-title {
+        margin-top: 12px;
+        color: #cbd5e1;
+        font-size: 10px;
+    }
+
+
+    /* =========================================================
+       TAB 2 TABLE
+       ========================================================= */
+
+    .scope-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+        max-height: 90px;
+        overflow-y: auto;
+    }
+
+    .scope-chip {
+        padding: 4px 7px;
+        color: #bae6fd;
+        background: rgba(14,165,233,.08);
+        border-radius: 15px;
+        font-size: 8px;
+    }
+
+    .scope-actions {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .scope-action {
+        padding: 6px 8px;
+        color: #bae6fd;
+        cursor: pointer;
+        background: rgba(2,6,23,.40);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 6px;
+        font-size: 8px;
+    }
+
+    .delete-agent-scope {
+        color: #fda4af;
+        border-color: rgba(244,63,94,.20);
+    }
+
+
+    /* =========================================================
+       DETAILS MODAL
+       ========================================================= */
+
+    .scope-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999998;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(2,6,23,.80);
+        backdrop-filter: blur(8px);
+    }
+
+        .scope-modal.show {
+            display: flex;
+        }
+
+    .scope-modal-card {
+        width: 600px;
+        max-width: 95%;
+        padding: 20px;
+        color: #e2e8f0;
+        background: #0f172a;
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 16px;
+    }
+
+    .detail-row {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 10px;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(148,163,184,.07);
+    }
+
+
+    /* =========================================================
+       MESSAGE
+       ========================================================= */
+
+    #orderNotification {
+        display: none;
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        z-index: 999999999;
+        transform: translateX(-50%);
+        min-width: 330px;
+        padding: 13px 20px;
+        color: white;
+        text-align: center;
+        border-radius: 11px;
+        box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    }
+
+        #orderNotification.success {
+            background: #047857;
+        }
+
+        #orderNotification.error {
+            background: #b91c1c;
+        }
+
+
+    /* =========================================================
+       LOADING
+       ========================================================= */
+
+    #pageLoadingOverlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 999999998;
+        align-items: center;
+        justify-content: center;
+        background: rgba(2,6,23,.76);
+    }
+
+        #pageLoadingOverlay.show {
+            display: flex;
+        }
+
+    .loading-card {
+        min-width: 260px;
+        padding: 25px;
+        color: white;
+        text-align: center;
+        background: #0f172a;
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 15px;
+    }
+
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @@media(max-width:1300px) {
+
+        .scope-grid {
+            grid-template-columns: repeat(3,1fr);
+        }
+    }
+
+    @@media(max-width:900px) {
+
+        .scope-grid {
+            grid-template-columns: repeat(2,1fr);
+        }
+
+        .order-stats {
+            grid-template-columns: repeat(2,1fr);
+        }
+    }
+
+    @@media(max-width:650px) {
+
+        .order-page {
+            padding: 10px;
+        }
+
+        .scope-grid,
+        .order-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .order-tabs {
+            flex-direction: column;
+        }
+
+        .order-tab {
+            width: 100%;
+        }
+
+        .guide-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .guide-main-btn {
+            width: 100%;
+        }
+
+        .section-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .oa-native-guide {
+            width: calc(100% - 16px);
+        }
+
+        .oa-native-guide-card {
+            padding: 15px;
+        }
+
+        .oa-native-guide-title {
+            font-size: 14px;
+        }
+
+        .oa-native-guide-item {
+            padding: 11px;
+        }
+
+        .oa-native-guide-text {
+            font-size: 10px;
+        }
+    }
+
+    /* =========================================================
+       TAB 3 - EXCEL IMPORT
+       ========================================================= */
+
+    .excel-component-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .excel-component-card {
+        position: relative;
+        padding: 20px;
+        overflow: hidden;
+        background: linear-gradient(135deg, rgba(15,23,42,.94), rgba(2,6,23,.84));
+        border: 1px solid rgba(34,211,238,.16);
+        border-radius: 20px;
+        box-shadow: 0 18px 46px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+        .excel-component-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 120px;
+            height: 120px;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(34,211,238,.13), transparent 68%);
+        }
+
+    .excel-component-head {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .excel-component-title {
+        margin: 0;
+        color: #f8fafc;
+        font-size: 17px;
+        font-weight: 900;
+    }
+
+    .excel-component-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        color: #67e8f9;
+        font-weight: 900;
+        background: rgba(8,145,178,.13);
+        border: 1px solid rgba(34,211,238,.24);
+        border-radius: 11px;
+    }
+
+    .excel-component-description {
+        min-height: 42px;
+        margin-bottom: 14px;
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.9;
+    }
+
+    .excel-file-picker {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+        background: rgba(15,23,42,.72);
+        border: 1px dashed rgba(148,163,184,.26);
+        border-radius: 14px;
+    }
+
+        .excel-file-picker input[type="file"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+    .excel-file-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 6px 12px;
+        cursor: pointer;
+        color: #e0f2fe;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+        background: rgba(14,165,233,.15);
+        border: 1px solid rgba(56,189,248,.24);
+        border-radius: 10px;
+    }
+
+    .excel-selected-file {
+        min-width: 0;
+        overflow: hidden;
+        color: #94a3b8;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .excel-component-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+    }
+
+    .excel-action-link,
+    .excel-upload-button,
+    .excel-disable-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 13px;
+        cursor: pointer;
+        text-decoration: none;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 900;
+        border-radius: 11px;
+        transition: .18s ease;
+    }
+
+    .excel-action-link {
+        color: #bfdbfe;
+        background: rgba(37,99,235,.14);
+        border: 1px solid rgba(96,165,250,.24);
+    }
+
+    .excel-upload-button {
+        color: #052e16;
+        background: linear-gradient(135deg, #34d399, #22d3ee);
+        border: 0;
+    }
+
+    .excel-disable-button {
+        color: #fecdd3;
+        background: rgba(225,29,72,.12);
+        border: 1px solid rgba(251,113,133,.24);
+    }
+
+        .excel-upload-button:disabled,
+        .excel-disable-button:disabled {
+            cursor: not-allowed;
+            opacity: .55;
+        }
+
+    .excel-active-batch {
+        margin-top: 14px;
+        padding: 12px;
+        color: #cbd5e1;
+        font-size: 12px;
+        line-height: 1.9;
+        background: rgba(16,185,129,.07);
+        border: 1px solid rgba(52,211,153,.16);
+        border-radius: 13px;
+    }
+
+        .excel-active-batch strong {
+            color: #6ee7b7;
+        }
+
+    .excel-result {
+        display: none;
+        margin-top: 12px;
+        padding: 10px 12px;
+        font-size: 12px;
+        line-height: 1.9;
+        border-radius: 12px;
+    }
+
+        .excel-result.success {
+            display: block;
+            color: #a7f3d0;
+            background: rgba(16,185,129,.09);
+            border: 1px solid rgba(52,211,153,.18);
+        }
+
+        .excel-result.error {
+            display: block;
+            color: #fecdd3;
+            background: rgba(225,29,72,.09);
+            border: 1px solid rgba(251,113,133,.18);
+        }
+
+    @@media (max-width: 900px) {
+        .excel-component-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+
+<!-- =========================================================
+     NATIVE GUIDE DIALOG
+
+     این Dialog عمداً بیرون فرم‌ها قرار گرفته است.
+     برای باز و بسته شدن هیچ jQuery لازم ندارد.
+     ========================================================= -->
+
+<dialog id="pageGuideDialog"
+        class="oa-native-guide">
+
+    <div class="oa-native-guide-card">
+
+
+        <div class="oa-native-guide-header">
+
+            <div>
+
+                <div class="oa-native-guide-title">
+
+                    راهنمای تنظیم نحوه ارجاع لیست وصول
+
+                </div>
+
+                <div class="oa-native-guide-subtitle">
+
+                    لطفاً قبل از اعمال تغییرات، راهنمای زیر را مطالعه فرمایید.
+
+                </div>
+
+            </div>
+
+
+            <form method="dialog">
+
+                <button type="submit"
+                        class="oa-native-guide-close"
+                        title="بستن">
+
+                    ×
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <div class="oa-native-guide-intro">
+
+            لطفا راهنمای زیر را مطالعه فرمایید:
+
+        </div>
+
+
+        <div class="oa-native-guide-item">
+
+            <div class="oa-native-guide-number">
+
+                1
+
+            </div>
+
+            <div class="oa-native-guide-text">
+
+                این صفحه جهت تعیین نحوه ارجاع لیست وصول مامورین می باشد.
+
+            </div>
+
+        </div>
+
+
+        <div class="oa-native-guide-item">
+
+            <div class="oa-native-guide-number">
+
+                2
+
+            </div>
+
+            <div class="oa-native-guide-text">
+
+                بصورت پیش فرض هیچ محدودیتی برای ارجاع لحاظ نشده است
+                (تمام مولفه ها فعال است) و درصورت عدم تغییر توسط کاربر،
+                ارجاع برای تمام مامورین تعیین نقش شده بدون محدودیت انجام خواهد شد.
+
+            </div>
+
+        </div>
+
+
+        <div class="oa-native-guide-item">
+
+            <div class="oa-native-guide-number">
+
+                3
+
+            </div>
+
+            <div class="oa-native-guide-text">
+
+                درصورت نیاز، می توانید برای یک یا چند مامور، تغییرات را اعمال
+                و دکمه
+
+                <span class="oa-native-guide-highlight">
+
+                    "ذخیره اطلاعات"
+
+                </span>
+
+                را بزنید
+                (برای سایر مامورین تغییری اعمال نخواهد شد)
+                و تغییرات فقط برای مامورین مشخص شده اعمال خواهد شد.
+
+            </div>
+
+        </div>
+
+
+        <div class="oa-native-guide-item">
+
+            <div class="oa-native-guide-number">
+
+                4
+
+            </div>
+
+            <div class="oa-native-guide-text">
+
+                آخرین تغییرات ذخیره شده در جدول ذیل صفحه نمایش داده می شود
+                و ارجاع لیست برمبنای آخرین تغییرات (جدول مذکور)
+                صورت خواهد گرفت و کاربران می توانند جهت ارجاعات بعدی،
+                قبل از زمان ارجاع تغییرات موردنظر را در زمان خود اعمال نمایند.
+
+            </div>
+
+        </div>
+
+
+        <div class="oa-native-guide-footer">
+
+            <form method="dialog">
+
+                <button type="submit"
+                        class="oa-native-guide-ok">
+
+                    متوجه شدم
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+    </div>
+
+</dialog>
+
+
+<div class="order-page">
+
+
+    <!-- =====================================================
+         MESSAGE
+         ===================================================== -->
+
+    <div id="orderNotification"></div>
+
+
+    <!-- =====================================================
+         LOADING
+         ===================================================== -->
+
+    <div id="pageLoadingOverlay">
+
+        <div class="loading-card">
+
+            <div id="loadingTitle">
+
+                در حال پردازش...
+
+            </div>
+
+            <div id="loadingText"
+                 style="margin-top:5px;color:#94a3b8;font-size:9px">
+
+                لطفاً چند لحظه صبر کنید
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         DETAILS MODAL TAB 2
+         ===================================================== -->
+
+    <div id="scopeDetailsModal"
+         class="scope-modal">
+
+        <div class="scope-modal-card">
+
+            <h3 style="margin-top:0">
+
+                جزئیات مامور
+
+            </h3>
+
+            <div id="scopeDetailsContent"></div>
+
+            <div class="form-actions">
+
+                <button type="button"
+                        id="closeScopeDetails"
+                        class="order-btn btn-secondary">
+
+                    بستن
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         GUIDE BUTTON
+         ===================================================== -->
+
+    <div class="guide-header">
+
+
+        <button type="button"
+                class="guide-main-btn"
+                onclick="document.getElementById('pageGuideDialog').showModal();">
+
+            <span class="guide-main-icon">
+
+                ?
+
+            </span>
+
+            راهنمای صفحه
+
+        </button>
+
+
+        <div class="guide-header-description">
+
+            برای مشاهده توضیحات نحوه تعیین نقش و تنظیمات ارجاع،
+            راهنمای صفحه را مطالعه فرمایید.
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         TABS
+         ===================================================== -->
+
+    <div class="order-tabs">
+
+
+        <button type="button"
+                class="order-tab active main-tab-button"
+                data-tab="tabOne">
+
+            1- تعیین نقش وصول
+
+        </button>
+
+
+        <button type="button"
+                class="order-tab main-tab-button"
+                data-tab="tabTwo">
+
+            2- تنظیمات ارجاع
+
+        </button>
+
+
+        <button type="button"
+                class="order-tab main-tab-button"
+                data-tab="tabThree">
+
+            3- ورود مؤلفه‌ها با Excel
+
+        </button>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         STATS
+         ===================================================== -->
+
+    <div class="order-stats">
+
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+
+                تعیین نقش ثبت‌شده
+
+            </div>
+
+            <div class="stat-value">
+
+                @(ViewBag.AssignmentCount ?? assignments.Count)
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+
+                نیروهای قابل انتخاب
+
+            </div>
+
+            <div class="stat-value">
+
+                @(ViewBag.UserCount ?? users.Count)
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+
+                نیروهای تنظیمات ارجاع
+
+            </div>
+
+            <div class="stat-value">
+
+                @tab2Users.Count
+
+            </div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-title">
+
+                مناطق
+
+            </div>
+
+            <div class="stat-value">
+
+                @allowedRegions.Count
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         TAB 1
+         ===================================================== -->
+
+    <div id="tabOne"
+         class="main-tab-panel">
+
+
+        <div class="glass-card"
+             id="assignmentFormCard">
+
+
+            <div class="section-header">
+
+                <div>
+
+                    <h2 id="assignmentFormTitle">
+
+                        تعیین نقش نیروها
+
+                    </h2>
+
+                    <p>
+
+                        نقش هر نیرو را انتخاب کنید.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <form id="assignmentForm">
+
+
+                @Html.AntiForgeryToken()
+
+
+
+                <div class="tab-one-toolbar">
+
+                    <div>
+
+                        <div class="tab-one-info-title">
+
+                            تعیین نقش ماموران
+
+                        </div>
+
+                        <div class="tab-one-info-subtitle">
+
+                            هر نیرو می‌تواند یک یا چند فعالیت داشته باشد.
+                            برای جستجوی نیرو از کادر زیر نام نیرو استفاده کنید.
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="matrix-area">
+
+
+                    <div class="matrix-toolbar">
+
+                        <div class="matrix-toolbar-title">
+
+                            ماتریس نقش‌ها
+
+                        </div>
+
+                        <div class="matrix-toolbar-info">
+
+                            انتخاب همه، کل ستون را انتخاب می‌کند.
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="matrix-wrapper matrix-scroll-20">
+
+
+                        <table class="activity-matrix"
+                               id="assignmentMatrix">
+
+
+                            <thead>
+
+                                <tr>
+
+
+                                    <!-- SEARCH زیر نام نیرو -->
+
+                                    <th class="user-column-header-cell">
+
+                                        <div class="user-column-title">
+
+                                            نام نیرو
+
+                                        </div>
+
+                                        <div class="user-column-search">
+
+                                            <span class="user-column-search-icon">
+
+                                                ⌕
+
+                                            </span>
+
+                                            <input type="text"
+                                                   id="matrixUserSearch"
+                                                   class="user-column-search-input"
+                                                   autocomplete="off"
+                                                   placeholder="جستجوی نام یا کد ملی..." />
+
+                                        </div>
+
+                                    </th>
+
+
+                                    @foreach (var activity in activityTypes)
+                                    {
+                                        <th>
+
+                                            @activity.Title
+
+                                        </th>
+                                    }
+
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody>
+
+
+                                <!-- SELECT ALL -->
+
+                                <tr class="select-all-row">
+
+
+                                    <td class="person-cell">
+
+                                        <strong style="color:#7dd3fc">
+
+                                            انتخاب همه
+
+                                        </strong>
+
+                                    </td>
+
+
+                                    @foreach (var activity in activityTypes)
+                                    {
+                                        <td>
+
+                                            <label class="neon-check">
+
+                                                <input type="checkbox"
+                                                       class="column-select-all"
+                                                       data-activity="@activity.ID" />
+
+                                                <span></span>
+
+                                            </label>
+
+                                        </td>
+                                    }
+
+
+                                </tr>
+
+
+                                <!-- USERS -->
+
+                                @foreach (var user in users)
+                                {
+                                    var fullName =
+                                        (
+                                            (user.usr_Name ?? "")
+                                            +
+                                            " "
+                                            +
+                                            (user.usr_Family ?? "")
+                                        )
+                                        .Trim();
+
+
+                                    <tr class="user-activity-row"
+                                        data-search="@((fullName + " " + (user.usr_NationalCode ?? "")).ToLower())">
+
+
+                                        <td class="person-cell">
+
+                                            <div class="person-info">
+
+                                                <span class="person-avatar">
+
+                                                    @(string.IsNullOrWhiteSpace(fullName)
+                                                        ? "؟"
+                                                        : fullName.Substring(0, 1))
+
+                                                </span>
+
+                                                <div>
+
+                                                    <span class="person-name">
+
+                                                        @fullName
+
+                                                    </span>
+
+                                                    <span class="person-national">
+
+                                                        @(user.usr_NationalCode ?? "")
+
+                                                    </span>
+
+                                                </div>
+
+                                            </div>
+
+                                        </td>
+
+
+                                        @foreach (var activity in activityTypes)
+                                        {
+                                            var pairKey =
+                                                user.usr_ID.ToString()
+                                                + "_"
+                                                + activity.ID.ToString();
+
+
+                                            var isSaved =
+                                                savedActivityPairKeys.Contains(
+                                                    pairKey
+                                                );
+
+
+                                            <td>
+
+                                                <label class="neon-check">
+
+                                                    <input type="checkbox"
+                                                           class="user-activity-check"
+                                                           data-user="@user.usr_ID"
+                                                           data-activity="@activity.ID"
+                                                           @(isSaved ? "checked" : null) />
+
+                                                    <span></span>
+
+                                                </label>
+
+                                            </td>
+                                        }
+
+
+                                    </tr>
+                                }
+
+
+                            </tbody>
+
+
+                        </table>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="form-actions">
+
+
+                    <button type="submit"
+                            class="order-btn btn-main">
+
+                        <span id="saveButtonText">
+
+                            ذخیره اطلاعات
+
+                        </span>
+
+                    </button>
+
+
+                    <button type="button"
+                            id="clearAssignment"
+                            class="order-btn btn-secondary">
+
+                        پاک کردن
+
+                    </button>
+
+
+
+                </div>
+
+
+            </form>
+
+
+        </div>
+
+
+        <!-- =================================================
+             TAB 1 SAVED TABLE
+             ================================================= -->
+
+        <div class="glass-card">
+
+
+            <div class="section-header">
+
+                <div>
+
+                    <h2>
+
+                        آخرین تعیین نقش ثبت‌شده
+
+                    </h2>
+
+                    <p>
+
+                        در هر ستون می‌توانید نام یا کد ملی نیرو را جستجو کنید.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="matrix-wrapper">
+
+
+                <table class="activity-matrix">
+
+
+                    <thead>
+
+                        <tr>
+
+                            <th style="width:65px">
+
+                                ردیف
+
+                            </th>
+
+
+                            @foreach (var activity in activityTypes)
+                            {
+                                <th>
+
+                                    @activity.Title
+
+                                </th>
+                            }
+
+
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+
+                        @{
+                            int row = 0;
+                        }
+
+
+                        @foreach (var assignment in assignments)
+                        {
+                            row++;
+
+
+                            <tr>
+
+
+                                <td>
+
+                                    @row
+
+                                </td>
+
+
+                                @foreach (var activity in activityTypes)
+                                {
+                                    var ids =
+                                        assignmentActivities
+                                        .Where(x =>
+                                            x.AssignmentID == assignment.ID
+                                            &&
+                                            x.ActivityTypeID == activity.ID)
+                                        .Select(x =>
+                                            x.UserID)
+                                        .Distinct()
+                                        .ToList();
+
+
+                                    var activityUsers =
+                                        users
+                                        .Where(x =>
+                                            ids.Contains(x.usr_ID))
+                                        .OrderBy(x =>
+                                            x.usr_Family)
+                                        .ThenBy(x =>
+                                            x.usr_Name)
+                                        .ToList();
+
+
+                                    <td>
+
+
+                                        <div class="summary-cell-box">
+
+
+                                            @if (activityUsers.Any())
+                                            {
+
+                                                <div class="summary-count-row">
+
+                                                    <span class="summary-person-count"
+                                                          data-total="@activityUsers.Count">
+
+                                                        @activityUsers.Count نفر
+
+                                                    </span>
+
+                                                    <span class="summary-search-result-count">
+
+                                                        همه
+
+                                                    </span>
+
+                                                </div>
+
+
+                                                <div class="summary-search-box">
+
+                                                    <span class="summary-search-icon">
+
+                                                        ⌕
+
+                                                    </span>
+
+                                                    <input type="text"
+                                                           class="summary-cell-search"
+                                                           autocomplete="off"
+                                                           placeholder="نام یا کد ملی..." />
+
+                                                </div>
+
+
+                                                <div class="summary-person-scroll">
+
+                                                    <div class="summary-person-list">
+
+
+                                                        @foreach (var person in activityUsers)
+                                                        {
+                                                            var name =
+                                                                (
+                                                                    (person.usr_Name ?? "")
+                                                                    +
+                                                                    " "
+                                                                    +
+                                                                    (person.usr_Family ?? "")
+                                                                )
+                                                                .Trim();
+
+
+                                                            <div class="summary-person-item"
+                                                                 data-search="@((name + " " + (person.usr_NationalCode ?? "")).ToLower())">
+
+                                                                @name
+
+                                                            </div>
+                                                        }
+
+
+                                                        <div class="summary-no-result">
+
+                                                            موردی پیدا نشد
+
+                                                        </div>
+
+
+                                                    </div>
+
+                                                </div>
+
+                                            }
+                                            else
+                                            {
+                                                <span style="color:#475569">
+
+                                                    -
+
+                                                </span>
+                                            }
+
+
+                                        </div>
+
+
+                                    </td>
+                                }
+
+
+
+
+                            </tr>
+                        }
+
+
+                        @if (row == 0)
+                        {
+                            <tr>
+
+                                <td colspan="@(activityTypes.Count + 1)"
+                                    style="padding:30px;color:#64748b">
+
+                                    هنوز اطلاعاتی ثبت نشده است.
+
+                                </td>
+
+                            </tr>
+                        }
+
+
+                    </tbody>
+
+
+                </table>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+    <!-- =====================================================
+         TAB 2
+         ===================================================== -->
+
+    <div id="tabTwo"
+         class="main-tab-panel"
+         style="display:none">
+
+
+        <div class="glass-card"
+             id="scopeFormCard">
+
+
+            <div class="section-header">
+
+                <div>
+
+                    <h2 id="scopeFormTitle">
+
+                        تنظیمات ارجاع ماموران
+
+                    </h2>
+
+                    <p>
+
+                        منطقه و روزکار موردنظر را برای ماموران تعیین کنید.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <form id="agentScopeForm">
+
+
+                @Html.AntiForgeryToken()
+
+
+                <input type="hidden"
+                       id="ScopeID" />
+
+
+                <div class="scope-grid">
+
+
+                    <!-- 1 USER -->
+
+                    <div class="scope-card">
+
+
+                        <div class="scope-card-title">
+
+                            نام مامور
+
+                        </div>
+
+
+                        <div class="scope-selector-search">
+
+                            <input type="text"
+                                   id="scopeUserSearch"
+                                   class="scope-selector-search-input"
+                                   autocomplete="off"
+                                   placeholder="جستجوی نام یا کد ملی..." />
+
+                        </div>
+
+
+                        <div class="scope-card-body">
+
+
+                            <label class="scope-item">
+
+                                <input type="checkbox"
+                                       id="scopeAllUsers"
+                                       checked />
+
+                                <span class="scope-check"></span>
+
+                                <span class="scope-text">
+
+                                    انتخاب همه
+
+                                </span>
+
+                            </label>
+
+
+                            @foreach (var user in tab2Users)
+                            {
+                                var name =
+                                    (
+                                        (user.usr_Name ?? "")
+                                        +
+                                        " "
+                                        +
+                                        (user.usr_Family ?? "")
+                                    )
+                                    .Trim();
+
+
+                                <label class="scope-item scope-user-option"
+                                       data-search="@((name + " " + (user.usr_NationalCode ?? "")).ToLower())">
+
+                                    <input type="checkbox"
+                                           class="scope-user-check"
+                                           value="@user.usr_ID"
+                                           checked />
+
+                                    <span class="scope-check"></span>
+
+                                    <span class="scope-text">
+
+                                        @name
+
+                                    </span>
+
+                                </label>
+                            }
+
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- 2 REGION -->
+
+                    <div class="scope-card">
+
+
+                        <div class="scope-card-title">
+
+                            کد منطقه
+
+                        </div>
+
+
+                        <div class="scope-selector-search">
+
+                            <input type="text"
+                                   id="scopeRegionSearch"
+                                   class="scope-selector-search-input"
+                                   autocomplete="off"
+                                   placeholder="جستجوی منطقه..." />
+
+                        </div>
+
+
+                        <div class="scope-card-body">
+
+
+                            <label class="scope-item">
+
+                                <input type="checkbox"
+                                       id="scopeAllRegions" />
+
+                                <span class="scope-check"></span>
+
+                                <span class="scope-text">
+
+                                    انتخاب همه
+
+                                </span>
+
+                            </label>
+
+
+                            @foreach (var region in allowedRegions)
+                            {
+                                <label class="scope-item scope-region-option"
+                                       data-search="@region">
+
+                                    <input type="checkbox"
+                                           class="scope-region-check"
+                                           value="@region" />
+
+                                    <span class="scope-check"></span>
+
+                                    <span class="scope-text">
+
+                                        منطقه @region
+
+                                    </span>
+
+                                </label>
+                            }
+
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- 3 WORK DAY -->
+
+                    <div class="scope-card">
+
+
+                        <div class="scope-card-title">
+
+                            روزکار
+
+                        </div>
+
+
+                        <div class="scope-selector-search">
+
+                            <input type="text"
+                                   id="scopeWorkDaySearch"
+                                   class="scope-selector-search-input"
+                                   autocomplete="off"
+                                   placeholder="جستجوی روزکار..." />
+
+                        </div>
+
+
+                        <div class="scope-card-body">
+
+
+                            <label class="scope-item">
+
+                                <input type="checkbox"
+                                       id="scopeAllWorkDays" />
+
+                                <span class="scope-check"></span>
+
+                                <span class="scope-text">
+
+                                    انتخاب همه
+
+                                </span>
+
+                            </label>
+
+
+                            <div class="workday-grid">
+
+
+                                @for (int day = 1; day <= 99; day++)
+                                {
+                                    <label class="scope-item scope-workday-option"
+                                           data-search="@day">
+
+                                        <input type="checkbox"
+                                               class="scope-workday-check"
+                                               value="@day" />
+
+                                        <span class="scope-check"></span>
+
+                                        <span class="scope-text">
+
+                                            @day
+
+                                        </span>
+
+                                    </label>
+                                }
+
+
+                            </div>
+
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- 4 MAHDOODEH -->
+
+                    <div class="scope-card scope-card-disabled">
+
+
+                        <div class="scope-card-title">
+
+                            محدوده
+
+                        </div>
+
+
+                        <div class="scope-disabled-body">
+
+                            <div class="scope-disabled-box">
+
+                                <div class="scope-disabled-badge">
+
+                                    در حال بروزرسانی
+
+                                </div>
+
+                                <div class="scope-disabled-title">
+
+                                    محدوده کاری مامور
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- 5 TARIFF -->
+
+                    <div class="scope-card scope-card-disabled">
+
+
+                        <div class="scope-card-title">
+
+                            نوع تعرفه
+
+                        </div>
+
+
+                        <div class="scope-disabled-body">
+
+                            <div class="scope-disabled-box">
+
+                                <div class="scope-disabled-badge">
+
+                                    در حال بروزرسانی
+
+                                </div>
+
+                                <div class="scope-disabled-title">
+
+                                    نوع تعرفه
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="form-actions">
+
+
+                    <button type="submit"
+                            id="saveAgentScope"
+                            class="order-btn btn-main">
+
+                        ذخیره اطلاعات
+
+                    </button>
+
+
+                    <button type="button"
+                            id="clearAgentScope"
+                            class="order-btn btn-secondary">
+
+                        پاک کردن
+
+                    </button>
+
+
+                    <button type="button"
+                            id="cancelAgentScopeEdit"
+                            class="order-btn btn-cancel"
+                            style="display:none">
+
+                        انصراف از ویرایش
+
+                    </button>
+
+
+                </div>
+
+
+            </form>
+
+
+        </div>
+
+
+        <!-- =================================================
+             TAB 2 SAVED
+             ================================================= -->
+
+        <div class="glass-card">
+
+
+            <div class="section-header">
+
+
+                <div>
+
+                    <h2>
+
+                        آخرین تنظیمات ذخیره‌شده ماموران
+
+                    </h2>
+
+                    <p>
+
+                        ارجاعات بر اساس آخرین تنظیمات ذخیره‌شده انجام خواهد شد.
+
+                    </p>
+
+                </div>
+
+
+                <div style="width:250px">
+
+                    <input type="text"
+                           id="scopeSearch"
+                           class="order-input"
+                           autocomplete="off"
+                           placeholder="جستجوی مامور..." />
+
+                </div>
+
+
+            </div>
+
+
+            <div class="matrix-wrapper">
+
+
+                <table class="activity-matrix">
+
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                مامور
+                            </th>
+
+                            <th>
+                                مناطق
+                            </th>
+
+                            <th>
+                                روزکار
+                            </th>
+
+                            <th>
+                                عملیات
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+
+                        @foreach (var scope in agentScopes)
+                        {
+                            var person =
+                                tab2Users
+                                .FirstOrDefault(x =>
+                                    x.usr_ID == scope.UserID);
+
+
+                            if (person == null)
+                            {
+                                continue;
+                            }
+
+
+                            var name =
+                                (
+                                    (person.usr_Name ?? "")
+                                    +
+                                    " "
+                                    +
+                                    (person.usr_Family ?? "")
+                                )
+                                .Trim();
+
+
+                            var regions =
+                                agentScopeRegions
+                                .Where(x =>
+                                    x.ScopeID == scope.ID)
+                                .Select(x =>
+                                    x.RegionCode)
+                                .OrderBy(x =>
+                                    x)
+                                .ToList();
+
+
+                            var days =
+                                agentScopeWorkDays
+                                .Where(x =>
+                                    x.ScopeID == scope.ID)
+                                .Select(x =>
+                                    x.WorkDay)
+                                .OrderBy(x =>
+                                    x)
+                                .ToList();
+
+
+                            <tr class="scope-data-row"
+                                data-name="@((name + " " + (person.usr_NationalCode ?? "")).ToLower())">
+
+
+                                <td>
+
+                                    <div class="person-info">
+
+                                        <span class="person-avatar">
+
+                                            @(string.IsNullOrWhiteSpace(name)
+                                                ? "؟"
+                                                : name.Substring(0, 1))
+
+                                        </span>
+
+                                        <div>
+
+                                            <span class="person-name">
+
+                                                @name
+
+                                            </span>
+
+                                            <span class="person-national">
+
+                                                @(person.usr_NationalCode ?? "")
+
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <td>
+
+                                    <div class="scope-chip-list">
+
+                                        @foreach (var r in regions)
+                                        {
+                                            <span class="scope-chip">
+
+                                                @r
+
+                                            </span>
+                                        }
+
+                                    </div>
+
+                                </td>
+
+
+                                <td>
+
+                                    <div class="scope-chip-list">
+
+                                        @foreach (var d in days)
+                                        {
+                                            <span class="scope-chip">
+
+                                                @d
+
+                                            </span>
+                                        }
+
+                                    </div>
+
+                                </td>
+
+
+                                <td>
+
+                                    <div class="scope-actions">
+
+                                        <button type="button"
+                                                class="scope-action details-agent-scope"
+                                                data-id="@scope.ID">
+
+                                            جزئیات
+
+                                        </button>
+
+                                        <button type="button"
+                                                class="scope-action edit-agent-scope"
+                                                data-id="@scope.ID">
+
+                                            ویرایش
+
+                                        </button>
+
+                                        <button type="button"
+                                                class="scope-action delete-agent-scope"
+                                                data-id="@scope.ID">
+
+                                            حذف
+
+                                        </button>
+
+                                    </div>
+
+                                </td>
+
+
+                            </tr>
+                        }
+
+
+                    </tbody>
+
+
+                </table>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- =====================================================
+         TAB 3 - EXCEL COMPONENT IMPORT
+         ===================================================== -->
+
+    <div id="tabThree"
+         class="main-tab-panel"
+         style="display:none">
+
+        <div class="glass-card">
+
+            <div class="section-header">
+
+                <div>
+
+                    <h2>
+                        ورود مؤلفه‌ها از Excel
+                    </h2>
+
+                    <p>
+                        ابتدا نمونه فایل مؤلفه را دریافت کنید، مقادیر را در ستون اول قرار دهید و سپس همان فایل را بارگذاری نمایید.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="excel-component-grid">
+
+                @foreach (var component in excelComponents)
+                {
+                    var activeBatch =
+                        excelImportBatches
+                        .Where(x =>
+                            x.ComponentType == component.Key
+                            &&
+                            x.IsActive == true)
+                        .OrderByDescending(x =>
+                            x.ID)
+                        .FirstOrDefault();
+
+
+                    <form class="excel-component-card component-upload-form"
+                          enctype="multipart/form-data"
+                          data-component-type="@component.Key"
+                          data-component-title="@component.Value">
+
+                        @Html.AntiForgeryToken()
+
+
+                        <div class="excel-component-head">
+
+                            <h3 class="excel-component-title">
+                                @component.Value
+                            </h3>
+
+                            <span class="excel-component-number">
+                                @component.Key
+                            </span>
+
+                        </div>
+
+
+                        <div class="excel-component-description">
+                            فایل باید فقط یک ستون با عنوان دقیق «@component.Value» داشته باشد. ردیف‌های خالی و مقادیر تکراری نادیده گرفته می‌شوند.
+                        </div>
+
+
+                        <div class="excel-file-picker">
+
+                            <input type="file"
+                                   id="componentExcel_@component.Key"
+                                   name="excelFile"
+                                   class="component-excel-file"
+                                   accept=".xlsx,.xls" />
+
+                            <label class="excel-file-label"
+                                   for="componentExcel_@component.Key">
+                                انتخاب فایل
+                            </label>
+
+                            <span class="excel-selected-file">
+                                فایلی انتخاب نشده است
+                            </span>
+
+                        </div>
+
+
+                        <div class="excel-component-actions">
+
+                            <a class="excel-action-link"
+                               href="@Url.Action("DownloadOrderComponentTemplate", "Orders", new { area = "Setting", componentType = component.Key })">
+                                دریافت نمونه Excel
+                            </a>
+
+                            <button type="submit"
+                                    class="excel-upload-button">
+                                بارگذاری و ذخیره
+                            </button>
+
+                            @if (activeBatch != null)
+                            {
+                                <button type="button"
+                                        class="excel-disable-button disable-component-import"
+                                        data-id="@activeBatch.ID">
+                                    غیرفعال‌سازی فایل فعلی
+                                </button>
+                            }
+
+                        </div>
+
+
+                        @if (activeBatch != null)
+                        {
+                            <div class="excel-active-batch">
+                                <strong>فایل فعال:</strong>
+                                @(activeBatch.OriginalFileName ?? "-")
+                                <br />
+                                <strong>تعداد مقادیر:</strong>
+                                @activeBatch.RowCount
+                            </div>
+                        }
+
+
+                        <div class="excel-result"></div>
+
+                    </form>
+                }
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+<!-- =========================================================
+     jQuery
+
+     اگر در _Layout.cshtml از قبل jQuery لود شده است،
+     این خط را حذف کنید.
+     ========================================================= -->
+
+<script src="~/Scripts/jquery-3.3.1.js"
+        type="text/javascript"></script>
+
+
+<script>
+
+$(document).ready(function () {
+
+
+    /* =====================================================
+       IMPORTANT
+
+       برای Guide هیچ JavaScript اینجا وجود ندارد.
+       Guide توسط <dialog> خود مرورگر کنترل می‌شود.
+       ===================================================== */
+
+
+    var DEFAULT_ASSIGNMENT_TITLE = "تعیین نقش";
+    var DEFAULT_ASSIGNMENT_DESCRIPTION = "";
+
+
+    /* =====================================================
+       COMMON
+       ===================================================== */
+
+    function token(formSelector) {
+
+        return $(
+            formSelector +
+            ' input[name="__RequestVerificationToken"]'
+        ).val();
+
+    }
+
+
+    function message(text, type) {
+
+        var box = $("#orderNotification");
+
+
+        box
+            .stop(true, true)
+            .removeClass("success error")
+            .addClass(type || "success")
+            .text(text || "")
+            .fadeIn(150);
+
+
+        clearTimeout(
+            window.orderMessageTimer
+        );
+
+
+        window.orderMessageTimer =
+            setTimeout(
+                function () {
+
+                    box.fadeOut(200);
+
+                },
+                3500
+            );
+
+    }
+
+
+    function loading(show) {
+
+        $("#pageLoadingOverlay")
+            .toggleClass(
+                "show",
+                !!show
+            );
+
+    }
+
+
+    function htmlEncode(value) {
+
+        return $("<div>")
+            .text(
+                value == null
+                ?
+                ""
+                :
+                value
+            )
+            .html();
+
+    }
+
+
+    /* =====================================================
+       TABS
+       ===================================================== */
+
+    $(".main-tab-button").on(
+        "click",
+        function () {
+
+            var target =
+                $(this).data("tab");
+
+
+            $(".main-tab-button")
+                .removeClass("active");
+
+
+            $(this)
+                .addClass("active");
+
+
+            $(".main-tab-panel")
+                .hide();
+
+
+            $("#" + target)
+                .show();
+
+
+            sessionStorage.setItem(
+                "OrderAssignmentActiveTab",
+                target
+            );
+        }
+    );
+
+
+    /* =====================================================
+       RESTORE LAST TAB
+       ===================================================== */
+
+    var savedTab =
+        sessionStorage.getItem(
+            "OrderAssignmentActiveTab"
+        );
+
+
+    if (
+        savedTab
+        &&
+        $("#" + savedTab).length
+        &&
+        $('.main-tab-button[data-tab="' + savedTab + '"]').length
+    ) {
+
+        $('.main-tab-button[data-tab="' + savedTab + '"]')
+            .trigger("click");
+    }
+
+    /* =====================================================
+       TAB 1 MASTER CHECKBOX
+       ===================================================== */
+
+    function updateAssignmentMasters() {
+
+        $(".column-select-all")
+            .each(
+                function () {
+
+                    var master =
+                        $(this);
+
+
+                    var activityId =
+                        master.data(
+                            "activity"
+                        );
+
+
+                    var items =
+                        $(
+                            '.user-activity-check[data-activity="' +
+                            activityId +
+                            '"]'
+                        );
+
+
+                    var checked =
+                        items
+                        .filter(":checked")
+                        .length;
+
+
+                    if (
+                        items.length > 0
+                        &&
+                        checked === items.length
+                    ) {
+
+                        master
+                            .prop(
+                                "checked",
+                                true
+                            )
+                            .prop(
+                                "indeterminate",
+                                false
+                            );
+
+                    }
+                    else if (
+                        checked > 0
+                    ) {
+
+                        master
+                            .prop(
+                                "checked",
+                                false
+                            )
+                            .prop(
+                                "indeterminate",
+                                true
+                            );
+
+                    }
+                    else {
+
+                        master
+                            .prop(
+                                "checked",
+                                false
+                            )
+                            .prop(
+                                "indeterminate",
+                                false
+                            );
+
+                    }
+
+                }
+            );
+    }
+
+
+    $(".column-select-all").on(
+        "change",
+        function () {
+
+            var activity =
+                $(this).data(
+                    "activity"
+                );
+
+
+            var checked =
+                $(this).is(
+                    ":checked"
+                );
+
+
+            $(
+                '.user-activity-check[data-activity="' +
+                activity +
+                '"]'
+            )
+            .prop(
+                "checked",
+                checked
+            );
+
+
+            updateAssignmentMasters();
+
+        }
+    );
+
+
+    $(document).on(
+        "change",
+        ".user-activity-check",
+        function () {
+
+            updateAssignmentMasters();
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 1 USER SEARCH
+       ===================================================== */
+
+    $("#matrixUserSearch").on(
+        "input",
+        function () {
+
+            var q =
+                $.trim(
+                    $(this).val()
+                )
+                .toLowerCase();
+
+
+            $("#assignmentMatrix .user-activity-row")
+                .each(
+                    function () {
+
+                        var text =
+                            (
+                                $(this)
+                                .attr(
+                                    "data-search"
+                                )
+                                ||
+                                ""
+                            )
+                            .toLowerCase();
+
+
+                        $(this).toggle(
+                            !q
+                            ||
+                            text.indexOf(q) >= 0
+                        );
+
+                    }
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 1 SUMMARY SEARCH
+       ===================================================== */
+
+    $(document).on(
+        "input",
+        ".summary-cell-search",
+        function () {
+
+            var cell =
+                $(this)
+                .closest(
+                    ".summary-cell-box"
+                );
+
+
+            var query =
+                $.trim(
+                    $(this).val()
+                )
+                .toLowerCase();
+
+
+            var visibleCount = 0;
+
+
+            cell
+                .find(
+                    ".summary-person-item"
+                )
+                .each(
+                    function () {
+
+                        var item =
+                            $(this);
+
+
+                        var text =
+                            (
+                                item.attr(
+                                    "data-search"
+                                )
+                                ||
+                                ""
+                            )
+                            .toLowerCase();
+
+
+                        var visible =
+                            !query
+                            ||
+                            text.indexOf(
+                                query
+                            ) >= 0;
+
+
+                        item.toggle(
+                            visible
+                        );
+
+
+                        if (visible) {
+
+                            visibleCount++;
+
+                        }
+
+                    }
+                );
+
+
+            var total =
+                parseInt(
+                    cell
+                    .find(
+                        ".summary-person-count"
+                    )
+                    .attr(
+                        "data-total"
+                    )
+                    ||
+                    "0"
+                );
+
+
+            cell
+                .find(
+                    ".summary-search-result-count"
+                )
+                .text(
+                    query
+                    ?
+                    visibleCount +
+                    " از " +
+                    total
+                    :
+                    "همه"
+                );
+
+
+            cell
+                .find(
+                    ".summary-no-result"
+                )
+                .toggle(
+                    !!query
+                    &&
+                    visibleCount === 0
+                );
+
+
+            cell
+                .find(
+                    ".summary-person-scroll"
+                )
+                .scrollTop(0);
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 1 URL
+       ===================================================== */
+
+    var assignmentUrls = {
+
+        save:
+            '@Url.Action("CreateOrderAssignment", "Orders", new { area = "Setting" })'
+
+    };
+
+
+    /* =====================================================
+       TAB 1 SELECTED PAIRS
+       ===================================================== */
+
+    function selectedPairs() {
+
+        var result = [];
+
+
+        $(".user-activity-check:checked")
+            .each(
+                function () {
+
+                    result.push(
+                        $(this).data("user")
+                        +
+                        "_"
+                        +
+                        $(this).data("activity")
+                    );
+
+                }
+            );
+
+
+        return result;
+    }
+
+
+    /* =====================================================
+       TAB 1 ALL MATRIX USERS
+
+       همه کاربران ارسال می‌شوند؛ حتی کاربری که هیچ تیکی ندارد.
+       به همین دلیل حالت کاملاً خالی نیز قابل ذخیره است.
+       ===================================================== */
+
+    function allMatrixUsers() {
+
+        var map = {};
+
+
+        $(".user-activity-check")
+            .each(
+                function () {
+
+                    map[
+                        $(this).data("user")
+                    ] = true;
+
+                }
+            );
+
+
+        return Object.keys(map);
+    }
+
+
+    var assignmentSaving = false;
+
+
+    /* =====================================================
+       TAB 1 SAVE / FAST UPSERT
+       ===================================================== */
+
+    $("#assignmentForm").on(
+        "submit",
+        function (e) {
+
+            e.preventDefault();
+
+
+            if (assignmentSaving) {
+
+                return;
+
+            }
+
+
+            var allUserIds =
+                allMatrixUsers();
+
+
+            var pairs =
+                selectedPairs();
+
+
+            if (allUserIds.length === 0) {
+
+                message(
+                    "هیچ نیرویی برای ثبت وجود ندارد.",
+                    "error"
+                );
+
+                return;
+
+            }
+
+
+            assignmentSaving = true;
+
+
+            var $submitButton =
+                $(this).find(":submit");
+
+
+            $submitButton
+                .prop(
+                    "disabled",
+                    true
+                );
+
+
+            loading(true);
+
+
+            $.ajax({
+
+                url:
+                    assignmentUrls.save,
+
+                type:
+                    "POST",
+
+                traditional:
+                    true,
+
+                data: {
+
+                    __RequestVerificationToken:
+                        token(
+                            "#assignmentForm"
+                        ),
+
+                    Title:
+                        DEFAULT_ASSIGNMENT_TITLE,
+
+                    Description:
+                        DEFAULT_ASSIGNMENT_DESCRIPTION,
+
+                    UserIds:
+                        allUserIds,
+
+                    UserActivityPairs:
+                        pairs
+                },
+
+                success:
+                    function (r) {
+
+                        if (
+                            r
+                            &&
+                            r.success
+                        ) {
+
+                            message(
+                                r.message,
+                                "success"
+                            );
+
+
+                            sessionStorage.setItem(
+                                "OrderAssignmentActiveTab",
+                                "tabOne"
+                            );
+
+
+                            // بدون تأخیر اضافی، جدول خلاصه نیز تازه می‌شود.
+                            window.location.reload();
+
+                        }
+                        else {
+
+                            message(
+                                r
+                                &&
+                                r.message
+                                ?
+                                r.message
+                                :
+                                "عملیات انجام نشد.",
+                                "error"
+                            );
+
+                        }
+
+                    },
+
+                error:
+                    function () {
+
+                        message(
+                            "خطا در ارتباط با سرور.",
+                            "error"
+                        );
+
+                    },
+
+                complete:
+                    function () {
+
+                        assignmentSaving = false;
+
+
+                        $submitButton
+                            .prop(
+                                "disabled",
+                                false
+                            );
+
+
+                        loading(false);
+
+                    }
+
+            });
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 1 CLEAR
+       ===================================================== */
+
+    $("#clearAssignment").on(
+        "click",
+        function () {
+
+            $(".user-activity-check")
+                .prop(
+                    "checked",
+                    false
+                );
+
+
+            $(".column-select-all")
+                .prop(
+                    "checked",
+                    false
+                )
+                .prop(
+                    "indeterminate",
+                    false
+                );
+
+        }
+    );
+
+    /* =====================================================
+       TAB 2 SEARCH USER
+       ===================================================== */
+
+    $("#scopeUserSearch").on(
+        "input",
+        function () {
+
+            var q =
+                $.trim(
+                    $(this).val()
+                )
+                .toLowerCase();
+
+
+            $(".scope-user-option")
+                .each(
+                    function () {
+
+                        var text =
+                            (
+                                $(this)
+                                .attr(
+                                    "data-search"
+                                )
+                                ||
+                                ""
+                            )
+                            .toLowerCase();
+
+
+                        $(this).toggle(
+                            !q
+                            ||
+                            text.indexOf(q) >= 0
+                        );
+
+                    }
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 SEARCH REGION
+       ===================================================== */
+
+    $("#scopeRegionSearch").on(
+        "input",
+        function () {
+
+            var q =
+                $.trim(
+                    $(this).val()
+                );
+
+
+            $(".scope-region-option")
+                .each(
+                    function () {
+
+                        var text =
+                            (
+                                $(this)
+                                .attr(
+                                    "data-search"
+                                )
+                                ||
+                                ""
+                            )
+                            .toString();
+
+
+                        $(this).toggle(
+                            !q
+                            ||
+                            text.indexOf(q) >= 0
+                        );
+
+                    }
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 SEARCH WORKDAY
+       ===================================================== */
+
+    $("#scopeWorkDaySearch").on(
+        "input",
+        function () {
+
+            var q =
+                $.trim(
+                    $(this).val()
+                );
+
+
+            $(".scope-workday-option")
+                .each(
+                    function () {
+
+                        var text =
+                            (
+                                $(this)
+                                .attr(
+                                    "data-search"
+                                )
+                                ||
+                                ""
+                            )
+                            .toString();
+
+
+                        $(this).toggle(
+                            !q
+                            ||
+                            text.indexOf(q) >= 0
+                        );
+
+                    }
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 SELECT ALL
+       ===================================================== */
+
+    $("#scopeAllUsers").on(
+        "change",
+        function () {
+
+            var checked =
+                $(this).is(
+                    ":checked"
+                );
+
+
+            $(".scope-user-option:visible")
+                .find(
+                    ".scope-user-check:not(:disabled)"
+                )
+                .prop(
+                    "checked",
+                    checked
+                );
+
+        }
+    );
+
+
+    $("#scopeAllRegions").on(
+        "change",
+        function () {
+
+            var checked =
+                $(this).is(
+                    ":checked"
+                );
+
+
+            $(".scope-region-option:visible")
+                .find(
+                    ".scope-region-check"
+                )
+                .prop(
+                    "checked",
+                    checked
+                );
+
+        }
+    );
+
+
+    $("#scopeAllWorkDays").on(
+        "change",
+        function () {
+
+            var checked =
+                $(this).is(
+                    ":checked"
+                );
+
+
+            $(".scope-workday-option:visible")
+                .find(
+                    ".scope-workday-check"
+                )
+                .prop(
+                    "checked",
+                    checked
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 URLS
+       ===================================================== */
+
+    var scopeUrls = {
+
+        save:
+            '@Url.Action("SaveAgentScope", "Orders", new { area = "Setting" })',
+
+        get:
+            '@Url.Action("GetAgentScope", "Orders", new { area = "Setting" })',
+
+        details:
+            '@Url.Action("GetAgentScopeDetails", "Orders", new { area = "Setting" })',
+
+        remove:
+            '@Url.Action("DeleteAgentScope", "Orders", new { area = "Setting" })'
+
+    };
+
+
+    /* =====================================================
+       TAB 2 GET SELECTED VALUES
+       ===================================================== */
+
+    function scopeValues(
+        selector
+    ) {
+
+        var result = [];
+
+
+        $(
+            selector +
+            ":checked"
+        )
+        .each(
+            function () {
+
+                result.push(
+                    parseInt(
+                        $(this).val(),
+                        10
+                    )
+                );
+
+            }
+        );
+
+
+        return result;
+    }
+
+
+    /* =====================================================
+       TAB 2 SAVE
+       ===================================================== */
+
+    $("#agentScopeForm").on(
+        "submit",
+        function (e) {
+
+            e.preventDefault();
+
+
+            var selectedUserIds =
+                scopeValues(
+                    ".scope-user-check"
+                );
+
+
+            var regions =
+                scopeValues(
+                    ".scope-region-check"
+                );
+
+
+            var days =
+                scopeValues(
+                    ".scope-workday-check"
+                );
+
+
+            if (
+                selectedUserIds.length === 0
+            ) {
+
+                message(
+                    "حداقل یک مامور انتخاب کنید.",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            if (
+                regions.length === 0
+            ) {
+
+                message(
+                    "حداقل یک منطقه انتخاب کنید.",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            if (
+                days.length === 0
+            ) {
+
+                message(
+                    "حداقل یک روزکار انتخاب کنید.",
+                    "error"
+                );
+
+                return;
+            }
+
+
+            loading(true);
+
+
+            $.ajax({
+
+                url:
+                    scopeUrls.save,
+
+                type:
+                    "POST",
+
+                traditional:
+                    true,
+
+                data: {
+
+                    __RequestVerificationToken:
+                        token(
+                            "#agentScopeForm"
+                        ),
+
+                    ID:
+                        $("#ScopeID")
+                        .val(),
+
+                    UserIds:
+                        selectedUserIds,
+
+                    RegionIds:
+                        regions,
+
+                    WorkDays:
+                        days
+                },
+
+                success:
+                    function (r) {
+
+                        if (
+                            r
+                            &&
+                            r.success
+                        ) {
+
+                            message(
+                                r.message,
+                                "success"
+                            );
+
+
+                            sessionStorage.setItem(
+                                "OrderAssignmentActiveTab",
+                                "tabTwo"
+                            );
+
+
+                            setTimeout(
+                                function () {
+
+                                    location.reload();
+
+                                },
+                                450
+                            );
+
+                        }
+                        else {
+
+                            message(
+                                r
+                                &&
+                                r.message
+                                ?
+                                r.message
+                                :
+                                "ثبت انجام نشد.",
+                                "error"
+                            );
+
+                        }
+
+                    },
+
+                error:
+                    function () {
+
+                        message(
+                            "خطا در ارتباط با سرور.",
+                            "error"
+                        );
+
+                    },
+
+                complete:
+                    function () {
+
+                        loading(false);
+
+                    }
+
+            });
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 EDIT
+       ===================================================== */
+
+    $(document).on(
+        "click",
+        ".edit-agent-scope",
+        function () {
+
+            var id =
+                $(this).data("id");
+
+
+            loading(true);
+
+
+            $.ajax({
+
+                url:
+                    scopeUrls.get,
+
+                type:
+                    "GET",
+
+                data:
+                    {
+                        id: id
+                    },
+
+                success:
+                    function (r) {
+
+                        if (
+                            !r
+                            ||
+                            !r.success
+                        ) {
+
+                            message(
+                                r
+                                &&
+                                r.message
+                                ?
+                                r.message
+                                :
+                                "اطلاعات دریافت نشد.",
+                                "error"
+                            );
+
+                            return;
+                        }
+
+
+                        $("#ScopeID")
+                            .val(
+                                r.data.ID
+                            );
+
+
+                        $(".scope-user-check")
+                            .prop(
+                                "checked",
+                                false
+                            )
+                            .prop(
+                                "disabled",
+                                true
+                            );
+
+
+                        $(
+                            '.scope-user-check[value="' +
+                            r.data.UserID +
+                            '"]'
+                        )
+                        .prop(
+                            "checked",
+                            true
+                        )
+                        .prop(
+                            "disabled",
+                            false
+                        );
+
+
+                        $(".scope-region-check")
+                            .prop(
+                                "checked",
+                                false
+                            );
+
+
+                        $.each(
+                            r.data.Regions
+                            ||
+                            [],
+                            function (
+                                index,
+                                value
+                            ) {
+
+                                $(
+                                    '.scope-region-check[value="' +
+                                    value +
+                                    '"]'
+                                )
+                                .prop(
+                                    "checked",
+                                    true
+                                );
+
+                            }
+                        );
+
+
+                        $(".scope-workday-check")
+                            .prop(
+                                "checked",
+                                false
+                            );
+
+
+                        $.each(
+                            r.data.WorkDays
+                            ||
+                            [],
+                            function (
+                                index,
+                                value
+                            ) {
+
+                                $(
+                                    '.scope-workday-check[value="' +
+                                    value +
+                                    '"]'
+                                )
+                                .prop(
+                                    "checked",
+                                    true
+                                );
+
+                            }
+                        );
+
+
+                        $("#saveAgentScope")
+                            .text(
+                                "ذخیره تغییرات"
+                            );
+
+
+                        $("#cancelAgentScopeEdit")
+                            .show();
+
+
+                        $(".main-tab-button")
+                            .removeClass(
+                                "active"
+                            );
+
+
+                        $('.main-tab-button[data-tab="tabTwo"]')
+                            .addClass(
+                                "active"
+                            );
+
+
+                        $(".main-tab-panel")
+                            .hide();
+
+
+                        $("#tabTwo")
+                            .show();
+
+
+                        $("html,body")
+                            .animate(
+                                {
+                                    scrollTop:
+                                        $("#scopeFormCard")
+                                        .offset()
+                                        .top
+                                        -
+                                        30
+                                },
+                                250
+                            );
+
+                    },
+
+                error:
+                    function () {
+
+                        message(
+                            "خطا در دریافت اطلاعات.",
+                            "error"
+                        );
+
+                    },
+
+                complete:
+                    function () {
+
+                        loading(false);
+
+                    }
+
+            });
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 CANCEL EDIT
+       ===================================================== */
+
+    $("#cancelAgentScopeEdit").on(
+        "click",
+        function () {
+
+            $("#ScopeID")
+                .val("");
+
+
+            $(".scope-user-check")
+                .prop(
+                    "disabled",
+                    false
+                )
+                .prop(
+                    "checked",
+                    true
+                );
+
+
+            $(".scope-region-check")
+                .prop(
+                    "checked",
+                    false
+                );
+
+
+            $(".scope-workday-check")
+                .prop(
+                    "checked",
+                    false
+                );
+
+
+            $("#saveAgentScope")
+                .text(
+                    "ذخیره اطلاعات"
+                );
+
+
+            $(this)
+                .hide();
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 CLEAR
+       ===================================================== */
+
+    $("#clearAgentScope").on(
+        "click",
+        function () {
+
+            $(".scope-region-check")
+                .prop(
+                    "checked",
+                    false
+                );
+
+
+            $(".scope-workday-check")
+                .prop(
+                    "checked",
+                    false
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 DELETE
+       ===================================================== */
+
+    $(document).on(
+        "click",
+        ".delete-agent-scope",
+        function () {
+
+            var id =
+                $(this).data("id");
+
+
+            if (
+                !confirm(
+                    "آیا اطلاعات این مامور حذف شود؟"
+                )
+            ) {
+
+                return;
+
+            }
+
+
+            loading(true);
+
+
+            $.ajax({
+
+                url:
+                    scopeUrls.remove,
+
+                type:
+                    "POST",
+
+                data: {
+
+                    __RequestVerificationToken:
+                        token(
+                            "#agentScopeForm"
+                        ),
+
+                    id:
+                        id
+                },
+
+                success:
+                    function (r) {
+
+                        if (
+                            r
+                            &&
+                            r.success
+                        ) {
+
+                            message(
+                                r.message,
+                                "success"
+                            );
+
+
+                            sessionStorage.setItem(
+                                "OrderAssignmentActiveTab",
+                                "tabTwo"
+                            );
+
+
+                            setTimeout(
+                                function () {
+
+                                    location.reload();
+
+                                },
+                                400
+                            );
+
+                        }
+                        else {
+
+                            message(
+                                r
+                                &&
+                                r.message
+                                ?
+                                r.message
+                                :
+                                "حذف انجام نشد.",
+                                "error"
+                            );
+
+                        }
+
+                    },
+
+                error:
+                    function () {
+
+                        message(
+                            "خطا در حذف اطلاعات.",
+                            "error"
+                        );
+
+                    },
+
+                complete:
+                    function () {
+
+                        loading(false);
+
+                    }
+
+            });
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 DETAILS
+       ===================================================== */
+
+    $(document).on(
+        "click",
+        ".details-agent-scope",
+        function () {
+
+            var id =
+                $(this).data("id");
+
+
+            loading(true);
+
+
+            $.ajax({
+
+                url:
+                    scopeUrls.details,
+
+                type:
+                    "GET",
+
+                data:
+                    {
+                        id: id
+                    },
+
+                success:
+                    function (r) {
+
+                        if (
+                            !r
+                            ||
+                            !r.success
+                        ) {
+
+                            message(
+                                r
+                                &&
+                                r.message
+                                ?
+                                r.message
+                                :
+                                "اطلاعات دریافت نشد.",
+                                "error"
+                            );
+
+                            return;
+                        }
+
+
+                        var d =
+                            r.data;
+
+
+                        var regionsText =
+                            (
+                                d.Regions
+                                ||
+                                []
+                            )
+                            .join("، ");
+
+
+                        var workDaysText =
+                            (
+                                d.WorkDays
+                                ||
+                                []
+                            )
+                            .join("، ");
+
+
+                        var html = "";
+
+
+                        html +=
+                            "<div class='detail-row'>" +
+                                "<div>نام مامور</div>" +
+                                "<div>" +
+                                    htmlEncode(
+                                        d.FullName
+                                    ) +
+                                "</div>" +
+                            "</div>";
+
+
+                        html +=
+                            "<div class='detail-row'>" +
+                                "<div>کد ملی</div>" +
+                                "<div>" +
+                                    htmlEncode(
+                                        d.NationalCode
+                                    ) +
+                                "</div>" +
+                            "</div>";
+
+
+                        html +=
+                            "<div class='detail-row'>" +
+                                "<div>مناطق</div>" +
+                                "<div>" +
+                                    htmlEncode(
+                                        regionsText
+                                    ) +
+                                "</div>" +
+                            "</div>";
+
+
+                        html +=
+                            "<div class='detail-row'>" +
+                                "<div>روزکار</div>" +
+                                "<div>" +
+                                    htmlEncode(
+                                        workDaysText
+                                    ) +
+                                "</div>" +
+                            "</div>";
+
+
+                        html +=
+                            "<div class='detail-row'>" +
+                                "<div>محدوده</div>" +
+                                "<div>در حال بروزرسانی</div>" +
+                            "</div>";
+
+
+                        html +=
+                            "<div class='detail-row'>" +
+                                "<div>نوع تعرفه</div>" +
+                                "<div>در حال بروزرسانی</div>" +
+                            "</div>";
+
+
+                        $("#scopeDetailsContent")
+                            .html(
+                                html
+                            );
+
+
+                        $("#scopeDetailsModal")
+                            .addClass(
+                                "show"
+                            );
+
+                    },
+
+                error:
+                    function () {
+
+                        message(
+                            "خطا در دریافت جزئیات.",
+                            "error"
+                        );
+
+                    },
+
+                complete:
+                    function () {
+
+                        loading(false);
+
+                    }
+
+            });
+
+        }
+    );
+
+
+    /* =====================================================
+       CLOSE DETAILS
+       ===================================================== */
+
+    $("#closeScopeDetails").on(
+        "click",
+        function () {
+
+            $("#scopeDetailsModal")
+                .removeClass(
+                    "show"
+                );
+
+        }
+    );
+
+
+    $("#scopeDetailsModal").on(
+        "click",
+        function (e) {
+
+            if (
+                e.target === this
+            ) {
+
+                $(this)
+                    .removeClass(
+                        "show"
+                    );
+
+            }
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 2 SAVED TABLE SEARCH
+       ===================================================== */
+
+    $("#scopeSearch").on(
+        "input",
+        function () {
+
+            var q =
+                $.trim(
+                    $(this).val()
+                )
+                .toLowerCase();
+
+
+            $(".scope-data-row")
+                .each(
+                    function () {
+
+                        var text =
+                            (
+                                $(this)
+                                .attr(
+                                    "data-name"
+                                )
+                                ||
+                                ""
+                            )
+                            .toLowerCase();
+
+
+                        $(this).toggle(
+                            !q
+                            ||
+                            text.indexOf(q) >= 0
+                        );
+
+                    }
+                );
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 3 URLS
+       ===================================================== */
+
+    var componentImportUrls = {
+
+        upload:
+            '@Url.Action("UploadOrderComponentExcel", "Orders", new { area = "Setting" })',
+
+        disable:
+            '@Url.Action("DisableOrderComponentImport", "Orders", new { area = "Setting" })'
+
+    };
+
+
+    /* =====================================================
+       TAB 3 FILE NAME
+       ===================================================== */
+
+    $(document).on(
+        "change",
+        ".component-excel-file",
+        function () {
+
+            var fileName =
+                this.files
+                &&
+                this.files.length
+                ?
+                this.files[0].name
+                :
+                "فایلی انتخاب نشده است";
+
+
+            $(this)
+                .closest(".excel-file-picker")
+                .find(".excel-selected-file")
+                .text(fileName);
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 3 UPLOAD
+       ===================================================== */
+
+    $(document).on(
+        "submit",
+        ".component-upload-form",
+        function (e) {
+
+            e.preventDefault();
+
+
+            var form = this;
+            var $form = $(form);
+            var fileInput =
+                $form.find(".component-excel-file")[0];
+            var $result =
+                $form.find(".excel-result");
+
+
+            if (
+                !fileInput
+                ||
+                !fileInput.files
+                ||
+                fileInput.files.length === 0
+            ) {
+
+                $result
+                    .removeClass("success")
+                    .addClass("error")
+                    .text("ابتدا فایل Excel را انتخاب کنید.");
+
+                return;
+            }
+
+
+            var formData =
+                new FormData(form);
+
+
+            formData.append(
+                "componentType",
+                $form.data("component-type")
+            );
+
+
+            var $button =
+                $form.find(".excel-upload-button");
+
+
+            $button.prop("disabled", true);
+            loading(true);
+
+
+            $.ajax({
+
+                url:
+                    componentImportUrls.upload,
+
+                type:
+                    "POST",
+
+                data:
+                    formData,
+
+                processData:
+                    false,
+
+                contentType:
+                    false,
+
+                success:
+                    function (r) {
+
+                        if (r && r.success) {
+
+                            $result
+                                .removeClass("error")
+                                .addClass("success")
+                                .text(r.message);
+
+
+                            message(
+                                r.message,
+                                "success"
+                            );
+
+
+                            sessionStorage.setItem(
+                                "OrderAssignmentActiveTab",
+                                "tabThree"
+                            );
+
+
+                            window.location.reload();
+                        }
+                        else {
+
+                            var errorText =
+                                r && r.message
+                                ? r.message
+                                : "بارگذاری فایل انجام نشد.";
+
+
+                            if (
+                                r
+                                &&
+                                r.errors
+                                &&
+                                r.errors.length
+                            ) {
+
+                                errorText +=
+                                    " | "
+                                    +
+                                    r.errors.join(" | ");
+                            }
+
+
+                            $result
+                                .removeClass("success")
+                                .addClass("error")
+                                .text(errorText);
+
+
+                            message(
+                                errorText,
+                                "error"
+                            );
+                        }
+
+                    },
+
+                error:
+                    function () {
+
+                        var errorText =
+                            "خطا در ارتباط با سرور هنگام بارگذاری فایل.";
+
+
+                        $result
+                            .removeClass("success")
+                            .addClass("error")
+                            .text(errorText);
+
+
+                        message(
+                            errorText,
+                            "error"
+                        );
+
+                    },
+
+                complete:
+                    function () {
+
+                        $button.prop("disabled", false);
+                        loading(false);
+
+                    }
+
+            });
+
+        }
+    );
+
+
+    /* =====================================================
+       TAB 3 DISABLE ACTIVE FILE
+       ===================================================== */
+
+    $(document).on(
+        "click",
+        ".disable-component-import",
+        function () {
+
+            var $button =
+                $(this);
+
+
+            if (
+                !confirm(
+                    "آیا فایل فعال این مؤلفه غیرفعال شود؟"
+                )
+            ) {
+
+                return;
+            }
+
+
+            $button.prop("disabled", true);
+            loading(true);
+
+
+            $.ajax({
+
+                url:
+                    componentImportUrls.disable,
+
+                type:
+                    "POST",
+
+                data: {
+
+                    __RequestVerificationToken:
+                        $button
+                        .closest(".component-upload-form")
+                        .find('input[name="__RequestVerificationToken"]')
+                        .val(),
+
+                    id:
+                        $button.data("id")
+                },
+
+                success:
+                    function (r) {
+
+                        if (r && r.success) {
+
+                            message(
+                                r.message,
+                                "success"
+                            );
+
+
+                            sessionStorage.setItem(
+                                "OrderAssignmentActiveTab",
+                                "tabThree"
+                            );
+
+
+                            window.location.reload();
+                        }
+                        else {
+
+                            message(
+                                r && r.message
+                                ? r.message
+                                : "غیرفعال‌سازی انجام نشد.",
+                                "error"
+                            );
+
+                            $button.prop("disabled", false);
+                        }
+
+                    },
+
+                error:
+                    function () {
+
+                        message(
+                            "خطا در ارتباط با سرور.",
+                            "error"
+                        );
+
+
+                        $button.prop("disabled", false);
+
+                    },
+
+                complete:
+                    function () {
+
+                        loading(false);
+
+                    }
+
+            });
+
+        }
+    );
+
+    /* =====================================================
+       INITIAL
+       ===================================================== */
+
+    updateAssignmentMasters();
+
+
+});
+
+</script>

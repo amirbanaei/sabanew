@@ -1,0 +1,1527 @@
+﻿@using SaabWebProject.Models.DomainModels
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+
+@model JBP_Cases
+
+@{
+    ViewBag.Title = "رسیدگی پرونده " + Model.CaseNumber;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var pathStages = ViewBag.PathStages as List<JBP_WorkflowStages> ?? new List<JBP_WorkflowStages>();
+    var instances = ViewBag.Instances as List<JBP_CaseStageInstances> ?? new List<JBP_CaseStageInstances>();
+    var activeInstance = ViewBag.ActiveInstance as JBP_CaseStageInstances;
+    var myMember = ViewBag.MyMember as JBP_CaseStageMembers;
+    var instanceMembers = ViewBag.InstanceMembers as List<JBP_CaseStageMembers> ?? new List<JBP_CaseStageMembers>();
+    var currentVerdict = ViewBag.CurrentVerdict as JBP_CaseVerdicts;
+    var signatures = ViewBag.Signatures as List<JBP_VerdictSignatures> ?? new List<JBP_VerdictSignatures>();
+    var mySignature = ViewBag.MySignature as JBP_VerdictSignatures;
+    var attachments = ViewBag.Attachments as List<JBP_CaseAttachments> ?? new List<JBP_CaseAttachments>();
+    var verdictAttachments = ViewBag.VerdictAttachments as List<JBP_CaseAttachments> ?? new List<JBP_CaseAttachments>();
+    var appeals = ViewBag.Appeals as List<JBP_CaseAppeals> ?? new List<JBP_CaseAppeals>();
+    var appealAttachments = ViewBag.AppealAttachments as List<JBP_CaseAttachments> ?? new List<JBP_CaseAttachments>();
+    var publishedVerdicts = ViewBag.PublishedVerdicts as List<JBP_CaseVerdicts> ?? new List<JBP_CaseVerdicts>();
+    var messages = ViewBag.Messages as List<JBP_CaseComments> ?? new List<JBP_CaseComments>();
+    var meetings = ViewBag.Meetings as List<JBP_CaseMeetings> ?? new List<JBP_CaseMeetings>();
+    var meetingParticipants = ViewBag.MeetingParticipants as List<JBP_CaseMeetingParticipants> ?? new List<JBP_CaseMeetingParticipants>();
+    var timeline = ViewBag.Timeline as List<JBP_CaseTimeline> ?? new List<JBP_CaseTimeline>();
+    var users = ViewBag.Users as List<tbUsers> ?? new List<tbUsers>();
+    var applicant = ViewBag.Applicant as tbUsers;
+    var applicantCases = ViewBag.ApplicantCases as List<JBP_Cases> ?? new List<JBP_Cases>();
+    var applicantSummary = ViewBag.ApplicantSummary as List<string> ?? new List<string>();
+    var applicantWorkInfo = ViewBag.ApplicantWorkInfo as Dictionary<string, string> ?? new Dictionary<string, string>();
+    var categoriesAll = ViewBag.CategoriesAll as List<JBP_CaseCategories> ?? new List<JBP_CaseCategories>();
+
+    bool isActiveMember = ViewBag.IsActiveMember == true;
+    bool canDraft = ViewBag.CanDraft == true;
+    bool isChair = ViewBag.IsChair == true;
+    bool isSecretary = ViewBag.IsSecretary == true;
+    bool canManageMeeting = ViewBag.CanManageMeeting == true;
+
+    var currentStage = activeInstance != null ? pathStages.FirstOrDefault(x => x.StageID == activeInstance.FK_Stage) : null;
+
+    var pc = new PersianCalendar();
+
+    Func<DateTime?, bool, string> fa = (d, withTime) =>
+        !d.HasValue ? "" :
+        pc.GetYear(d.Value).ToString("0000") + "/" + pc.GetMonth(d.Value).ToString("00") + "/" + pc.GetDayOfMonth(d.Value).ToString("00")
+        + (withTime ? " " + d.Value.ToString("HH:mm") : "");
+
+    Func<int?, string> userName = id =>
+    {
+        var u = id.HasValue ? users.FirstOrDefault(x => x.usr_ID == id.Value) : null;
+        return u == null ? "-" : ((u.usr_Name ?? "") + " " + (u.usr_Family ?? "")).Trim();
+    };
+
+    Func<byte, string> roleTitle = r => r == 1 ? "رئیس جلسه" : r == 2 ? "دبیر جلسه" : r == 4 ? "مهمان" : "عضو";
+    Func<byte, string> roleBadge = r => r == 1 ? "purple" : r == 2 ? "warn" : "muted";
+
+    string[] meetingTypes = { "", "حضوری", "ویدئوکال / آنلاین", "تلفنی" };
+    string[] attendTypes = { "", "حضوری", "ویدئوکال", "تلفنی" };
+
+    byte verdictStatus = currentVerdict != null ? currentVerdict.StatusCode : (byte)0;
+    var currentVerdictFiles = currentVerdict != null
+        ? verdictAttachments.Where(x => x.AttachmentGroupID == currentVerdict.AttachmentGroupID).ToList()
+        : new List<JBP_CaseAttachments>();
+
+    int signedCount = signatures.Count(x => x.StatusCode == 1 && x.RoleCode != 1);
+    bool signDeadlinePassed = currentVerdict != null && currentVerdict.SignDeadline.HasValue && currentVerdict.SignDeadline.Value < DateTime.Now;
+    bool canSign = isActiveMember && mySignature != null && mySignature.StatusCode == 0 && verdictStatus == 2 && !signDeadlinePassed;
+    int currentUserId = myMember != null ? myMember.FK_User : 0;
+}
+
+<style>
+
+    /* ================= PAGE ================= */
+
+    .jbp-page {
+        direction: rtl;
+        min-height: calc(100vh - 65px);
+        padding: 10px;
+        color: #fff;
+        font-size: 10px;
+        line-height: 1.7;
+        background: radial-gradient(circle at 8% 6%, rgba(0,225,255,.14), transparent 27%), radial-gradient(circle at 90% 12%, rgba(121,73,255,.16), transparent 30%), radial-gradient(circle at 50% 100%, rgba(0,255,170,.05), transparent 32%), linear-gradient(135deg, #06101d 0%, #0a1930 50%, #07111f 100%);
+    }
+
+    .jbp-page * { box-sizing: border-box; }
+    .jbp-wrap { max-width: 1580px; margin: auto; position: relative; z-index: 2; }
+
+    .jbp-glass {
+        background: linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.03));
+        border: 1px solid rgba(255,255,255,.11);
+        box-shadow: 0 12px 34px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.06);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border-radius: 14px;
+    }
+
+    /* ================= HEADER ================= */
+
+    .jbp-head { padding: 8px 12px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; position: relative; overflow: hidden; }
+    .jbp-head::before { content: ""; position: absolute; width: 150px; height: 150px; right: -70px; top: -100px; border-radius: 50%; background: rgba(0,218,255,.1); filter: blur(25px); pointer-events: none; }
+    .jbp-brand { display: flex; align-items: center; gap: 9px; min-width: 0; position: relative; }
+    .jbp-logo { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; background: linear-gradient(135deg, #00d4ff, #3c7cff); box-shadow: 0 0 18px rgba(0,212,255,.35); }
+    .jbp-logo.purple { background: linear-gradient(135deg, #7b5cff, #b04cff); box-shadow: 0 0 18px rgba(150,90,255,.35); }
+    .jbp-logo.green { background: linear-gradient(135deg, #00b27c, #00d6a0); box-shadow: 0 0 18px rgba(0,200,150,.3); }
+    .jbp-title { margin: 0; font-size: 14px; font-weight: 900; line-height: 1.5; }
+    .jbp-subtitle { margin-top: 1px; color: rgba(255,255,255,.5); font-size: 9px; line-height: 1.6; }
+    .jbp-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; position: relative; }
+
+    /* ================= BUTTONS ================= */
+
+    .jbp-btn {
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.06);
+        color: #fff !important;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 8px;
+        text-decoration: none !important;
+        transition: .2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 9.5px;
+        white-space: nowrap;
+    }
+
+    .jbp-btn:hover { transform: translateY(-1px); border-color: rgba(0,220,255,.4); box-shadow: 0 0 14px rgba(0,210,255,.18); }
+    .jbp-btn.primary { border: 0; background: linear-gradient(135deg, #02c6df, #087cff); box-shadow: 0 0 14px rgba(0,195,255,.3); }
+    .jbp-btn.green { border: 0; background: linear-gradient(135deg, #00ac78, #00cf97); box-shadow: 0 0 12px rgba(0,210,150,.25); }
+    .jbp-btn.red { border: 0; background: linear-gradient(135deg, #e44b64, #bd2346); box-shadow: 0 0 12px rgba(230,70,100,.25); }
+    .jbp-btn.purple { border: 0; background: linear-gradient(135deg, #755bff, #ad4cff); box-shadow: 0 0 12px rgba(150,90,255,.28); }
+    .jbp-btn.amber { border: 0; background: linear-gradient(135deg, #e6a100, #ff7a1a); box-shadow: 0 0 12px rgba(255,160,40,.28); }
+    .jbp-btn.sm { min-height: 22px; padding: 0 7px; font-size: 8.5px; border-radius: 6px; }
+    .jbp-btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+    .jbp-count { display: inline-flex; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; align-items: center; justify-content: center; background: #ff4d6d; font-size: 8px; font-weight: 900; box-shadow: 0 0 8px rgba(255,77,109,.6); }
+
+    /* ================= STATS ================= */
+
+    .jbp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 6px; margin-bottom: 7px; }
+    .jbp-stat { padding: 7px 10px; position: relative; overflow: hidden; transition: .2s; }
+    .jbp-stat:hover { transform: translateY(-1px); border-color: rgba(0,220,255,.3); }
+    .jbp-stat::before { content: ""; position: absolute; width: 55px; height: 55px; border-radius: 50%; top: -22px; left: -14px; background: rgba(0,210,255,.1); }
+    .jbp-stat.hot { border-color: rgba(255,200,80,.45); box-shadow: 0 0 18px rgba(255,190,60,.14); }
+    .jbp-stat-label { color: rgba(255,255,255,.55); font-size: 8.5px; }
+    .jbp-stat-value { font-size: 17px; font-weight: 900; line-height: 1.4; text-shadow: 0 0 10px rgba(0,210,255,.35); }
+    .jbp-stat-icon { position: absolute; left: 8px; bottom: 5px; font-size: 15px; opacity: .3; }
+
+    /* ================= SECTIONS ================= */
+
+    .jbp-section { padding: 9px 10px; margin-bottom: 7px; }
+    .jbp-section-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+    .jbp-section-title { margin: 0; font-size: 11px; font-weight: 900; color: #8ceeff; }
+    .jbp-section-sub { margin-top: 1px; color: rgba(255,255,255,.45); font-size: 9px; line-height: 1.7; }
+    .jbp-panel { padding: 7px 8px; border-radius: 10px; background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.055); }
+    .jbp-panel-title { margin-bottom: 5px; color: #88ecff; font-size: 9.5px; font-weight: 800; }
+
+    .jbp-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+    .jbp-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px; }
+    .jbp-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+    .jbp-span-2 { grid-column: span 2; }
+    .jbp-span-3 { grid-column: span 3; }
+    .jbp-span-all { grid-column: 1 / -1; }
+
+    /* ================= FORM ================= */
+
+    .jbp-field > label { display: block; margin-bottom: 2px; color: #8cecff; font-size: 9px; font-weight: 700; }
+    .jbp-field .hint { margin-top: 2px; color: rgba(255,255,255,.4); font-size: 8.5px; line-height: 1.6; }
+
+    .jbp-control {
+        width: 100%;
+        min-height: 28px;
+        padding: 4px 8px;
+        border: 1px solid rgba(255,255,255,.11);
+        border-radius: 8px;
+        background: rgba(255,255,255,.045);
+        color: #fff;
+        outline: none;
+        font-family: inherit;
+        font-size: 10px;
+        transition: .15s;
+    }
+
+    .jbp-control:focus { border-color: rgba(0,215,255,.7); box-shadow: 0 0 0 2px rgba(0,210,255,.08), 0 0 12px rgba(0,210,255,.12); }
+    .jbp-control::placeholder { color: rgba(255,255,255,.28); }
+    select.jbp-control option { color: #fff; background: #102039; }
+    textarea.jbp-control { min-height: 58px; resize: vertical; line-height: 1.8; }
+    input[type="file"].jbp-control { padding: 3px 6px; font-size: 9px; }
+    .jbp-check { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border-radius: 6px; background: rgba(255,255,255,.025); cursor: pointer; font-size: 9px; line-height: 1.6; }
+    .jbp-check input { accent-color: #00caec; margin: 0; }
+    .jbp-scroll-list { max-height: 150px; overflow-y: auto; padding: 3px; border-radius: 8px; background: rgba(2,12,23,.34); }
+
+    /* ================= TABLE ================= */
+
+    .jbp-table-wrap { overflow-x: auto; border-radius: 9px; border: 1px solid rgba(255,255,255,.05); }
+    .jbp-table { width: 100%; min-width: 760px; border-collapse: collapse; }
+    .jbp-table th { padding: 6px 6px; color: #85ecff; font-size: 9px; font-weight: 700; background: rgba(0,210,255,.05); border-bottom: 1px solid rgba(255,255,255,.07); text-align: right; white-space: nowrap; }
+    .jbp-table td { padding: 5px 6px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; font-size: 9.5px; line-height: 1.6; }
+    .jbp-table tbody tr { transition: .15s; }
+    .jbp-table tbody tr:hover { background: rgba(0,210,255,.035); }
+    .jbp-table tr.highlight { background: rgba(255,200,80,.05); box-shadow: inset -2px 0 0 rgba(255,190,60,.55); }
+    .jbp-num { color: #70e9ff; font-weight: 900; text-shadow: 0 0 8px rgba(0,210,255,.3); }
+    .jbp-ltr { direction: ltr; text-align: right; unicode-bidi: plaintext; }
+    .jbp-empty { text-align: center; padding: 16px !important; color: rgba(255,255,255,.4); }
+    .jbp-muted { color: rgba(255,255,255,.45); }
+
+    /* ================= BADGES / ALERTS ================= */
+
+    .jbp-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 9px; font-size: 8.5px; line-height: 1.7; white-space: nowrap; color: #86ebff; background: rgba(0,210,255,.08); border: 1px solid rgba(0,210,255,.15); }
+    .jbp-badge.ok { color: #71eab5; background: rgba(0,210,140,.08); border-color: rgba(0,210,140,.18); }
+    .jbp-badge.warn { color: #ffd884; background: rgba(255,190,60,.08); border-color: rgba(255,190,60,.18); }
+    .jbp-badge.danger { color: #ff9aaa; background: rgba(255,72,100,.08); border-color: rgba(255,72,100,.2); }
+    .jbp-badge.purple { color: #cdb8ff; background: rgba(140,90,255,.1); border-color: rgba(140,90,255,.22); }
+    .jbp-badge.muted { color: rgba(255,255,255,.55); background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
+
+    .jbp-alert-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px; margin-bottom: 7px; }
+    .jbp-alert-grid:empty { display: none; }
+    .jbp-alert-grid .jbp-alert { margin-bottom: 0; }
+    .jbp-alert { padding: 6px 9px; margin-bottom: 7px; border-radius: 10px; line-height: 1.8; font-size: 9.5px; display: flex; gap: 7px; align-items: flex-start; flex-wrap: wrap; }
+    .jbp-alert > div:first-child[style*="font-size"] { font-size: 14px !important; }
+    .jbp-alert.info { color: #b8f3ff; background: rgba(0,210,255,.06); border: 1px solid rgba(0,210,255,.2); box-shadow: 0 0 14px rgba(0,210,255,.06); }
+    .jbp-alert.warn { color: #ffe3a6; background: rgba(255,190,60,.07); border: 1px solid rgba(255,190,60,.22); box-shadow: 0 0 14px rgba(255,190,60,.06); }
+    .jbp-alert.ok { color: #b3f5d8; background: rgba(0,210,140,.07); border: 1px solid rgba(0,210,140,.22); }
+    .jbp-alert.danger { color: #ffd2d9; background: rgba(255,72,100,.07); border: 1px solid rgba(255,72,100,.22); box-shadow: 0 0 14px rgba(255,72,100,.06); }
+    .jbp-alert .grow { flex: 1; min-width: 160px; }
+    .jbp-alert .jbp-list { line-height: 1.9; }
+
+    /* ================= WORKFLOW STEPPER (دایره + خط) ================= */
+
+    .jbp-path {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 6px 2px 3px;
+        counter-reset: jstep;
+        direction: rtl;
+    }
+
+    .jbp-path::-webkit-scrollbar { height: 4px; }
+    .jbp-path::-webkit-scrollbar-thumb { border-radius: 10px; background: linear-gradient(90deg, rgba(0,210,255,.3), rgba(125,75,255,.3)); }
+
+    .jbp-arrow { display: none !important; }
+
+    .jbp-step {
+        --c: rgba(0,210,255,.55);
+        counter-increment: jstep;
+        position: relative;
+        flex: 0 0 104px;
+        width: 104px;
+        min-width: 104px;
+        padding: 0 3px !important;
+        text-align: center;
+        color: #fff;
+        text-decoration: none !important;
+        background: none;
+        border: 0;
+        display: block !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        align-self: flex-start;
+    }
+
+    .jbp-step.jk-dana { --c: #9b6bff; }
+    .jbp-step.jk-register { --c: #00c8ef; }
+    .jbp-step.jk-review { --c: #00d6a0; }
+    .jbp-step.jk-appeal { --c: #ffb640; }
+
+    /* دایره */
+    .jbp-step::before {
+        content: counter(jstep);
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin: 0 auto 4px;
+        border-radius: 50%;
+        font-size: 9px;
+        font-weight: 900;
+        color: var(--c);
+        background: #0b1a2e;
+        border: 2px solid var(--c);
+        box-shadow: 0 0 0 3px rgba(255,255,255,.02), 0 0 8px rgba(0,0,0,.3);
+        transition: .2s;
+    }
+
+    /* خط بین مراحل */
+    .jbp-step:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        top: 11px;
+        left: -50%;
+        width: 100%;
+        height: 2px;
+        border-radius: 3px;
+        background: rgba(255,255,255,.09);
+    }
+
+    .jbp-step .t { font-size: 8.5px; font-weight: 800; line-height: 1.5; color: rgba(255,255,255,.78); }
+    .jbp-step .d { font-size: 7.5px; line-height: 1.5; color: rgba(255,255,255,.42); margin-top: 1px; }
+    .jbp-step .x { font-size: 7.5px; line-height: 1.5; margin-top: 1px; }
+
+    /* مرحله انجام‌شده */
+    .jbp-step.done::before {
+        content: "✓";
+        color: #dfffee;
+        border-color: rgba(0,225,155,.7);
+        background: linear-gradient(135deg, rgba(0,190,130,.45), rgba(0,220,160,.2));
+        box-shadow: 0 0 10px rgba(0,220,155,.3);
+    }
+
+    .jbp-step.done:not(:last-child)::after {
+        background: linear-gradient(90deg, rgba(0,210,255,.45), rgba(0,220,160,.75));
+        box-shadow: 0 0 6px rgba(0,210,180,.35);
+    }
+
+    .jbp-step.done .t { color: rgba(180,255,225,.8); }
+
+    /* مرحله جاری */
+    .jbp-step.active::before {
+        color: #fff;
+        border-color: #45eaff;
+        background: linear-gradient(135deg, #00c8df, #087cff);
+        animation: jbpPulse 1.8s infinite;
+    }
+
+    .jbp-step.active .t { color: #8ceeff; font-weight: 900; text-shadow: 0 0 8px rgba(0,220,255,.5); }
+
+    /* مرحله آینده */
+    .jbp-step.pending::before { opacity: .45; }
+    .jbp-step.pending .t, .jbp-step.pending .d { opacity: .5; }
+
+    a.jbp-step:hover::before { transform: scale(1.1); box-shadow: 0 0 14px var(--c); }
+
+    @@keyframes jbpPulse {
+        0% { box-shadow: 0 0 6px rgba(0,225,255,.55), 0 0 14px rgba(0,190,255,.22), 0 0 0 3px rgba(0,210,255,.05); }
+        50% { box-shadow: 0 0 11px rgba(0,225,255,.95), 0 0 24px rgba(0,190,255,.45), 0 0 0 6px rgba(0,210,255,.09); }
+        100% { box-shadow: 0 0 6px rgba(0,225,255,.55), 0 0 14px rgba(0,190,255,.22), 0 0 0 3px rgba(0,210,255,.05); }
+    }
+
+    /* ================= TABS ================= */
+
+    .jbp-tabs { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 7px; }
+    .jbp-tab { padding: 4px 9px; border-radius: 7px; cursor: pointer; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.72); font-size: 9.5px; font-family: inherit; transition: .15s; }
+    .jbp-tab:hover { border-color: rgba(0,210,255,.3); }
+    .jbp-tab.active { color: #fff; background: linear-gradient(135deg, rgba(0,198,223,.35), rgba(8,124,255,.35)); border-color: rgba(0,210,255,.5); box-shadow: 0 0 12px rgba(0,210,255,.2); }
+    .jbp-tab-pane { display: none; }
+    .jbp-tab-pane.active { display: block; }
+
+    /* ================= MISC ================= */
+
+    .jbp-text-block { white-space: pre-wrap; line-height: 1.95; font-size: 10px; padding: 7px 9px; border-radius: 9px; background: rgba(0,0,0,.14); border: 1px solid rgba(255,255,255,.05); max-height: 260px; overflow-y: auto; }
+    .jbp-kv { display: grid; grid-template-columns: 105px 1fr; gap: 2px 8px; font-size: 9.5px; line-height: 1.8; }
+    .jbp-kv .k { color: rgba(255,255,255,.48); }
+    .jbp-files { display: flex; flex-wrap: wrap; gap: 4px; }
+    .jbp-file { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 7px; color: #bdf3ff !important; text-decoration: none !important; background: rgba(0,210,255,.07); border: 1px solid rgba(0,210,255,.15); font-size: 9px; transition: .15s; }
+    .jbp-file:hover { background: rgba(0,210,255,.14); box-shadow: 0 0 10px rgba(0,210,255,.2); }
+    .jbp-list { margin: 0; padding: 0 14px 0 0; line-height: 1.9; }
+    .jbp-timeline { position: relative; padding-right: 12px; max-height: 360px; overflow-y: auto; }
+    .jbp-timeline::before { content: ""; position: absolute; right: 3px; top: 4px; bottom: 4px; width: 2px; background: linear-gradient(rgba(0,210,255,.35), rgba(125,75,255,.2)); }
+    .jbp-tl-item { position: relative; padding: 0 6px 7px 0; }
+    .jbp-tl-item::before { content: ""; position: absolute; right: -12px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: #00c8ef; box-shadow: 0 0 8px rgba(0,210,255,.7); }
+    .jbp-tl-title { font-weight: 800; font-size: 9.5px; }
+    .jbp-tl-meta { font-size: 8.5px; color: rgba(255,255,255,.42); }
+    .jbp-tl-desc { font-size: 9px; color: rgba(255,255,255,.72); line-height: 1.8; white-space: pre-wrap; }
+    .jbp-msg { padding: 5px 8px; border-radius: 8px; margin-bottom: 4px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.06); font-size: 9.5px; }
+    .jbp-msg.mine { background: rgba(0,210,255,.07); border-color: rgba(0,210,255,.17); }
+    .jbp-msg .meta { font-size: 8.5px; color: rgba(255,255,255,.42); }
+    .jbp-stepper { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 7px; }
+    .jbp-stepper span { flex: 1; min-width: 90px; text-align: center; padding: 4px; border-radius: 7px; font-size: 9px; background: rgba(255,255,255,.04); color: rgba(255,255,255,.42); }
+    .jbp-stepper span.done { background: rgba(0,210,140,.12); color: #8ff0c6; }
+    .jbp-stepper span.now { background: rgba(0,210,255,.18); color: #fff; box-shadow: 0 0 0 1px rgba(0,210,255,.55), 0 0 12px rgba(0,210,255,.25); }
+
+    /* ================= MODAL ================= */
+
+    .jbp-modal { position: fixed; inset: 0; z-index: 99999; display: none; align-items: flex-start; justify-content: center; padding: 22px 10px; overflow-y: auto; background: rgba(2,8,18,.74); backdrop-filter: blur(8px); }
+    .jbp-modal.show { display: flex; }
+    .jbp-modal-card { direction: rtl; width: 100%; max-width: 720px; padding: 12px 14px; color: #fff; font-size: 10px; border-radius: 16px; border: 1px solid rgba(0,220,255,.25); background: linear-gradient(145deg, rgba(12,32,55,.97), rgba(15,18,45,.97)); box-shadow: 0 25px 70px rgba(0,0,0,.5), 0 0 35px rgba(0,210,255,.1); }
+    .jbp-modal-card * { box-sizing: border-box; }
+    .jbp-modal-card.sm { max-width: 440px; }
+    .jbp-modal-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .jbp-modal-head h3 { margin: 0; font-size: 12.5px; color: #8ceeff; }
+    .jbp-modal-close { width: 26px; height: 26px; border: 0; border-radius: 7px; color: #fff; cursor: pointer; background: rgba(255,255,255,.08); font-size: 14px; }
+    .jbp-modal-foot { display: flex; justify-content: flex-end; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+
+    /* ================= JALALI PICKER ================= */
+
+    .jbp-cal { display: none; position: absolute; z-index: 999999; top: calc(100% + 3px); right: 0; width: 230px; padding: 7px; border-radius: 11px; background: rgba(7,22,40,.99); border: 1px solid rgba(0,210,255,.25); box-shadow: 0 18px 45px rgba(0,0,0,.55), 0 0 18px rgba(0,210,255,.1); }
+    .jbp-cal.open { display: block; }
+    .jbp-cal-head { display: grid; grid-template-columns: 24px 1fr 24px; gap: 3px; align-items: center; }
+    .jbp-cal-head b { text-align: center; color: #84edff; font-size: 10px; }
+    .jbp-cal button { border: 0; border-radius: 6px; color: #fff; background: transparent; cursor: pointer; font-family: inherit; }
+    .jbp-cal-head button { height: 22px; background: rgba(255,255,255,.07); }
+    .jbp-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; margin-top: 4px; }
+    .jbp-cal-grid span { text-align: center; color: rgba(255,255,255,.4); font-size: 8.5px; }
+    .jbp-cal-grid button { height: 24px; font-size: 9.5px; }
+    .jbp-cal-grid button:hover { background: rgba(0,210,255,.14); }
+    .jbp-cal-grid button.today { border: 1px solid rgba(0,210,255,.5); box-shadow: 0 0 6px rgba(0,210,255,.3); }
+    .jbp-cal-grid button[disabled] { opacity: .25; cursor: not-allowed; }
+
+    /* ================= TOAST ================= */
+
+    .jbp-toast { position: fixed; z-index: 1000000; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: 92vw; padding: 8px 13px; border-radius: 10px; color: #fff; font-size: 10.5px; line-height: 1.8; white-space: pre-wrap; direction: rtl; box-shadow: 0 12px 35px rgba(0,0,0,.45), 0 0 16px rgba(0,210,150,.3); background: #0f7a5a; }
+    .jbp-toast.err { background: #b3263f; box-shadow: 0 12px 35px rgba(0,0,0,.45), 0 0 16px rgba(230,60,90,.35); }
+
+    /* ================= SIDE BY SIDE ================= */
+
+    .jbp-side { display: grid; grid-template-columns: minmax(230px, 1fr) 3fr; gap: 7px; align-items: start; }
+    .jbp-auto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 7px; align-items: start; }
+
+    /* ================= RESPONSIVE ================= */
+
+    @@media (max-width: 1100px) {
+        .jbp-grid-3, .jbp-grid-4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+        .jbp-span-3 { grid-column: span 2; }
+    }
+
+    @@media (max-width: 700px) {
+        .jbp-page { padding: 6px; }
+        .jbp-head { flex-direction: column; align-items: stretch; }
+        .jbp-actions .jbp-btn { flex: 1; }
+        .jbp-grid-2, .jbp-grid-3, .jbp-grid-4 { grid-template-columns: 1fr !important; }
+        .jbp-span-2, .jbp-span-3 { grid-column: auto; }
+        .jbp-kv { grid-template-columns: 1fr; }
+        .jbp-side, .jbp-auto-grid { grid-template-columns: 1fr !important; }
+    }
+</style>
+
+<div class="jbp-page">
+    <div class="jbp-wrap">
+
+        <form id="jbpTokenForm">@Html.AntiForgeryToken()</form>
+
+        <!-- ================= HEADER ================= -->
+
+        <div class="jbp-glass jbp-head">
+            <div class="jbp-brand">
+                <div class="jbp-logo purple">⚖</div>
+                <div>
+                    <h1 class="jbp-title">رسیدگی پرونده <span class="jbp-ltr">@Model.CaseNumber</span></h1>
+                    <div class="jbp-subtitle">@Model.Title</div>
+                    <div style="margin-top:6px; display:flex; gap:4px; flex-wrap:wrap;">
+                        <span class="jbp-badge">@ViewBag.StatusTitle</span>
+                        @if (currentStage != null)
+                        {
+                            <span class="jbp-badge ok">@currentStage.Title</span>
+                        }
+                        @if (myMember != null)
+                        {
+                            <span class="jbp-badge @roleBadge(myMember.RoleCode)">نقش شما: @roleTitle(myMember.RoleCode)</span>
+                        }
+                        @if (activeInstance != null && activeInstance.DueAt.HasValue)
+                        {
+                            var left = activeInstance.DueAt.Value - DateTime.Now;
+                            <span class="jbp-badge @(left.TotalSeconds < 0 ? "danger" : "warn")">
+                                مهلت رسیدگی: <span class="jbp-ltr">@fa(activeInstance.DueAt, true)</span>
+                                (@(left.TotalSeconds < 0 ? "گذشته از مهلت" : left.TotalHours > 24 ? (int)left.TotalDays + " روز مانده" : (int)left.TotalHours + " ساعت مانده"))
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="jbp-actions">
+                @if (canManageMeeting)
+                {
+                    <button type="button" class="jbp-btn primary" onclick="jbpOpenModal('meetingModal')">📅 تنظیم جلسه رسیدگی</button>
+                }
+                @if (canDraft && verdictStatus != 3)
+                {
+                    <button type="button" class="jbp-btn green" onclick="jbpOpenModal('verdictModal')">📜 ثبت نتیجه رسیدگی</button>
+                }
+                <a class="jbp-btn" href="@Url.Action("JusticeReviewInbox", "Orders", new { area = "Setting" })">← کارتابل رسیدگی</a>
+            </div>
+        </div>
+
+        @if (!isActiveMember)
+        {
+            <div class="jbp-alert info"><div class="grow">این پرونده در مرحله فعلی به شما ارجاع نشده یا مختومه است؛ صفحه فقط برای مشاهده باز شده است.</div></div>
+        }
+
+        @if (mySignature != null && mySignature.StatusCode == 0 && verdictStatus == 2)
+        {
+            <div class="jbp-alert danger">
+                <div class="grow">✍ <strong>نتیجه رسیدگی در انتظار امضای شماست.</strong>
+                    @if (currentVerdict.SignDeadline.HasValue)
+                    {
+                        <text>مهلت امضا: <span class="jbp-ltr">@fa(currentVerdict.SignDeadline, true)</span></text>
+                    }
+                    @if (signDeadlinePassed) { <text> — مهلت امضا گذشته است.</text> }
+                </div>
+            </div>
+        }
+
+
+        <!-- ================= PATH ================= -->
+
+        <div class="jbp-glass jbp-section">
+            <div class="jbp-path">
+                @for (int i = 0; i < pathStages.Count; i++)
+                {
+                    var st = pathStages[i];
+                    var inst = instances.Where(x => x.FK_Stage == st.StageID).OrderByDescending(x => x.InstanceID).FirstOrDefault();
+                    string kind = st.StageType == 7 ? "jk-dana" : st.StageType == 1 ? "jk-register" : st.StageType == 2 ? "jk-review" : "jk-appeal";
+                    string state = inst == null ? "pending" : inst.StatusCode == 1 ? "active" : "done";
+                    if (i > 0)
+                    {
+                        <div class="jbp-arrow">←</div>
+                    }
+                    <div class="jbp-step @kind @state">
+                        <div class="t">@st.Title</div>
+                        <div class="d">مهلت: @(st.DeadlineDays ?? 0) روز</div>
+                        @if (inst != null && inst.FinishedAt.HasValue)
+                        {
+                            <div class="x jbp-muted jbp-ltr">@fa(inst.FinishedAt, false)</div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+
+        <!-- ================= TABS ================= -->
+
+        <div class="jbp-glass jbp-section" id="reviewTabs">
+
+            <div class="jbp-tabs">
+                <button type="button" class="jbp-tab active" data-tab="tabRequest">📝 درخواست و پیوست‌ها</button>
+                <button type="button" class="jbp-tab" data-tab="tabDana">🤖 گفتگو با دانا</button>
+                <button type="button" class="jbp-tab" data-tab="tabApplicant">👤 شخصیت و سوابق متقاضی</button>
+                <button type="button" class="jbp-tab" data-tab="tabMeetings">📅 جلسات (@meetings.Count)</button>
+                <button type="button" class="jbp-tab" data-tab="tabVerdict">📜 نتیجه رسیدگی و امضاها @(verdictStatus > 0 ? "•" : "")</button>
+                <button type="button" class="jbp-tab" data-tab="tabTimeline">🕓 تاریخچه</button>
+            </div>
+
+
+            <!-- ---------- REQUEST ---------- -->
+
+            <div class="jbp-tab-pane active" id="tabRequest">
+                <div class="jbp-grid-2">
+                    <div>
+                        <div class="jbp-kv" style="margin-bottom:6px;">
+                            <div class="k">موضوع</div><div>@ViewBag.Category</div>
+                            <div class="k">تاریخ ثبت</div><div class="jbp-ltr">@ViewBag.CreatedAtPersian</div>
+                            <div class="k">دوره مرتبط</div><div>@(Model.RelatedPeriod ?? "-")</div>
+                            <div class="k">تاریخ رخداد</div><div class="jbp-ltr">@(string.IsNullOrEmpty(ViewBag.EventDatePersian) ? "-" : ViewBag.EventDatePersian)</div>
+                            <div class="k">مبلغ مورد اختلاف</div><div>@(Model.DisputedAmount.HasValue ? Model.DisputedAmount.Value.ToString("#,0") + " ریال" : "-")</div>
+                            <div class="k">کد فعالیت</div><div>@(string.IsNullOrEmpty(Model.ActivityCode) ? "-" : Model.ActivityCode)</div>
+                            <div class="k">اولویت</div><div>@(Model.Priority == 3 ? "فوری" : Model.Priority == 2 ? "مهم" : "عادی")</div>
+                        </div>
+
+                        <div class="jbp-panel-title">پیوست‌های درخواست</div>
+                        @if (attachments.Any())
+                        {
+                            <div class="jbp-files">
+                                @foreach (var f in attachments)
+                                {
+                                    <a class="jbp-file" href="@Url.Action("DownloadJusticeAttachment", "Orders", new { area = "Setting", id = f.AttachmentID })">📎 @f.RealFileName</a>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="jbp-muted">پیوستی ندارد.</div>
+                        }
+                    </div>
+                    <div>
+                        <div class="jbp-panel-title">شرح درخواست</div>
+                        <div class="jbp-text-block">@Model.Description</div>
+                    </div>
+                </div>
+
+                @if (appeals.Any() || publishedVerdicts.Any())
+                {
+                    <div class="jbp-panel-title" style="margin-top:6px;">سوابق آرای قبلی و اعتراض‌های متقاضی</div>
+
+                    foreach (var v in publishedVerdicts)
+                    {
+                        var vf = verdictAttachments.Where(x => x.AttachmentGroupID == v.AttachmentGroupID).ToList();
+                        <div class="jbp-panel" style="margin-bottom:5px;">
+                            <div class="jbp-panel-title">رای رسیدگی مرحله @(v.ReviewLevel ?? 0) — ابلاغ <span class="jbp-ltr">@fa(v.PublishedAt, true)</span></div>
+                            <div class="jbp-text-block">@v.VerdictText</div>
+                            @if (vf.Any())
+                            {
+                                <div class="jbp-files" style="margin-top:6px;">
+                                    @foreach (var f in vf)
+                                    {
+                                        <a class="jbp-file" href="@Url.Action("DownloadJusticeAttachment", "Orders", new { area = "Setting", id = f.AttachmentID })">📎 @f.RealFileName</a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    foreach (var a in appeals)
+                    {
+                        var af = appealAttachments.Where(x => x.AttachmentGroupID == a.AttachmentGroupID).ToList();
+                        <div class="jbp-panel" style="margin-bottom:5px; border-color:rgba(255,190,60,.3);">
+                            <div class="jbp-panel-title" style="color:#ffd884;">اعتراض متقاضی به رای مرحله @(a.AppealLevel ?? 0) — <span class="jbp-ltr">@fa(a.CreatedAt, true)</span></div>
+                            <div class="jbp-kv">
+                                <div class="k">بخش مورد مخالفت</div><div style="white-space:pre-wrap;">@(a.DisagreedPart ?? "-")</div>
+                                <div class="k">دلیل مخالفت</div><div style="white-space:pre-wrap;">@a.Reason</div>
+                                <div class="k">مدرک / اطلاعات جدید</div><div style="white-space:pre-wrap;">@(a.HasNewEvidence ? (a.NewEvidence ?? "در پیوست") : "ندارد")</div>
+                            </div>
+                            @if (af.Any())
+                            {
+                                <div class="jbp-files" style="margin-top:6px;">
+                                    @foreach (var f in af)
+                                    {
+                                        <a class="jbp-file" href="@Url.Action("DownloadJusticeAttachment", "Orders", new { area = "Setting", id = f.AttachmentID })">📎 @f.RealFileName</a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+
+
+            <!-- ---------- DANA ---------- -->
+
+            <div class="jbp-tab-pane" id="tabDana">
+                <div class="jbp-panel-title">خلاصه مذاکره متقاضی با دستیار هوشمند دانا</div>
+                @if (!string.IsNullOrEmpty(Model.DanaConversationSummary))
+                {
+                    <div class="jbp-text-block">@Model.DanaConversationSummary</div>
+                    if (!string.IsNullOrEmpty(Model.DanaSessionRef))
+                    {
+                        <div class="jbp-muted" style="margin-top:6px;">شناسه گفتگو در دانا: <span class="jbp-ltr">@Model.DanaSessionRef</span></div>
+                    }
+                }
+                else
+                {
+                    <div class="jbp-empty">خلاصه‌ای از گفتگو با دانا ثبت نشده است.</div>
+                }
+            </div>
+
+
+            <!-- ---------- APPLICANT ---------- -->
+
+            <div class="jbp-tab-pane" id="tabApplicant">
+                <div class="jbp-grid-2">
+                    <div class="jbp-panel">
+                        <div class="jbp-panel-title">مشخصات و وضعیت کارکرد</div>
+                        <div class="jbp-kv">
+                            @foreach (var kv in applicantWorkInfo)
+                            {
+                                <div class="k">@kv.Key</div><div>@kv.Value</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="jbp-panel">
+                        <div class="jbp-panel-title">خلاصه شخصیت و سوابق تعامل</div>
+                        <ul class="jbp-list">
+                            @foreach (var line in applicantSummary)
+                            {
+                                <li>@line</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="jbp-panel-title" style="margin-top:6px;">درخواست‌های متقاضی (@applicantCases.Count)</div>
+                <div class="jbp-table-wrap">
+                    <table class="jbp-table" style="min-width:700px;">
+                        <thead><tr><th>شماره</th><th>عنوان</th><th>موضوع</th><th>تاریخ ثبت</th><th>وضعیت</th><th>نحوه خاتمه</th></tr></thead>
+                        <tbody>
+                            @foreach (var c in applicantCases)
+                            {
+                                var cat = categoriesAll.FirstOrDefault(x => x.CategoryID == c.FK_Category);
+                                <tr style="@(c.CaseID == Model.CaseID ? "background:rgba(0,210,255,.07);" : "")">
+                                    <td><span class="jbp-num">@c.CaseNumber</span></td>
+                                    <td>@c.Title</td>
+                                    <td>@(cat != null ? cat.Title : "-")</td>
+                                    <td class="jbp-ltr">@fa(c.CreatedAt, false)</td>
+                                    <td>@(c.StatusCode == 90 || c.StatusCode == 91 ? "خاتمه‌یافته" : "باز")</td>
+                                    <td>@(c.CloseReason == 1 ? "پذیرش صریح" : c.CloseReason == 2 ? "تایید ضمنی" : c.CloseReason == 3 ? "رای قطعی" : "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+
+            <!-- ---------- MEETINGS ---------- -->
+
+            <div class="jbp-tab-pane" id="tabMeetings">
+                <div class="jbp-grid-3" style="grid-template-columns: 2fr 1fr;">
+                    <div>
+                        @if (!meetings.Any())
+                        {
+                            <div class="jbp-empty">هنوز جلسه‌ای برای این پرونده تنظیم نشده است.</div>
+                        }
+
+                        @foreach (var m in meetings)
+                        {
+                            var parts = meetingParticipants.Where(x => x.FK_Meeting == m.MeetingID).ToList();
+                            <div class="jbp-panel" style="margin-bottom:5px;">
+                                <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                                    <div>
+                                        <div class="jbp-panel-title" style="margin:0;">@m.Title</div>
+                                        <div class="jbp-muted" style="margin-top:3px;">
+                                            <span class="jbp-ltr">@fa(m.MeetingDateTime, true)</span> — @meetingTypes[m.MeetingType]
+                                            @if (!string.IsNullOrEmpty(m.Location)) { <text> — @m.Location</text> }
+                                            @if (!string.IsNullOrEmpty(m.ContactPhone)) { <text> — ☎ <span class="jbp-ltr">@m.ContactPhone</span></text> }
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; gap:4px; align-items:center;">
+                                        @if (m.StatusCode == 1) { <span class="jbp-badge warn">برنامه‌ریزی شده</span> }
+                                        else if (m.StatusCode == 2) { <span class="jbp-badge ok">برگزار شده</span> }
+                                        else { <span class="jbp-badge danger">لغو شده</span> }
+
+                                        @if (canManageMeeting && m.StatusCode == 1)
+                                        {
+                                            <button type="button" class="jbp-btn sm green" onclick="setMeetingStatus(@m.MeetingID, 2, this)">برگزار شد</button>
+                                            <button type="button" class="jbp-btn sm red" onclick="setMeetingStatus(@m.MeetingID, 3, this)">لغو</button>
+                                        }
+                                    </div>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(m.OnlineLink))
+                                {
+                                    <a class="jbp-file" style="margin-top:6px;" href="@m.OnlineLink" target="_blank" rel="noopener">🎥 ورود به جلسه آنلاین</a>
+                                }
+
+                                @if (!string.IsNullOrEmpty(m.Agenda))
+                                {
+                                    <div class="jbp-text-block" style="margin-top:6px;">@m.Agenda</div>
+                                }
+
+                                <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
+                                    @foreach (var p in parts)
+                                    {
+                                        <span class="jbp-badge @(p.IsApplicant ? "warn" : p.IsGuest ? "purple" : "muted")">
+                                            @userName(p.FK_User) — @p.ParticipantRole
+                                            @if (p.IsApplicant && m.ApplicantAttendanceType.HasValue)
+                                            {
+                                                <text>(@attendTypes[m.ApplicantAttendanceType.Value])</text>
+                                            }
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="jbp-panel">
+                        <div class="jbp-panel-title">👥 اعضای مرحله فعلی</div>
+                        @if (!instanceMembers.Any())
+                        {
+                            <div class="jbp-muted">عضوی ثبت نشده است.</div>
+                        }
+                        @foreach (var im in instanceMembers.Where(x => x.CanView))
+                        {
+                            <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid rgba(255,255,255,.05);">
+                                <span>@userName(im.FK_User)</span>
+                                <span class="jbp-badge @roleBadge(im.RoleCode)">@roleTitle(im.RoleCode)</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ---------- VERDICT ---------- -->
+
+            <div class="jbp-tab-pane" id="tabVerdict">
+
+                <div class="jbp-stepper">
+                    <span class="@(verdictStatus == 1 ? "now" : verdictStatus > 1 ? "done" : "")">① پیش‌نویس دبیر</span>
+                    <span class="@(verdictStatus == 2 ? "now" : verdictStatus > 2 ? "done" : "")">② امضای اعضا</span>
+                    <span class="@(verdictStatus == 3 ? "now" : verdictStatus > 3 ? "done" : "")">③ امضا و تایید رئیس</span>
+                    <span class="@(verdictStatus == 4 ? "done" : "")">④ ابلاغ رای</span>
+                </div>
+
+                @if (currentVerdict == null)
+                {
+                    <div class="jbp-empty">
+                        هنوز نتیجه رسیدگی برای این مرحله ثبت نشده است.
+                        @if (canDraft)
+                        {
+                            <div style="margin-top:6px;"><button type="button" class="jbp-btn green" onclick="jbpOpenModal('verdictModal')">📜 ثبت نتیجه رسیدگی</button></div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="jbp-grid-3" style="grid-template-columns: 3fr 2fr;">
+                        <div>
+                            <div class="jbp-panel-title">متن نتیجه رسیدگی</div>
+                            <div class="jbp-text-block">@currentVerdict.VerdictText</div>
+
+                            @if (currentVerdictFiles.Any())
+                            {
+                                <div class="jbp-files" style="margin-top:5px;">
+                                    @foreach (var f in currentVerdictFiles)
+                                    {
+                                        <a class="jbp-file" href="@Url.Action("DownloadJusticeAttachment", "Orders", new { area = "Setting", id = f.AttachmentID })">📎 @f.RealFileName</a>
+                                    }
+                                </div>
+                            }
+
+                            <div class="jbp-muted" style="margin-top:5px; font-size:10px;">
+                                تهیه: @userName(currentVerdict.CreatedBy) — <span class="jbp-ltr">@fa(currentVerdict.CreatedAt, true)</span>
+                                @if (currentVerdict.UpdatedAt.HasValue)
+                                {
+                                    <text> — آخرین اصلاح: <span class="jbp-ltr">@fa(currentVerdict.UpdatedAt, true)</span></text>
+                                }
+                            </div>
+
+                            <!-- ACTIONS -->
+                            <div class="jbp-actions" style="margin-top:6px;">
+                                @if (canDraft && verdictStatus == 1)
+                                {
+                                    <button type="button" class="jbp-btn" onclick="jbpOpenModal('verdictModal')">✎ ویرایش پیش‌نویس</button>
+                                    <button type="button" class="jbp-btn primary" id="btnSendForSign">✉ ارسال برای امضای اعضا</button>
+                                }
+                                @if (canDraft && verdictStatus == 2)
+                                {
+                                    <button type="button" class="jbp-btn" onclick="jbpOpenModal('verdictModal')">✎ اصلاح متن (امضاها بازنشانی می‌شوند)</button>
+                                }
+                                @if (canSign)
+                                {
+                                    <button type="button" class="jbp-btn green" onclick="jbpOpenModal('signModal')">✍ امضای رای</button>
+                                }
+                                @if (isChair && verdictStatus == 2)
+                                {
+                                    <button type="button" class="jbp-btn purple" id="btnApprove">🖋 امضا و تایید نهایی رئیس</button>
+                                }
+                                @if ((isChair || isSecretary) && verdictStatus == 3)
+                                {
+                                    <button type="button" class="jbp-btn amber" id="btnPublish">📣 ابلاغ رای</button>
+                                }
+                            </div>
+
+                            @if (isChair && verdictStatus == 2 && signedCount < signatures.Count(x => x.RoleCode != 1))
+                            {
+                                <div class="jbp-alert warn" style="margin-top:6px;">
+                                    <div class="grow">
+                                        @(signatures.Count(x => x.RoleCode != 1) - signedCount) عضو هنوز امضا نکرده‌اند
+                                        @(signDeadlinePassed ? "و مهلت امضا گذشته است" : "").
+                                        به‌عنوان رئیس جلسه می‌توانید در هر حال رای را امضا و ابلاغ کنید.
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div>
+                            <div class="jbp-panel">
+                                <div class="jbp-panel-title">
+                                    امضاها (@signedCount از @(signatures.Count(x => x.RoleCode != 1)))
+                                    @if (currentVerdict.SignDeadline.HasValue)
+                                    {
+                                        <span class="jbp-badge @(signDeadlinePassed ? "danger" : "warn")" style="margin-right:6px;">
+                                            مهلت: <span class="jbp-ltr">@fa(currentVerdict.SignDeadline, true)</span>
+                                        </span>
+                                    }
+                                </div>
+
+                                @if (!signatures.Any())
+                                {
+                                    <div class="jbp-muted">@(verdictStatus == 1 ? "رای هنوز برای امضا ارسال نشده است." : "امضاکننده‌ای ثبت نشده است.")</div>
+                                }
+
+                                @foreach (var s in signatures.OrderBy(x => x.RoleCode == 1 ? 9 : x.RoleCode))
+                                {
+                                    <div style="padding:6px 0; border-bottom:1px solid rgba(255,255,255,.05);">
+                                        <div style="display:flex; justify-content:space-between; gap:6px;">
+                                            <span>@userName(s.FK_User) <span class="jbp-badge @roleBadge(s.RoleCode)">@roleTitle(s.RoleCode)</span></span>
+                                            @if (s.StatusCode == 1)
+                                            {
+                                                <span class="jbp-badge ok">✓ امضا — <span class="jbp-ltr">@fa(s.SignedAt, true)</span></span>
+                                            }
+                                            else
+                                            {
+                                                <span class="jbp-badge @(signDeadlinePassed ? "danger" : "muted")">@(signDeadlinePassed ? "امضا نشد" : "در انتظار")</span>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(s.Comment))
+                                        {
+                                            <div class="jbp-muted" style="font-size:10px; margin-top:3px;">💬 @s.Comment</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <!-- MESSAGES -->
+                <div class="jbp-panel" style="margin-top:6px;">
+                    <div class="jbp-panel-title">💬 نکات اعضا و رئیس درباره متن رای (پیام به دبیر)</div>
+
+                    @if (!messages.Any())
+                    {
+                        <div class="jbp-muted" style="margin-bottom:5px;">پیامی ثبت نشده است.</div>
+                    }
+
+                    @foreach (var msg in messages)
+                    {
+                        <div class="jbp-msg @(msg.FK_User == currentUserId ? "mine" : "")">
+                            <div class="meta">
+                                @userName(msg.FK_User)
+                                @if (msg.FK_ToUser.HasValue) { <text>← @userName(msg.FK_ToUser)</text> } else { <text>← همه اعضا</text> }
+                                — <span class="jbp-ltr">@fa(msg.CreatedAt, true)</span>
+                            </div>
+                            <div style="white-space:pre-wrap;">@msg.CommentText</div>
+                        </div>
+                    }
+
+                    @if (isActiveMember)
+                    {
+                        <form id="messageForm" style="display:flex; gap:6px; margin-top:5px;">
+                            <input type="hidden" name="caseId" value="@Model.CaseID" />
+                            <textarea name="message" class="jbp-control" rows="2" style="min-height:44px;"
+                                      placeholder="@(isSecretary ? "پیام به اعضای جلسه..." : "نکته یا پیشنهاد اصلاحی خود درباره متن رای را برای دبیر بنویسید...")"></textarea>
+                            <button type="submit" class="jbp-btn primary" id="btnMessage">ارسال</button>
+                        </form>
+                    }
+                </div>
+            </div>
+
+
+            <!-- ---------- TIMELINE ---------- -->
+
+            <div class="jbp-tab-pane" id="tabTimeline">
+                <div class="jbp-timeline">
+                    @foreach (var t in timeline)
+                    {
+                        <div class="jbp-tl-item">
+                            <div class="jbp-tl-title">@t.ActionTitle</div>
+                            <div class="jbp-tl-meta">@userName(t.FK_User) — <span class="jbp-ltr">@fa(t.CreatedAt, true)</span></div>
+                            @if (!string.IsNullOrEmpty(t.Description))
+                            {
+                                <div class="jbp-tl-desc">@t.Description</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ================= MEETING MODAL ================= -->
+
+@if (canManageMeeting)
+{
+    <div class="jbp-modal" id="meetingModal">
+        <div class="jbp-modal-card" style="max-width:900px;">
+            <div class="jbp-modal-head">
+                <h3>📅 تنظیم جلسه رسیدگی</h3>
+                <button type="button" class="jbp-modal-close" data-close-modal="meetingModal">×</button>
+            </div>
+
+            <form id="meetingForm">
+                <input type="hidden" name="caseId" value="@Model.CaseID" />
+
+                <div class="jbp-grid-3" style="grid-template-columns: 3fr 2fr;">
+                    <div class="jbp-grid-2" style="align-content:start;">
+                        <div class="jbp-field jbp-span-all">
+                            <label>عنوان جلسه *</label>
+                            <input type="text" name="title" class="jbp-control" maxlength="300"
+                                   value="جلسه @(currentStage != null ? currentStage.Title : "رسیدگی") پرونده @Model.CaseNumber" />
+                        </div>
+
+                        <div class="jbp-field jbp-span-all">
+                            <label>مفاد / دستور جلسه *</label>
+                            <textarea name="agenda" class="jbp-control" rows="4" placeholder="موضوعات مورد بررسی، مستندات لازم، ..."></textarea>
+                        </div>
+
+                        <div class="jbp-field">
+                            <label>نوع جلسه</label>
+                            <select name="meetingType" id="meetingType" class="jbp-control">
+                                <option value="1">حضوری</option>
+                                <option value="2">ویدئوکال / آنلاین</option>
+                                <option value="3">تلفنی</option>
+                            </select>
+                        </div>
+
+                        <div class="jbp-field">
+                            <label>تاریخ *</label>
+                            <div><input type="text" name="meetingDatePersian" id="meetingDatePersian" class="jbp-control jbp-ltr" placeholder="انتخاب تاریخ" /></div>
+                        </div>
+
+                        <div class="jbp-field">
+                            <label>ساعت *</label>
+                            <input type="time" name="meetingTime" class="jbp-control" />
+                        </div>
+
+                        <div class="jbp-field" id="locationBox">
+                            <label>محل جلسه</label>
+                            <input type="text" name="location" class="jbp-control" />
+                        </div>
+
+                        <div class="jbp-field" id="onlineLinkBox" style="display:none;">
+                            <label>لینک جلسه ویدئویی</label>
+                            <input type="text" name="onlineLink" class="jbp-control jbp-ltr" placeholder="https://..." />
+                        </div>
+
+                        <div class="jbp-field">
+                            <label>شماره تماس (برای جلسه / متقاضی تلفنی)</label>
+                            <input type="text" name="contactPhone" class="jbp-control jbp-ltr" />
+                        </div>
+
+                        <div class="jbp-panel jbp-span-all" style="border-color:rgba(255,190,60,.25);">
+                            <label class="jbp-check" style="margin-bottom:6px;">
+                                <input type="checkbox" id="inviteApplicant" />
+                                دعوت از خود متقاضی (@(applicant != null ? ((applicant.usr_Name ?? "") + " " + (applicant.usr_Family ?? "")).Trim() : "-"))
+                            </label>
+                            <div id="applicantModeBox" style="display:none;">
+                                <select name="applicantAttendanceType" class="jbp-control">
+                                    <option value="1">حضوری</option>
+                                    <option value="2">ویدئوکال</option>
+                                    <option value="3">تلفنی</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="jbp-panel" style="margin-bottom:5px;">
+                            <label class="jbp-check">
+                                <input type="checkbox" id="inviteMembers" checked />
+                                دعوت از همه اعضای مرحله (@(instanceMembers.Count(x => !x.IsGuest && x.CanView)) نفر)
+                            </label>
+                        </div>
+
+                        <div class="jbp-panel">
+                            <div class="jbp-panel-title">➕ اعضای مهمان</div>
+                            <input type="text" id="guestSearch" class="jbp-control" placeholder="جستجوی کاربر..." />
+                            <div class="jbp-scroll-list" style="max-height:220px; margin-top:6px;">
+                                @foreach (var u in users.Where(x => x.usr_ID != Model.FK_User && !instanceMembers.Any(m => m.FK_User == x.usr_ID && !m.IsGuest)))
+                                {
+                                    string fullName = ((u.usr_Name ?? "") + " " + (u.usr_Family ?? "")).Trim();
+                                    string personnel = u.usr_Personal_ID.HasValue ? u.usr_Personal_ID.Value.ToString() : "";
+                                    <label class="jbp-check guest-item" data-search="@(fullName + " " + personnel)">
+                                        <input type="checkbox" name="guestUserIds" value="@u.usr_ID" />
+                                        @fullName <span class="jbp-muted">@personnel</span>
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="jbp-modal-foot">
+                    <button type="button" class="jbp-btn" data-close-modal="meetingModal">انصراف</button>
+                    <button type="submit" class="jbp-btn primary" id="btnMeeting">✓ ثبت و ارسال دعوت‌نامه</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+
+<!-- ================= VERDICT MODAL ================= -->
+
+@if (canDraft)
+{
+    <div class="jbp-modal" id="verdictModal">
+        <div class="jbp-modal-card">
+            <div class="jbp-modal-head">
+                <h3>📜 ثبت نتیجه رسیدگی</h3>
+                <button type="button" class="jbp-modal-close" data-close-modal="verdictModal">×</button>
+            </div>
+
+            @if (verdictStatus == 2)
+            {
+                <div class="jbp-alert warn"><div class="grow">رای در مرحله امضای اعضاست؛ با ذخیره تغییرات، امضاهای قبلی بازنشانی و از اعضا خواسته می‌شود دوباره امضا کنند.</div></div>
+            }
+
+            <form id="verdictForm" enctype="multipart/form-data">
+                <input type="hidden" name="caseId" value="@Model.CaseID" />
+
+                <div class="jbp-field" style="margin-bottom:6px;">
+                    <label>متن نتیجه رسیدگی *</label>
+                    <textarea name="verdictText" class="jbp-control" rows="10">@(currentVerdict != null ? currentVerdict.VerdictText : "")</textarea>
+                </div>
+
+                @if (currentVerdictFiles.Any())
+                {
+                    <div class="jbp-panel-title">مستندات بارگذاری‌شده</div>
+                    <div class="jbp-files" style="margin-bottom:6px;">
+                        @foreach (var f in currentVerdictFiles)
+                        {
+                            <span class="jbp-file">
+                                📎 @f.RealFileName
+                                <button type="button" class="jbp-btn sm red" style="min-height:20px; padding:0 6px;" onclick="deleteVerdictFile(@f.AttachmentID, this)">×</button>
+                            </span>
+                        }
+                    </div>
+                }
+
+                <div class="jbp-field">
+                    <label>بارگذاری مستندات</label>
+                    <input type="file" name="files" class="jbp-control" multiple accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.zip,.rar,.mp3,.m4a" />
+                </div>
+
+                <div class="jbp-modal-foot">
+                    <button type="button" class="jbp-btn" data-close-modal="verdictModal">انصراف</button>
+                    <button type="submit" class="jbp-btn green" id="btnSaveVerdict">💾 ذخیره نتیجه</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+
+<!-- ================= SIGN MODAL ================= -->
+
+@if (canSign)
+{
+    <div class="jbp-modal" id="signModal">
+        <div class="jbp-modal-card sm">
+            <div class="jbp-modal-head">
+                <h3>✍ امضای نتیجه رسیدگی</h3>
+                <button type="button" class="jbp-modal-close" data-close-modal="signModal">×</button>
+            </div>
+            <div class="jbp-section-sub">اگر با متن رای مشکل دارید، به‌جای امضا از بخش «پیام به دبیر» نکته خود را بفرستید.</div>
+            <div class="jbp-field" style="margin-top:6px;">
+                <label>توضیح (اختیاری)</label>
+                <textarea id="signComment" class="jbp-control" rows="3"></textarea>
+            </div>
+            <div class="jbp-modal-foot">
+                <button type="button" class="jbp-btn" data-close-modal="signModal">انصراف</button>
+                <button type="button" class="jbp-btn green" id="btnSign">✓ امضا می‌کنم</button>
+            </div>
+        </div>
+    </div>
+}
+
+
+<script>
+
+    /* ================= TEXT ================= */
+
+    function jbpNormalize(value) {
+        return (value || "").toString()
+            .replace(/[۰-۹]/g, function (c) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(c); })
+            .replace(/[٠-٩]/g, function (c) { return "٠١٢٣٤٥٦٧٨٩".indexOf(c); })
+            .replace(/ي/g, "ی").replace(/ك/g, "ک")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toLowerCase();
+    }
+
+    /* فیلتر ساده فهرست: input + selector آیتم‌ها (data-search یا متن) */
+    function jbpBindFilter(inputId, itemSelector, displayValue) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        input.addEventListener("input", function () {
+            var q = jbpNormalize(input.value);
+            document.querySelectorAll(itemSelector).forEach(function (item) {
+                var text = jbpNormalize(item.getAttribute("data-search") || item.innerText);
+                item.style.display = !q || text.indexOf(q) >= 0 ? (displayValue || "") : "none";
+            });
+        });
+    }
+
+
+    /* ================= TOAST / AJAX ================= */
+
+    function jbpToast(message, isError) {
+        var t = document.createElement("div");
+        t.className = "jbp-toast" + (isError ? " err" : "");
+        t.textContent = message;
+        document.body.appendChild(t);
+        setTimeout(function () { t.remove(); }, isError ? 6000 : 3500);
+    }
+
+    function jbpToken() {
+        var t = document.querySelector('input[name="__RequestVerificationToken"]');
+        return t ? t.value : "";
+    }
+
+    /* data: FormData یا شیء ساده */
+    function jbpPost(url, data) {
+        var fd;
+
+        if (data instanceof FormData) {
+            fd = data;
+        } else {
+            fd = new FormData();
+            Object.keys(data || {}).forEach(function (k) {
+                var v = data[k];
+                if (Array.isArray(v)) v.forEach(function (i) { fd.append(k, i); });
+                else if (v !== null && v !== undefined) fd.append(k, v);
+            });
+        }
+
+        if (!fd.has("__RequestVerificationToken")) {
+            fd.append("__RequestVerificationToken", jbpToken());
+        }
+
+        return fetch(url, { method: "POST", body: fd, credentials: "same-origin" })
+            .then(function (r) { return r.text(); })
+            .then(function (raw) {
+                try { return JSON.parse(raw); }
+                catch (e) { throw new Error("پاسخ نامعتبر از سرور:\n" + raw.substring(0, 300)); }
+            });
+    }
+
+    /* ارسال + پیام + رفرش صفحه در صورت موفقیت */
+    function jbpSubmit(url, data, button, confirmText) {
+        if (confirmText && !confirm(confirmText)) return Promise.resolve();
+
+        if (button) button.disabled = true;
+
+        return jbpPost(url, data)
+            .then(function (r) {
+                jbpToast(r.message || (r.success ? "انجام شد." : "عملیات انجام نشد."), !r.success);
+                if (r.success) setTimeout(function () { location.reload(); }, 900);
+                else if (button) button.disabled = false;
+                return r;
+            })
+            .catch(function (err) {
+                jbpToast(err.message || "خطا در ارتباط با سرور.", true);
+                if (button) button.disabled = false;
+            });
+    }
+
+
+    /* ================= MODAL / TABS ================= */
+
+    function jbpOpenModal(id) { var m = document.getElementById(id); if (m) m.classList.add("show"); }
+    function jbpCloseModal(id) { var m = document.getElementById(id); if (m) m.classList.remove("show"); }
+
+    document.addEventListener("click", function (e) {
+        if (e.target.classList && e.target.classList.contains("jbp-modal")) e.target.classList.remove("show");
+        var closeBtn = e.target.closest ? e.target.closest("[data-close-modal]") : null;
+        if (closeBtn) jbpCloseModal(closeBtn.getAttribute("data-close-modal"));
+    });
+
+    document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") document.querySelectorAll(".jbp-modal.show").forEach(function (m) { m.classList.remove("show"); });
+    });
+
+    function jbpInitTabs(containerId) {
+        var box = document.getElementById(containerId);
+        if (!box) return;
+
+        box.querySelectorAll(".jbp-tab").forEach(function (tab) {
+            tab.addEventListener("click", function () {
+                box.querySelectorAll(".jbp-tab").forEach(function (t) { t.classList.remove("active"); });
+                box.querySelectorAll(".jbp-tab-pane").forEach(function (p) { p.classList.remove("active"); });
+                tab.classList.add("active");
+                var pane = document.getElementById(tab.getAttribute("data-tab"));
+                if (pane) pane.classList.add("active");
+                try { sessionStorage.setItem("jbpTab_" + containerId, tab.getAttribute("data-tab")); } catch (e) { }
+            });
+        });
+
+        try {
+            var saved = sessionStorage.getItem("jbpTab_" + containerId);
+            var savedTab = saved ? box.querySelector('.jbp-tab[data-tab="' + saved + '"]') : null;
+            if (savedTab) savedTab.click();
+        } catch (e) { }
+    }
+
+
+    /* ================= JALALI CALENDAR ================= */
+
+    function jdiv(a, b) { return ~~(a / b); }
+    function jmod(a, b) { return a - ~~(a / b) * b; }
+
+    function jalCal(jy) {
+        var breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+        var bl = breaks.length, gy = jy + 621, leapJ = -14, jp = breaks[0], jm, jump = 0, leap, leapG, march, n, i;
+
+        for (i = 1; i < bl; i++) {
+            jm = breaks[i];
+            jump = jm - jp;
+            if (jy < jm) break;
+            leapJ += jdiv(jump, 33) * 8 + jdiv(jmod(jump, 33), 4);
+            jp = jm;
+        }
+
+        n = jy - jp;
+        leapJ += jdiv(n, 33) * 8 + jdiv(jmod(n, 33) + 3, 4);
+        if (jmod(jump, 33) === 4 && jump - n === 4) leapJ++;
+
+        leapG = jdiv(gy, 4) - jdiv((jdiv(gy, 100) + 1) * 3, 4) - 150;
+        march = 20 + leapJ - leapG;
+
+        if (jump - n < 6) n = n - jump + jdiv(jump + 4, 33) * 33;
+        leap = jmod(jmod(n + 1, 33) - 1, 4);
+        if (leap === -1) leap = 4;
+
+        return { leap: leap, gy: gy, march: march };
+    }
+
+    function g2d(gy, gm, gd) {
+        var d = jdiv((gy + jdiv(gm - 8, 6) + 100100) * 1461, 4) + jdiv(153 * jmod(gm + 9, 12) + 2, 5) + gd - 34840408;
+        return d - jdiv(jdiv(gy + 100100 + jdiv(gm - 8, 6), 100) * 3, 4) + 752;
+    }
+
+    function d2g(jdn) {
+        var j = 4 * jdn + 139361631;
+        j = j + jdiv(jdiv(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+        var i = jdiv(jmod(j, 1461), 4) * 5 + 308;
+        var gd = jdiv(jmod(i, 153), 5) + 1;
+        var gm = jmod(jdiv(i, 153), 12) + 1;
+        var gy = jdiv(j, 1461) - 100100 + jdiv(8 - gm, 6);
+        return { gy: gy, gm: gm, gd: gd };
+    }
+
+    function j2d(jy, jm, jd) {
+        var r = jalCal(jy);
+        return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - jdiv(jm, 7) * (jm - 7) + jd - 1;
+    }
+
+    function d2j(jdn) {
+        var g = d2g(jdn), jy = g.gy - 621, r = jalCal(jy), jdn1f = g2d(g.gy, 3, r.march), k = jdn - jdn1f, jm, jd;
+
+        if (k >= 0) {
+            if (k <= 185) {
+                jm = 1 + jdiv(k, 31);
+                jd = jmod(k, 31) + 1;
+                return { jy: jy, jm: jm, jd: jd };
+            }
+            k -= 186;
+        } else {
+            jy--;
+            k += 179;
+            if (r.leap === 1) k++;
+        }
+
+        jm = 7 + jdiv(k, 30);
+        jd = jmod(k, 30) + 1;
+        return { jy: jy, jm: jm, jd: jd };
+    }
+
+    var JBP_MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+
+    function jbpPad(v) { return v < 10 ? "0" + v : "" + v; }
+
+    function jbpTodayJalali() {
+        var n = new Date();
+        return d2j(g2d(n.getFullYear(), n.getMonth() + 1, n.getDate()));
+    }
+
+    /* options.minToday = true → روزهای گذشته غیرفعال */
+    function jbpDatePicker(inputId, options) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+
+        options = options || {};
+        input.readOnly = true;
+        input.parentNode.style.position = "relative";
+
+        var box = document.createElement("div");
+        box.className = "jbp-cal";
+        input.parentNode.appendChild(box);
+
+        var today = jbpTodayJalali();
+        var todayKey = today.jy * 10000 + today.jm * 100 + today.jd;
+        var y = today.jy, m = today.jm;
+
+        function monthLength(yy, mm) {
+            if (mm <= 6) return 31;
+            if (mm <= 11) return 30;
+            return jalCal(yy).leap === 0 ? 30 : 29;
+        }
+
+        function render() {
+            var g = d2g(j2d(y, m, 1));
+            var offset = (new Date(g.gy, g.gm - 1, g.gd).getDay() + 1) % 7;
+
+            var html = '<div class="jbp-cal-head"><button type="button" data-nav="-1">›</button><b>'
+                + JBP_MONTHS[m - 1] + " " + y + '</b><button type="button" data-nav="1">‹</button></div>'
+                + '<div class="jbp-cal-grid"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span>';
+
+            for (var i = 0; i < offset; i++) html += "<span></span>";
+
+            for (var d = 1; d <= monthLength(y, m); d++) {
+                var key = y * 10000 + m * 100 + d;
+                var cls = key === todayKey ? "today" : "";
+                var dis = options.minToday && key < todayKey ? " disabled" : "";
+                html += '<button type="button" class="' + cls + '" data-day="' + d + '"' + dis + ">" + d + "</button>";
+            }
+
+            html += "</div>";
+            box.innerHTML = html;
+        }
+
+        box.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var nav = e.target.getAttribute("data-nav");
+            var day = e.target.getAttribute("data-day");
+
+            if (nav) {
+                m += parseInt(nav, 10);
+                if (m < 1) { m = 12; y--; }
+                if (m > 12) { m = 1; y++; }
+                render();
+            } else if (day && !e.target.disabled) {
+                input.value = y + "/" + jbpPad(m) + "/" + jbpPad(parseInt(day, 10));
+                input.dispatchEvent(new Event("change"));
+                box.classList.remove("open");
+            }
+        });
+
+        input.addEventListener("click", function (e) {
+            e.stopPropagation();
+            render();
+            box.classList.toggle("open");
+        });
+
+        document.addEventListener("click", function () { box.classList.remove("open"); });
+    }
+
+</script>
+
+<script>
+
+    var CASE_ID = '@Model.CaseID';
+
+    jbpInitTabs("reviewTabs");
+
+    function actionUrl(name) {
+        return '@Url.Action("__ACTION__", "Orders", new { area = "Setting" })'.replace("__ACTION__", name);
+    }
+
+
+    /* ================= MEETING ================= */
+
+    var meetingForm = document.getElementById("meetingForm");
+
+    if (meetingForm) {
+        jbpDatePicker("meetingDatePersian", { minToday: true });
+        jbpBindFilter("guestSearch", ".guest-item", "flex");
+
+        document.getElementById("meetingType").addEventListener("change", function () {
+            document.getElementById("locationBox").style.display = this.value === "1" ? "block" : "none";
+            document.getElementById("onlineLinkBox").style.display = this.value === "2" ? "block" : "none";
+        });
+
+        document.getElementById("inviteApplicant").addEventListener("change", function () {
+            document.getElementById("applicantModeBox").style.display = this.checked ? "block" : "none";
+        });
+
+        meetingForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            var fd = new FormData(meetingForm);
+            var inviteApplicant = document.getElementById("inviteApplicant").checked;
+
+            fd.set("inviteMembers", document.getElementById("inviteMembers").checked ? "true" : "false");
+            fd.set("inviteApplicant", inviteApplicant ? "true" : "false");
+            if (!inviteApplicant) fd.delete("applicantAttendanceType");
+
+            if (!fd.get("meetingDatePersian")) { jbpToast("تاریخ جلسه را انتخاب کنید.", true); return; }
+            if (!fd.get("meetingTime")) { jbpToast("ساعت جلسه را وارد کنید.", true); return; }
+
+            jbpSubmit(actionUrl("ScheduleJusticeMeeting"), fd, document.getElementById("btnMeeting"));
+        });
+    }
+
+    function setMeetingStatus(meetingId, status, btn) {
+        jbpSubmit(actionUrl("UpdateJusticeMeetingStatus"), { meetingId: meetingId, status: status }, btn,
+            status === 3 ? "این جلسه لغو و به شرکت‌کنندگان اطلاع داده شود؟" : "جلسه به‌عنوان «برگزار شده» ثبت شود؟");
+    }
+
+
+    /* ================= VERDICT ================= */
+
+    var verdictForm = document.getElementById("verdictForm");
+
+    if (verdictForm) {
+        verdictForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            jbpSubmit(actionUrl("SaveJusticeVerdictDraft"), new FormData(verdictForm), document.getElementById("btnSaveVerdict"));
+        });
+    }
+
+    function deleteVerdictFile(id, btn) {
+        jbpSubmit(actionUrl("DeleteJusticeVerdictAttachment"), { attachmentId: id }, btn, "این فایل حذف شود؟");
+    }
+
+    function bindAction(buttonId, action, confirmText) {
+        var b = document.getElementById(buttonId);
+        if (b) b.addEventListener("click", function () { jbpSubmit(actionUrl(action), { caseId: CASE_ID }, b, confirmText); });
+    }
+
+    bindAction("btnSendForSign", "SendJusticeVerdictForSign", "نتیجه رسیدگی برای امضای اعضا ارسال شود؟");
+    bindAction("btnApprove", "ApproveJusticeVerdict", "رای را به‌عنوان رئیس جلسه امضا و تایید نهایی می‌کنید؟");
+    bindAction("btnPublish", "PublishJusticeVerdict", "رای ابلاغ شود؟ پس از ابلاغ، نتیجه برای متقاضی قابل مشاهده است و قابل ویرایش نیست.");
+
+    var signBtn = document.getElementById("btnSign");
+
+    if (signBtn) {
+        signBtn.addEventListener("click", function () {
+            jbpSubmit(actionUrl("SignJusticeVerdict"),
+                { caseId: CASE_ID, comment: document.getElementById("signComment").value },
+                signBtn);
+        });
+    }
+
+
+    /* ================= MESSAGES ================= */
+
+    var messageForm = document.getElementById("messageForm");
+
+    if (messageForm) {
+        messageForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            if (!messageForm.message.value.trim()) return;
+            jbpSubmit(actionUrl("SendJusticeVerdictMessage"), new FormData(messageForm), document.getElementById("btnMessage"));
+        });
+    }
+
+</script>
