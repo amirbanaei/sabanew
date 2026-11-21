@@ -1,0 +1,870 @@
+﻿@model SaabWebProject.Models.DomainModels.ExchangeItem
+
+@using SaabWebProject.Models.DomainModels
+@using System.Globalization
+
+@{
+
+    Layout = null;
+
+
+    List<ExchangeFile> files =
+        ViewBag.Files
+        as List<ExchangeFile>;
+
+
+    List<ExchangeResponse> responses =
+        ViewBag.Responses
+        as List<ExchangeResponse>;
+
+
+    List<ExchangeCenter> centers =
+        ViewBag.Centers
+        as List<ExchangeCenter>;
+
+
+    PersianCalendar pc =
+        new PersianCalendar();
+
+
+    var sender =
+        centers.FirstOrDefault(x =>
+            x.ID ==
+            Model.SenderCenterID);
+
+
+    var receiver =
+        centers.FirstOrDefault(x =>
+            x.ID ==
+            Model.ReceiverCenterID);
+
+
+    Func<DateTime?, string> pdate =
+        delegate (DateTime? date)
+        {
+
+            if (date == null)
+                return "-";
+
+
+            DateTime d =
+                date.Value;
+
+
+            return
+                pc.GetYear(d)
+                + "/" +
+                pc.GetMonth(d)
+                    .ToString("00")
+                + "/" +
+                pc.GetDayOfMonth(d)
+                    .ToString("00")
+                + " - "
+                + d.ToString(
+                    "HH:mm:ss"
+                );
+
+        };
+
+
+    DateTime delayEnd =
+        Model.ResponseDate ??
+        DateTime.Now;
+
+
+    int delayDays = 0;
+
+
+    if (
+        delayEnd >
+        Model.DueDate
+    )
+    {
+
+        delayDays =
+            (
+                delayEnd.Date -
+                Model.DueDate.Date
+            ).Days;
+
+    }
+
+}
+
+
+<style>
+
+    .modal-content-inner {
+        direction: rtl;
+        padding: 30px;
+        color: inherit;
+    }
+
+
+    .modal-top {
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(255,255,255,.07);
+        margin-bottom: 20px;
+    }
+
+
+    .modal-code {
+        display: inline-block;
+        color: #00e5ff;
+        font-size: 12px;
+        margin-bottom: 7px;
+    }
+
+
+    .modal-title {
+        font-size: 23px;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+
+    .modal-description {
+        opacity: .65;
+        font-size: 13px;
+        max-width: 750px;
+    }
+
+
+    .modal-stats {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+
+    @@media(max-width:850px) {
+
+        .modal-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+
+    .modal-stat {
+        padding: 15px;
+        border-radius: 15px;
+        background: rgba(255,255,255,.035);
+        border: 1px solid rgba(255,255,255,.07);
+    }
+
+
+    .modal-stat-label {
+        opacity: .55;
+        font-size: 11px;
+        margin-bottom: 7px;
+    }
+
+
+    .modal-stat-value {
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+
+    .modal-section {
+        padding: 18px;
+        border-radius: 17px;
+        margin-bottom: 15px;
+        background: rgba(255,255,255,.025);
+        border: 1px solid rgba(255,255,255,.065);
+    }
+
+
+    .modal-section-title {
+        font-weight: 800;
+        font-size: 15px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+
+        .modal-section-title i {
+            color: #00e5ff;
+        }
+
+
+    .modal-file {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px;
+        margin-bottom: 8px;
+        border-radius: 13px;
+        background: rgba(0,229,255,.035);
+        border: 1px solid rgba(0,229,255,.09);
+    }
+
+
+    .modal-file-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+
+    .modal-file-icon {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 12px;
+        background: rgba(0,229,255,.08);
+        color: #00e5ff;
+        font-size: 19px;
+    }
+
+
+    .modal-file-name {
+        font-weight: 700;
+        font-size: 13px;
+    }
+
+
+    .modal-file-time {
+        opacity: .5;
+        font-size: 11px;
+        margin-top: 3px;
+    }
+
+
+    .modal-download {
+        padding: 7px 12px;
+        border-radius: 10px;
+        color: #00e5ff;
+        text-decoration: none;
+        border: 1px solid rgba(0,229,255,.25);
+        background: rgba(0,229,255,.06);
+        transition: .2s;
+    }
+
+
+        .modal-download:hover {
+            background: rgba(0,229,255,.14);
+            color: white;
+        }
+
+
+    .modal-delay-danger {
+        color: #ff6b81;
+    }
+
+
+    .modal-delay-ok {
+        color: #69f0ae;
+    }
+
+
+    .response-item {
+        padding: 12px;
+        border-right: 2px solid rgba(0,229,255,.35);
+        margin-bottom: 10px;
+        background: rgba(255,255,255,.025);
+        border-radius: 10px 0 0 10px;
+    }
+
+
+    .response-date {
+        font-size: 11px;
+        color: #00e5ff;
+        margin-bottom: 5px;
+    }
+
+
+    .neo-response-text {
+        width: 100%;
+        min-height: 90px;
+        padding: 12px;
+        border-radius: 13px;
+        color: inherit;
+        background: rgba(255,255,255,.035);
+        border: 1px solid rgba(255,255,255,.10);
+        outline: none;
+        resize: vertical;
+    }
+
+
+        .neo-response-text:focus {
+            border-color: rgba(0,229,255,.50);
+            box-shadow: 0 0 20px rgba(0,229,255,.06);
+        }
+
+
+    .btn-modal-response {
+        margin-top: 10px;
+        padding: 9px 20px;
+        border: 0;
+        border-radius: 11px;
+        color: white;
+        cursor: pointer;
+        background: linear-gradient( 135deg, #00bfa5, #00b8d4 );
+        box-shadow: 0 7px 25px rgba(0,188,212,.15);
+    }
+</style>
+
+
+
+<div class="modal-content-inner">
+
+
+    <!-- HEADER -->
+
+    <div class="modal-top">
+
+
+        <div class="modal-code">
+
+            پرونده
+            #@Model.ID
+
+        </div>
+
+
+        <div class="modal-title">
+
+            @Model.Title
+
+        </div>
+
+
+        <div class="modal-description">
+
+            @Model.Description
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- INFO -->
+
+    <div class="modal-stats">
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                فرستنده
+            </div>
+
+            <div class="modal-stat-value">
+
+                @(sender == null
+                    ? "-"
+                    : sender.CenterName)
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                گیرنده
+            </div>
+
+            <div class="modal-stat-value">
+
+                @(receiver == null
+                    ? "-"
+                    : receiver.CenterName)
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                زمان ارسال
+            </div>
+
+            <div class="modal-stat-value">
+
+                @pdate(
+                    Model.SendDate
+                )
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                مهلت پاسخ
+            </div>
+
+            <div class="modal-stat-value">
+
+                @pdate(
+                    Model.DueDate
+                )
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                اولین مشاهده
+            </div>
+
+            <div class="modal-stat-value">
+
+                @pdate(
+                    Model.FirstViewDate
+                )
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                زمان پاسخ
+            </div>
+
+            <div class="modal-stat-value">
+
+                @pdate(
+                    Model.ResponseDate
+                )
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                مهلت تعیین شده
+            </div>
+
+            <div class="modal-stat-value">
+
+                @Model.ResponseDays
+                روز تقویمی
+
+            </div>
+
+        </div>
+
+
+        <div class="modal-stat">
+
+            <div class="modal-stat-label">
+                وضعیت تأخیر
+            </div>
+
+
+            @if (delayDays > 0)
+            {
+
+                <div class="
+                    modal-stat-value
+                    modal-delay-danger">
+
+                    @delayDays
+                    روز تأخیر
+
+                </div>
+
+            }
+            else
+            {
+
+                <div class="
+                    modal-stat-value
+                    modal-delay-ok">
+
+                    بدون تأخیر
+
+                </div>
+
+            }
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- FILES -->
+
+    <div class="modal-section">
+
+
+        <div class="modal-section-title">
+
+            <i class="bi bi-paperclip"></i>
+
+            فایل‌های ارسال شده
+
+        </div>
+
+
+        @if (
+            files != null &&
+            files.Count > 0
+        )
+        {
+
+            foreach (
+                var file
+                in files
+            )
+            {
+
+                <div class="modal-file">
+
+
+                    <div class="modal-file-info">
+
+
+                        <div class="modal-file-icon">
+
+                            <i class="
+                                bi bi-file-earmark">
+                            </i>
+
+                        </div>
+
+
+                        <div>
+
+
+                            <div class="
+                                modal-file-name">
+
+                                @file.RealFileName
+
+                            </div>
+
+
+                            <div class="
+                                modal-file-time">
+
+                                ارسال:
+
+                                @pdate(
+                                    file.UploadDate
+                                )
+
+                                &nbsp; | &nbsp;
+
+                                مشاهده:
+
+                                @pdate(
+                                    file.FirstViewDate
+                                )
+
+                            </div>
+
+
+                        </div>
+
+
+                    </div>
+
+
+                    <a class="modal-download"
+                       href="@Url.Action(
+                            "ExchangeDownload",
+                            "Orders",
+                            new
+                            {
+                                id =
+                                    file.ID
+                            })">
+
+                        <i class="
+                            bi bi-download">
+                        </i>
+
+                        دریافت
+
+                    </a>
+
+
+                </div>
+
+            }
+
+        }
+        else
+        {
+
+            <div style="
+                    opacity:.6;
+                    text-align:center;
+                    padding:20px;">
+
+                فایلی وجود ندارد.
+
+            </div>
+
+        }
+
+
+    </div>
+
+
+
+    <!-- RESPONSES -->
+
+    <div class="modal-section">
+
+
+        <div class="modal-section-title">
+
+            <i class="
+                bi bi-chat-square-text">
+            </i>
+
+            پاسخ‌ها
+
+        </div>
+
+
+        @if (
+            responses != null &&
+            responses.Count > 0
+        )
+        {
+
+            foreach (
+                var response
+                in responses
+            )
+            {
+
+                <div class="response-item">
+
+
+                    <div class="
+                        response-date">
+
+                        @pdate(
+                            response.ResponseDate
+                        )
+
+                    </div>
+
+
+                    <div>
+
+                        @response.ResponseText
+
+                    </div>
+
+
+                </div>
+
+            }
+
+        }
+        else
+        {
+
+            <div style="opacity:.55">
+
+                هنوز پاسخی ثبت نشده است.
+
+            </div>
+
+        }
+
+
+    </div>
+
+
+
+    <!-- NEW RESPONSE -->
+
+    <div class="modal-section">
+
+
+        <div class="modal-section-title">
+
+            <i class="bi bi-reply"></i>
+
+            ثبت پاسخ جدید
+
+        </div>
+
+
+        <textarea id="modalResponseText"
+                  class="neo-response-text"
+                  placeholder="متن پاسخ را وارد کنید...">
+        </textarea>
+
+
+        <button type="button"
+                id="btnModalResponse"
+                data-id="@Model.ID"
+                class="btn-modal-response">
+
+            <i class="bi bi-check2-circle"></i>
+
+            ثبت پاسخ
+
+        </button>
+
+
+    </div>
+
+
+</div>
+<script src="~/Scripts/jquery-3.3.1.js" type="text/javascript"></script>
+<script src="~/Assets/plugins/select-picker/dist/picker.min.js"></script>
+<script src="~/Scripts/jquery-ui.js"></script>
+<script src="~/Assets/plugins/BootstrapPersianDateTimePicker/dist/jquery.md.bootstrap.datetimepicker.js"></script>
+<script src="~/Assets/plugins/select-picker/dist/picker.min.js"></script>
+<script src="~/Scripts/jquery-ui.js"></script>
+<script src="~/Assets/plugins/BootstrapPersianDateTimePicker/dist/jquery.md.bootstrap.datetimepicker.js"></script>
+<script src="~/Assets/plugins/select-picker/dist/picker.min.js"></script>
+<script>
+            $(document).on(
+    "click",
+    "#btnModalResponse",
+    function () {
+
+        var button = $(this);
+
+        var id =
+            button.data("id");
+
+        var text =
+            $("#modalResponseText")
+            .val();
+
+
+        if (!text.trim()) {
+
+            alert(
+                "متن پاسخ را وارد کنید."
+            );
+
+            return;
+        }
+
+
+        button.prop(
+            "disabled",
+            true
+        );
+
+
+        $.ajax({
+
+            url:
+                '@Url.Action(
+                    "ExchangeResponseSave",
+                    "Orders"
+                )',
+
+            type:
+                "POST",
+
+            data:
+            {
+                id: id,
+
+                responseText:
+                    text
+            },
+
+
+            success:
+                function (res) {
+
+
+                    if (res.success) {
+
+                        // جزئیات Modal مجدداً
+                        // بارگذاری شود
+
+                        $.ajax({
+
+                            url:
+                                '@Url.Action(
+                                    "ExchangeDetailsModal",
+                                    "Orders"
+                                )',
+
+                            type:
+                                "GET",
+
+                            data:
+                            {
+                                id: id
+                            },
+
+
+                            success:
+                                function (html) {
+
+                                    $("#exchangeModalBody")
+                                        .html(html);
+
+                                }
+
+                        });
+
+                    }
+                    else {
+
+                        alert(
+                            res.message
+                        );
+
+                        button.prop(
+                            "disabled",
+                            false
+                        );
+
+                    }
+
+                },
+
+
+            error:
+                function () {
+
+                    alert(
+                        "خطا در ثبت پاسخ"
+                    );
+
+                    button.prop(
+                        "disabled",
+                        false
+                    );
+
+                }
+
+        });
+
+    }
+);
+</script>

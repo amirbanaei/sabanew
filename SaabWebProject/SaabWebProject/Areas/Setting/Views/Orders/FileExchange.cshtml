@@ -1,0 +1,1406 @@
+﻿@model IEnumerable<SaabWebProject.Models.DomainModels.ExchangeItem>
+
+@using SaabWebProject.Models.DomainModels
+@using System.Globalization
+
+@{
+    ViewBag.Title = "سامانه تبادل و پیگیری فایل";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    List<ExchangeCenter> centers =
+        ViewBag.Centers as List<ExchangeCenter>;
+
+    SaabEntities db =
+        new SaabEntities();
+
+    PersianCalendar pc =
+        new PersianCalendar();
+}
+
+
+<style>
+
+    /* ============================================
+       PAGE
+    ============================================ */
+
+    .neo-exchange-page {
+        direction: rtl;
+        text-align: right;
+        min-height: 100vh;
+        padding: 22px;
+        position: relative;
+        overflow: hidden;
+        background: radial-gradient( circle at 10% 10%, rgba(0,229,255,.10), transparent 28% ), radial-gradient( circle at 90% 15%, rgba(124,77,255,.12), transparent 30% ), radial-gradient( circle at 50% 90%, rgba(0,255,163,.06), transparent 28% );
+    }
+
+
+        .neo-exchange-page:before {
+            content: "";
+            position: fixed;
+            width: 380px;
+            height: 380px;
+            background: rgba(0,229,255,.08);
+            filter: blur(100px);
+            border-radius: 50%;
+            top: 20%;
+            left: -150px;
+            pointer-events: none;
+        }
+
+
+    /* ============================================
+       HEADER
+    ============================================ */
+
+    .neo-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+
+    .neo-header-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+
+    .neo-header-icon {
+        width: 52px;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        font-size: 23px;
+        background: linear-gradient( 135deg, rgba(0,229,255,.25), rgba(124,77,255,.25) );
+        border: 1px solid rgba(0,229,255,.35);
+        box-shadow: 0 0 30px rgba(0,229,255,.18);
+    }
+
+
+    .neo-header h3 {
+        margin: 0;
+        font-weight: 800;
+        font-size: 22px;
+    }
+
+
+    .neo-header p {
+        margin: 4px 0 0;
+        opacity: .65;
+        font-size: 13px;
+    }
+
+
+    /* ============================================
+       GLASS CARD
+    ============================================ */
+
+    .neo-card {
+        position: relative;
+        margin-bottom: 22px;
+        padding: 22px;
+        border-radius: 22px;
+        background: linear-gradient( 135deg, rgba(255,255,255,.10), rgba(255,255,255,.035) );
+        border: 1px solid rgba(255,255,255,.13);
+        backdrop-filter: blur(22px);
+        -webkit-backdrop-filter: blur(22px);
+        box-shadow: 0 20px 60px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.10);
+        overflow: hidden;
+    }
+
+
+        .neo-card:before {
+            content: "";
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            right: -75px;
+            top: -75px;
+            background: rgba(0,229,255,.12);
+            filter: blur(35px);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+
+    .neo-card-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 17px;
+        font-weight: 800;
+        margin-bottom: 20px;
+    }
+
+
+        .neo-card-title i {
+            color: #00dffc;
+            font-size: 20px;
+        }
+
+
+    /* ============================================
+       FORM
+    ============================================ */
+
+    .neo-form-row {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 15px;
+        margin-bottom: 16px;
+    }
+
+
+        .neo-form-row.two {
+            grid-template-columns: 1.5fr 1fr;
+        }
+
+
+    @@media(max-width:1000px) {
+
+        .neo-form-row,
+        .neo-form-row.two {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+
+    @@media(max-width:600px) {
+
+        .neo-form-row,
+        .neo-form-row.two {
+            grid-template-columns: 1fr;
+        }
+    }
+
+
+    .neo-field label {
+        display: block;
+        font-size: 12px;
+        opacity: .75;
+        margin-bottom: 7px;
+    }
+
+
+    .neo-input {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 13px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(10,15,30,.15);
+        color: inherit;
+        outline: none;
+        transition: .25s;
+    }
+
+
+        .neo-input:focus {
+            border-color: rgba(0,229,255,.65);
+            box-shadow: 0 0 0 3px rgba(0,229,255,.08), 0 0 20px rgba(0,229,255,.08);
+        }
+
+
+    textarea.neo-input {
+        resize: vertical;
+        min-height: 90px;
+    }
+
+
+    /* ============================================
+       FILE AREA
+    ============================================ */
+
+    .neo-file-zone {
+        position: relative;
+        border: 1px dashed rgba(0,229,255,.4);
+        border-radius: 16px;
+        padding: 15px;
+        background: rgba(0,229,255,.025);
+    }
+
+
+    .neo-files-selected {
+        margin-top: 10px;
+        font-size: 12px;
+        line-height: 2;
+    }
+
+
+    .neo-file-item {
+        display: inline-flex;
+        margin: 4px;
+        padding: 5px 10px;
+        border-radius: 20px;
+        background: rgba(0,229,255,.08);
+        border: 1px solid rgba(0,229,255,.15);
+    }
+
+
+    /* ============================================
+       BUTTON
+    ============================================ */
+
+    .neo-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: none;
+        padding: 11px 23px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: .25s;
+        text-decoration: none;
+    }
+
+
+    .neo-btn-primary {
+        color: white;
+        background: linear-gradient( 135deg, #00b8d4, #536dfe );
+        box-shadow: 0 8px 25px rgba(0,184,212,.20);
+    }
+
+
+        .neo-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(0,229,255,.30);
+            color: white;
+        }
+
+
+    .neo-btn-view {
+        color: #8ff7ff;
+        background: rgba(0,229,255,.08);
+        border: 1px solid rgba(0,229,255,.25);
+        padding: 7px 13px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: .25s;
+    }
+
+
+        .neo-btn-view:hover {
+            background: rgba(0,229,255,.15);
+            box-shadow: 0 0 20px rgba(0,229,255,.12);
+        }
+
+
+    /* ============================================
+       TABLE
+    ============================================ */
+
+    .neo-table-wrapper {
+        overflow-x: auto;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,.06);
+    }
+
+
+    .neo-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1100px;
+    }
+
+
+        .neo-table th {
+            padding: 15px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            opacity: .65;
+            white-space: nowrap;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+
+
+        .neo-table td {
+            padding: 14px 12px;
+            font-size: 13px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,.045);
+        }
+
+
+        .neo-table tbody tr {
+            transition: .2s;
+        }
+
+
+            .neo-table tbody tr:hover {
+                background: rgba(0,229,255,.035);
+            }
+
+
+    /* ============================================
+       STATUS
+    ============================================ */
+
+    .neo-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+    }
+
+
+        .neo-status.sent {
+            background: rgba(83,109,254,.12);
+            color: #8c9eff;
+        }
+
+
+        .neo-status.view {
+            background: rgba(255,193,7,.10);
+            color: #ffd54f;
+        }
+
+
+        .neo-status.response {
+            background: rgba(0,230,118,.10);
+            color: #69f0ae;
+        }
+
+
+    .delay {
+        color: #ff6b81;
+        font-weight: bold;
+    }
+
+
+    .no-delay {
+        color: #69f0ae;
+        font-weight: bold;
+    }
+
+
+    /* ============================================
+       CUSTOM GLASS MODAL
+    ============================================ */
+
+    #exchangeModalOverlay {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(3,7,18,.72);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+
+        #exchangeModalOverlay.show {
+            display: flex;
+        }
+
+
+    .neo-modal {
+        position: relative;
+        width: min( 1180px, 96vw );
+        max-height: 92vh;
+        overflow-y: auto;
+        border-radius: 24px;
+        background: linear-gradient( 145deg, rgba(21,28,50,.94), rgba(10,15,30,.92) );
+        border: 1px solid rgba(0,229,255,.22);
+        box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 35px 100px rgba(0,0,0,.60), 0 0 50px rgba(0,229,255,.08);
+    }
+
+
+    .neo-modal-close {
+        position: absolute;
+        left: 17px;
+        top: 17px;
+        z-index: 10;
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,.10);
+        background: rgba(255,255,255,.05);
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        transition: .2s;
+    }
+
+
+        .neo-modal-close:hover {
+            background: rgba(255,80,100,.18);
+            border-color: rgba(255,80,100,.35);
+        }
+
+
+    .neo-modal-loading {
+        padding: 80px;
+        text-align: center;
+    }
+
+
+    .neo-loader {
+        width: 45px;
+        height: 45px;
+        margin: auto;
+        border: 3px solid rgba(0,229,255,.15);
+        border-top-color: #00e5ff;
+        border-radius: 50%;
+        animation: neoRotate .8s linear infinite;
+    }
+
+
+    @@keyframes neoRotate {
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+<div class="neo-exchange-page">
+
+
+    <!-- HEADER -->
+
+    <div class="neo-header">
+
+        <div class="neo-header-title">
+
+            <div class="neo-header-icon">
+
+                <i class="bi bi-arrow-left-right"></i>
+
+            </div>
+
+            <div>
+
+                <h3>
+                    سامانه تبادل فایل
+                </h3>
+
+                <p>
+                    ثبت، ارسال و پیگیری فایل‌ها بین دو مرکز
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ===================================================
+         SEND CARD
+    ==================================================== -->
+
+    <div class="neo-card">
+
+        <div class="neo-card-title">
+
+            <i class="bi bi-send"></i>
+
+            ارسال جدید
+
+        </div>
+
+
+        <div class="neo-form-row">
+
+
+            <div class="neo-field">
+
+                <label>
+                    عنوان / موضوع
+                </label>
+
+                <input id="exchangeTitle"
+                       type="text"
+                       class="neo-input"
+                       placeholder="عنوان ارسال..." />
+
+            </div>
+
+
+            <div class="neo-field">
+
+                <label>
+                    فرستنده
+                </label>
+
+                <select id="senderCenter"
+                        class="neo-input">
+
+                    <option value="">
+                        انتخاب کنید
+                    </option>
+
+                    @foreach (var c in centers)
+                    {
+                        <option value="@c.ID">
+
+                            @c.CenterName
+
+                        </option>
+                    }
+
+                </select>
+
+            </div>
+
+
+            <div class="neo-field">
+
+                <label>
+                    گیرنده
+                </label>
+
+                <select id="receiverCenter"
+                        class="neo-input">
+
+                    <option value="">
+                        انتخاب کنید
+                    </option>
+
+                    @foreach (var c in centers)
+                    {
+                        <option value="@c.ID">
+
+                            @c.CenterName
+
+                        </option>
+                    }
+
+                </select>
+
+            </div>
+
+
+            <div class="neo-field">
+
+                <label>
+                    مهلت پاسخ
+                    (روز تقویمی)
+                </label>
+
+                <input id="responseDays"
+                       type="number"
+                       min="0"
+                       value="3"
+                       class="neo-input" />
+
+            </div>
+
+
+        </div>
+
+
+        <div class="neo-form-row two">
+
+
+            <div class="neo-field">
+
+                <label>
+                    توضیحات
+                </label>
+
+                <textarea id="exchangeDescription"
+                          class="neo-input"
+                          placeholder="شرح فعالیت یا فایل..."></textarea>
+
+            </div>
+
+
+            <div class="neo-field">
+
+                <label>
+                    فایل‌ها
+                </label>
+
+
+                <div class="neo-file-zone">
+
+                    <input id="exchangeFiles"
+                           type="file"
+                           multiple
+                           class="neo-input" />
+
+
+                    <div id="selectedFiles"
+                         class="neo-files-selected">
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <button type="button"
+                id="btnExchangeSend"
+                class="neo-btn neo-btn-primary">
+
+            <i class="bi bi-cloud-arrow-up"></i>
+
+            ثبت و ارسال
+
+        </button>
+
+
+        <span id="exchangeMessage">
+        </span>
+
+
+    </div>
+
+
+
+    <!-- ===================================================
+         LIST
+    ==================================================== -->
+
+    <div class="neo-card">
+
+
+        <div class="neo-card-title">
+
+            <i class="bi bi-clock-history"></i>
+
+            سوابق تبادل فایل‌ها
+
+        </div>
+
+
+        <div class="neo-table-wrapper">
+
+            <table class="neo-table">
+
+
+                <thead>
+
+                    <tr>
+
+                        <th>کد</th>
+
+                        <th>موضوع</th>
+
+                        <th>فرستنده</th>
+
+                        <th>گیرنده</th>
+
+                        <th>ارسال</th>
+
+                        <th>مهلت</th>
+
+                        <th>مشاهده</th>
+
+                        <th>فایل‌ها</th>
+
+                        <th>تأخیر</th>
+
+                        <th>وضعیت</th>
+
+                        <th>عملیات</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+
+                    @foreach (var item in Model)
+                    {
+
+                        var sender =
+                            db.ExchangeCenter
+                            .FirstOrDefault(x =>
+                                x.ID ==
+                                item.SenderCenterID);
+
+
+                        var receiver =
+                            db.ExchangeCenter
+                            .FirstOrDefault(x =>
+                                x.ID ==
+                                item.ReceiverCenterID);
+
+
+                        int fileCount =
+                            db.ExchangeFile.Count(x =>
+                                x.FK_ExchangeItem ==
+                                item.ID);
+
+
+                        Func<DateTime?, string> pdate =
+                            delegate (DateTime? date)
+                            {
+
+                                if (date == null)
+                                    return "-";
+
+                                DateTime d =
+                                    date.Value;
+
+                                return
+                                    pc.GetYear(d)
+                                    + "/" +
+                                    pc.GetMonth(d)
+                                        .ToString("00")
+                                    + "/" +
+                                    pc.GetDayOfMonth(d)
+                                        .ToString("00")
+                                    + " "
+                                    + d.ToString("HH:mm");
+                            };
+
+
+                        DateTime end =
+                            item.ResponseDate ??
+                            DateTime.Now;
+
+
+                        int delayDays =
+                            end > item.DueDate
+                            ?
+                            (end.Date -
+                             item.DueDate.Date)
+                            .Days
+                            :
+                            0;
+
+
+                        <tr>
+
+
+                            <td>
+                                #@item.ID
+                            </td>
+
+
+                            <td>
+
+                                <strong>
+                                    @item.Title
+                                </strong>
+
+                            </td>
+
+
+                            <td>
+
+                                @(sender != null
+                                ? sender.CenterName
+                                : "-")
+
+                            </td>
+
+
+                            <td>
+
+                                @(receiver != null
+                                ? receiver.CenterName
+                                : "-")
+
+                            </td>
+
+
+                            <td>
+
+                                @pdate(
+                                    item.SendDate
+                                )
+
+                            </td>
+
+
+                            <td>
+
+                                @pdate(
+                                    item.DueDate
+                                )
+
+                            </td>
+
+
+                            <td>
+
+                                @pdate(
+                                    item.FirstViewDate
+                                )
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="neo-status sent">
+
+                                    <i class="bi bi-paperclip"></i>
+
+                                    @fileCount
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                @if (delayDays > 0)
+                                {
+
+                                    <span class="delay">
+
+                                        @delayDays
+                                        روز
+
+                                    </span>
+
+                                }
+                                else
+                                {
+
+                                    <span class="no-delay">
+
+                                        بدون تأخیر
+
+                                    </span>
+
+                                }
+
+                            </td>
+
+
+                            <td>
+
+
+                                @if (item.Status == 0)
+                                {
+
+                                    <span class="neo-status sent">
+
+                                        ارسال شده
+
+                                    </span>
+
+                                }
+                                else if (item.Status == 1)
+                                {
+
+                                    <span class="neo-status view">
+
+                                        مشاهده شده
+
+                                    </span>
+
+                                }
+                                else if (item.Status == 2)
+                                {
+
+                                    <span class="neo-status response">
+
+                                        پاسخ داده شده
+
+                                    </span>
+
+                                }
+
+
+                            </td>
+
+
+                            <td>
+
+                                <button type="button"
+                                        class="neo-btn-view btnOpenExchangeModal"
+                                        data-id="@item.ID">
+
+                                    <i class="bi bi-eye"></i>
+
+                                    مشاهده
+
+                                </button>
+
+                            </td>
+
+
+                        </tr>
+                    }
+
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+</div><div id="exchangeModalOverlay">
+
+
+    <div class="neo-modal">
+
+
+        <button type="button"
+                class="neo-modal-close"
+                id="btnCloseExchangeModal">
+
+            ×
+
+        </button>
+
+
+        <div id="exchangeModalBody">
+
+
+            <div class="neo-modal-loading">
+
+                <div class="neo-loader">
+                </div>
+
+                <div style="margin-top:15px">
+
+                    در حال دریافت اطلاعات...
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+</div>
+<script src="~/Scripts/jquery-3.3.1.js"></script>
+
+<script>
+
+
+    // ============================================
+    // نمایش فایل‌های انتخاب شده
+    // ============================================
+
+    $("#exchangeFiles").change(function () {
+
+
+        var files =
+            this.files;
+
+
+        var html = "";
+
+
+        for (var i = 0;
+             i < files.length;
+             i++) {
+
+
+            html +=
+                '<span class="neo-file-item">' +
+
+                '<i class="bi bi-paperclip"></i>' +
+
+                '&nbsp;' +
+
+                files[i].name +
+
+                '</span>';
+
+        }
+
+
+        $("#selectedFiles")
+            .html(html);
+
+    });
+
+
+
+    // ============================================
+    // ارسال فایل
+    // ============================================
+
+    $("#btnExchangeSend")
+        .click(function () {
+
+
+            var title =
+                $("#exchangeTitle")
+                .val();
+
+
+            var sender =
+                $("#senderCenter")
+                .val();
+
+
+            var receiver =
+                $("#receiverCenter")
+                .val();
+
+
+            var files =
+                $("#exchangeFiles")[0]
+                .files;
+
+
+            if (!title.trim()) {
+
+                alert(
+                    "عنوان را وارد کنید."
+                );
+
+                return;
+            }
+
+
+            if (!sender ||
+                !receiver) {
+
+                alert(
+                    "فرستنده و گیرنده را انتخاب کنید."
+                );
+
+                return;
+            }
+
+
+            if (sender == receiver) {
+
+                alert(
+                    "فرستنده و گیرنده نمی‌توانند یکسان باشند."
+                );
+
+                return;
+            }
+
+
+            if (files.length == 0) {
+
+                alert(
+                    "حداقل یک فایل انتخاب کنید."
+                );
+
+                return;
+            }
+
+
+            var fd =
+                new FormData();
+
+
+            fd.append(
+                "title",
+                title
+            );
+
+
+            fd.append(
+                "description",
+                $("#exchangeDescription")
+                    .val()
+            );
+
+
+            fd.append(
+                "senderCenterID",
+                sender
+            );
+
+
+            fd.append(
+                "receiverCenterID",
+                receiver
+            );
+
+
+            fd.append(
+                "responseDays",
+                $("#responseDays")
+                    .val()
+            );
+
+
+            for (var i = 0;
+                 i < files.length;
+                 i++) {
+
+
+                fd.append(
+                    "files",
+                    files[i]
+                );
+
+            }
+
+
+            $("#btnExchangeSend")
+                .prop(
+                    "disabled",
+                    true
+                );
+
+
+            $.ajax({
+
+                url:
+                    '@Url.Action(
+                        "SaveExchange",
+                        "Orders"
+                    )',
+
+                type:
+                    "POST",
+
+                data:
+                    fd,
+
+                processData:
+                    false,
+
+                contentType:
+                    false,
+
+
+                success:
+                    function (res) {
+
+
+                        if (res.success) {
+
+                            alert(
+                                res.message
+                            );
+
+                            location.reload();
+
+                        }
+                        else {
+
+                            alert(
+                                res.message
+                            );
+
+
+                            $("#btnExchangeSend")
+                                .prop(
+                                    "disabled",
+                                    false
+                                );
+
+                        }
+
+                    },
+
+
+                error:
+                    function () {
+
+
+                        alert(
+                            "خطا در ارتباط با سرور."
+                        );
+
+
+                        $("#btnExchangeSend")
+                            .prop(
+                                "disabled",
+                                false
+                            );
+
+                    }
+
+            });
+
+        });
+
+
+
+    // ============================================
+    // باز کردن Modal
+    // ============================================
+
+    $(document)
+        .on(
+            "click",
+            ".btnOpenExchangeModal",
+            function () {
+
+
+                var id =
+                    $(this)
+                    .data("id");
+
+
+                $("#exchangeModalOverlay")
+                    .addClass("show");
+
+
+                $("body")
+                    .css(
+                        "overflow",
+                        "hidden"
+                    );
+
+
+                $("#exchangeModalBody")
+                    .html(
+
+                        '<div class="neo-modal-loading">' +
+
+                        '<div class="neo-loader"></div>' +
+
+                        '<div style="margin-top:15px">' +
+
+                        'در حال دریافت اطلاعات...' +
+
+                        '</div>' +
+
+                        '</div>'
+
+                    );
+
+
+                $.ajax({
+
+                    url:
+                        '@Url.Action(
+                            "ExchangeDetails",
+                            "Orders"
+                        )',
+
+                    type:
+                        "GET",
+
+                    data:
+                    {
+                        id: id
+                    },
+
+
+                    success:
+                        function (html) {
+
+
+                            $("#exchangeModalBody")
+                                .html(html);
+
+                        },
+
+
+                    error:
+                        function () {
+
+
+                            $("#exchangeModalBody")
+                                .html(
+
+                                    '<div style="padding:50px;text-align:center;color:#ff6b81">' +
+
+                                    'خطا در دریافت اطلاعات.' +
+
+                                    '</div>'
+
+                                );
+
+                        }
+
+                });
+
+            });
+
+
+
+    // ============================================
+    // بستن Modal
+    // ============================================
+
+    $("#btnCloseExchangeModal")
+        .click(function () {
+
+
+
+            CloseExchangeModal();
+
+        });
+
+
+
+    $("#exchangeModalOverlay")
+        .click(function (e) {
+
+
+            if (
+                e.target === this
+            ) {
+
+                CloseExchangeModal();
+
+            }
+
+        });
+
+
+
+    function CloseExchangeModal() {
+
+
+        $("#exchangeModalOverlay")
+            .removeClass("show");
+
+
+        $("body")
+            .css(
+                "overflow",
+                ""
+            );
+
+
+        // برای بروزرسانی زمان مشاهده و وضعیت
+        location.reload();
+
+    }
+
+
+
+    // ESC
+
+    $(document)
+        .keydown(function (e) {
+
+
+            if (e.key === "Escape") {
+
+                if (
+                    $("#exchangeModalOverlay")
+                    .hasClass("show")
+                ) {
+
+                    CloseExchangeModal();
+
+                }
+
+            }
+
+        });
+
+     
+</script>

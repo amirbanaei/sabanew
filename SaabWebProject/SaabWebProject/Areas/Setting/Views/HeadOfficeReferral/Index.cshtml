@@ -1,0 +1,415 @@
+﻿@model SaabWebProject.Models.ViewModels.Setting.HeadOfficeReferralPageViewModel
+@using System.Globalization
+@{
+    ViewBag.Title = "تنظیمات ستاد جهت ارجاع متمرکز";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    Response.ContentEncoding = System.Text.Encoding.UTF8;
+    Response.Charset = "utf-8";
+    var active = Model.ActiveTab ?? "base";
+}
+
+<nav dir="rtl" style="padding:12px" aria-label="ناوبری تنظیمات">
+<a href="@Url.Action("Index", "ProcedureDesigner", new { area = "Setting" })" target="_blank" rel="noopener">طراحی و ویرایش پروسیجر</a> |
+<a href="@Url.Action("Index", "HeadOfficeIndicators", new { area = "Setting" })" target="_blank" rel="noopener">شاخص اصلی</a> |
+<a href="@Url.Action("Index", "HeadOfficeReferral", new { area = "Setting", tab = "lists" })" target="_blank" rel="noopener">عنوان لیست</a>
+</nav>
+<style>
+    .hor-page {
+        --hor-cyan: #40f4ff;
+        --hor-blue: #5aa9ff;
+        --hor-violet: #a07cff;
+        --hor-pink: #ff6ca8;
+        --hor-panel: rgba(8, 22, 37, .68);
+        --hor-line: rgba(131, 235, 255, .22);
+        direction: rtl;
+        position: relative;
+        isolation: isolate;
+        min-height: 72vh;
+        padding: 18px 16px 38px;
+        color: #ebfaff;
+        text-align: right;
+    }
+    .hor-page::before, .hor-page::after { content: ""; position: fixed; z-index: -1; width: 380px; height: 380px; border-radius: 50%; pointer-events: none; filter: blur(120px); opacity: .14; }
+    .hor-page::before { top: 8%; right: 8%; background: var(--hor-cyan); }
+    .hor-page::after { bottom: 0; left: 7%; background: var(--hor-violet); }
+    .hor-hero, .hor-tabs, .hor-card {
+        border: 1px solid var(--hor-line);
+        background: linear-gradient(145deg, rgba(18, 43, 62, .76), rgba(6, 16, 30, .7));
+        box-shadow: 0 18px 45px rgba(0, 0, 0, .27), inset 0 1px 0 rgba(255, 255, 255, .07);
+        backdrop-filter: blur(18px) saturate(145%);
+        -webkit-backdrop-filter: blur(18px) saturate(145%);
+    }
+    .hor-hero { position: relative; overflow: hidden; padding: 25px 30px; margin-bottom: 18px; border-radius: 20px; background: linear-gradient(120deg, rgba(13, 40, 66, .88), rgba(12, 77, 85, .63)); }
+    .hor-hero::after { content: ""; position: absolute; right: 0; bottom: 0; width: 42%; height: 2px; background: linear-gradient(90deg,transparent,var(--hor-cyan)); box-shadow: 0 0 18px var(--hor-cyan); }
+    .hor-hero h3 { margin: 0 0 8px; color: #fff; font-size: 25px; font-weight: 900; text-shadow: 0 0 20px rgba(64,244,255,.28); }
+    .hor-hero h3 i { color: var(--hor-cyan); filter: drop-shadow(0 0 7px rgba(64,244,255,.65)); }
+    .hor-hero p { max-width: 980px; margin: 0; color: rgba(232,250,255,.76); line-height: 2; }
+    .hor-tabs { display: grid; grid-template-columns: repeat(4,minmax(150px,1fr)); gap: 9px; padding: 10px; margin-bottom: 20px; border-radius: 16px; }
+    .hor-tabs a { position: relative; padding: 13px 15px; overflow: hidden; color: rgba(229,247,252,.7); border: 1px solid transparent; border-radius: 11px; text-align: center; text-decoration: none; font-weight: 800; transition: color .2s ease, border-color .2s ease, background .2s ease, transform .2s ease; }
+    .hor-tabs a:hover { color: #fff; border-color: rgba(64,244,255,.25); background: rgba(64,244,255,.06); transform: translateY(-1px); }
+    .hor-tabs a.active { color: #03181e; border-color: var(--hor-cyan); background: linear-gradient(135deg,var(--hor-cyan),#7cbcff); box-shadow: 0 0 22px rgba(64,244,255,.2); }
+    .hor-card { padding: 24px; margin-bottom: 20px; border-radius: 18px; transition: border-color .25s ease, box-shadow .25s ease; }
+    .hor-card:hover { border-color: rgba(64,244,255,.34); box-shadow: 0 20px 52px rgba(0,0,0,.3),0 0 28px rgba(64,244,255,.045); }
+    .hor-title { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; color: #f4fdff; font-size: 17px; font-weight: 900; }
+    .hor-title::before { content: ""; width: 4px; height: 22px; border-radius: 8px; background: linear-gradient(var(--hor-cyan),var(--hor-violet)); box-shadow: 0 0 14px rgba(64,244,255,.62); }
+    .hor-help { color: rgba(218,240,246,.55); font-size: 13px; line-height: 1.9; }
+    .hor-page label { margin-bottom: 8px; color: rgba(235,250,255,.82); font-weight: 700; }
+    .hor-page .form-control, .hor-page .form-select {
+        min-height: 44px;
+        color: #f4fdff;
+        border: 1px solid rgba(131,235,255,.22);
+        border-radius: 10px;
+        background-color: rgba(3,12,23,.6);
+        box-shadow: inset 0 1px 6px rgba(0,0,0,.2);
+        transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .hor-page .form-control::placeholder { color: rgba(220,241,246,.38); }
+    .hor-page .form-control:focus, .hor-page .form-select:focus { color: #fff; border-color: var(--hor-cyan); background-color: rgba(5,20,32,.86); box-shadow: 0 0 0 3px rgba(64,244,255,.09),0 0 18px rgba(64,244,255,.13); }
+    .hor-page select option { color: #eefbff; background: #0b1b2b; }
+    .hor-fields { display: grid; grid-template-columns: repeat(auto-fill,minmax(190px,1fr)); gap: 9px; max-height: 330px; padding: 13px; overflow: auto; border: 1px solid rgba(131,235,255,.16); border-radius: 12px; background: rgba(2,10,20,.38); scrollbar-color: rgba(64,244,255,.42) transparent; }
+    .hor-check { display: flex; gap: 8px; align-items: center; min-height: 40px; padding: 8px 10px; margin: 0 !important; border: 1px solid rgba(255,255,255,.06); border-radius: 9px; background: rgba(255,255,255,.035); cursor: pointer; transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+    .hor-check:hover { border-color: rgba(64,244,255,.28); background: rgba(64,244,255,.07); transform: translateY(-1px); }
+    .hor-check input { width: 17px; height: 17px; accent-color: var(--hor-cyan); }
+    .hor-table { --bs-table-bg: transparent; --bs-table-color: #e8f7fb; --bs-table-hover-bg: rgba(64,244,255,.055); --bs-table-hover-color: #fff; color: #e8f7fb; }
+    .hor-table th { padding: 13px; white-space: nowrap; color: #96e8ef; border-color: rgba(131,235,255,.17); background: rgba(64,244,255,.065); }
+    .hor-table td { padding: 13px; border-color: rgba(255,255,255,.065); }
+    .hor-table td,.hor-table th { vertical-align: middle !important; }
+    .hor-weight { width: 86px; min-width: 76px; }
+    .hor-money { min-width: 140px; }
+    .hor-empty { padding: 38px !important; color: rgba(218,240,246,.46) !important; text-align: center; }
+    .hor-badge { display: inline-block; padding: 5px 10px; color: var(--hor-cyan); border: 1px solid rgba(64,244,255,.25); border-radius: 20px; background: rgba(64,244,255,.11); font-weight: 800; }
+    .hor-builder { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+    .hor-builder button { min-width: 42px; }
+    .hor-expression { min-height: 105px; direction: ltr; text-align: left; font-family: Consolas,monospace; }
+    .hor-sum.ok { color: #55f5b2; font-weight: 900; text-shadow: 0 0 10px rgba(85,245,178,.35); }
+    .hor-sum.bad { color: #ff789c; font-weight: 900; text-shadow: 0 0 10px rgba(255,120,156,.3); }
+    .hor-page .btn { border-radius: 9px; font-weight: 800; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .hor-page .btn:hover { transform: translateY(-1px); }
+    .hor-page .btn-primary { color: #03161c; border: 0; background: linear-gradient(135deg,var(--hor-cyan),#6bbcff); box-shadow: 0 8px 22px rgba(64,244,255,.17); }
+    .hor-page .btn-primary:hover { color: #03161c; box-shadow: 0 10px 28px rgba(64,244,255,.27),0 0 22px rgba(64,244,255,.15); }
+    .hor-page .btn-light, .hor-page [class*="btn-outline-"] { color: #e9faff; border-color: rgba(131,235,255,.26) !important; background: rgba(255,255,255,.045); }
+    .hor-page .btn-outline-primary:hover, .hor-page .btn-outline-info:hover, .hor-page .btn-outline-success:hover { color: #03161c; border-color: var(--hor-cyan) !important; background: var(--hor-cyan); box-shadow: 0 0 18px rgba(64,244,255,.23); }
+    .hor-page .btn-outline-danger { color: #ff91ae; border-color: rgba(255,108,168,.36) !important; }
+    .hor-page .btn-outline-danger:hover { color: #fff; background: rgba(255,70,118,.78); box-shadow: 0 0 18px rgba(255,70,118,.24); }
+    .hor-page .alert { color: #eefcff; border: 1px solid rgba(131,235,255,.2); border-radius: 11px; background: rgba(8,22,37,.78); }
+    .hor-page .alert-success { border-color: rgba(73,255,175,.32); box-shadow: inset 3px 0 #49ffaf; }
+    .hor-page .alert-warning { border-color: rgba(255,202,83,.34); box-shadow: inset 3px 0 #ffca53; }
+    .hor-page .alert-danger { border-color: rgba(255,108,168,.36); box-shadow: inset 3px 0 var(--hor-pink); }
+    .hor-page hr { border-color: rgba(131,235,255,.14); opacity: 1; }
+    .hor-page code { color: #8ef6ff; padding: 3px 7px; border: 1px solid rgba(64,244,255,.14); border-radius: 6px; background: rgba(3,12,23,.55); }
+    /* حالت فشرده: کنترل‌ها در یک نما و با حداقل اسکرول */
+    .hor-page { padding: 8px 8px 18px; font-size: 12px; }
+    .hor-hero { padding: 12px 18px; margin-bottom: 8px; border-radius: 14px; }
+    .hor-hero h3 { margin-bottom: 2px; font-size: 18px; }
+    .hor-hero p { overflow: hidden; font-size: 11px; line-height: 1.55; text-overflow: ellipsis; white-space: nowrap; }
+    .hor-tabs { gap: 5px; padding: 5px; margin-bottom: 9px; border-radius: 11px; }
+    .hor-tabs a { padding: 7px 8px; border-radius: 8px; font-size: 11px; }
+    .hor-card { padding: 12px 14px; margin-bottom: 9px; border-radius: 13px; }
+    .hor-card.picker-open { position: relative; z-index: 1200; }
+    .hor-title { margin-bottom: 9px; font-size: 14px; }
+    .hor-title::before { height: 17px; }
+    .hor-help { font-size: 10.5px; line-height: 1.55; }
+    .hor-page label { margin-bottom: 3px; font-size: 11px; }
+    .hor-page .mb-3 { margin-bottom: .4rem !important; }
+    .hor-page .mt-3 { margin-top: .45rem !important; }
+    .hor-page .form-control, .hor-page .form-select { min-height: 32px; height: 32px; padding: 4px 8px; border-radius: 7px; font-size: 11px; }
+    .hor-page input.form-control, .hor-page textarea.form-control, .hor-page .form-select { margin-bottom: 0 !important; border-width: 1px !important; }
+    .hor-page textarea.form-control { height: 66px; min-height: 66px; }
+    .hor-page .btn { min-height: 30px; padding: 4px 9px; border-radius: 7px; font-size: 10.5px; }
+    .hor-page button.btn-primary[type=submit], .hor-page #save-priority { min-width: 84px; min-height: 25px; padding: 3px 9px; font-size: 9.5px; line-height: 1.35; }
+    .hor-fields { grid-template-columns: repeat(auto-fill,minmax(165px,1fr)); gap: 5px; max-height: 190px; padding: 7px; }
+    .hor-check { min-height: 31px; padding: 4px 7px; font-size: 10.5px; }
+    .hor-check input { width: 14px; height: 14px; }
+    .hor-table th, .hor-table td { padding: 6px 8px; font-size: 10.5px; }
+    .hor-table .hor-filter-row th { padding: 4px 5px; background: rgba(3,12,23,.46); }
+    .hor-column-filter { width: 100%; height: 26px; padding: 3px 6px; color: #edffff; border: 1px solid rgba(64,244,255,.18); border-radius: 6px; outline: 0; background: rgba(2,10,19,.7); font-size: 9.5px; }
+    .hor-page .hor-column-filter { margin-bottom: 0 !important; border-width: 1px !important; }
+    .hor-column-filter:focus { border-color: var(--hor-cyan); box-shadow: 0 0 10px rgba(64,244,255,.14); }
+    .hor-column-filter::placeholder { color: rgba(220,241,246,.33); }
+    .hor-table .form-control { min-width: 62px; }
+    .hor-weight { width: 65px; min-width: 60px; }
+    .hor-money { min-width: 105px; }
+    .hor-empty { padding: 17px !important; }
+    .hor-builder { gap: 4px; margin-top: 6px; }
+    .hor-builder button { min-width: 32px; }
+    .hor-expression { min-height: 66px !important; }
+    .hor-page hr { margin: .55rem 0; }
+    .hor-page .picker { display: block; width: 100%; margin-bottom: 0 !important; border: 0 !important; background: transparent !important; }
+    .hor-page .picker .pc-select { display: block; width: 100%; min-width: 0; max-width: none; }
+    .hor-page .picker .pc-element.pc-trigger { height: 32px; padding: 5px 25px 5px 8px; margin: 0 !important; overflow: hidden; color: #f4fdff !important; border: 1px solid rgba(131,235,255,.22) !important; border-radius: 7px; background-color: rgba(3,12,23,.6) !important; background-image: none !important; background-repeat: no-repeat !important; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+    .hor-page .picker .pc-element.pc-trigger::before { content: ""; position: absolute; top: 11px; right: 9px; width: 0; height: 0; border-top: 6px solid var(--hor-cyan); border-right: 4px solid transparent; border-left: 4px solid transparent; filter: drop-shadow(0 0 4px rgba(64,244,255,.55)); }
+    .hor-page .picker .pc-select .pc-list { position: absolute; top: calc(100% + 3px); right: 0; bottom: auto; left: auto; z-index: 1300; width: 100%; min-width: 210px; max-width: calc(100vw - 48px); padding: 5px; border: 1px solid rgba(64,244,255,.34); border-radius: 9px; background: rgba(5,17,29,.97); box-shadow: 0 14px 35px rgba(0,0,0,.46),0 0 18px rgba(64,244,255,.09); backdrop-filter: blur(16px); }
+    .hor-page .picker .pc-select .pc-list input[type=search] { height: 29px; padding: 4px 8px; color: #fff; border: 1px solid rgba(64,244,255,.26); border-radius: 6px; outline: 0; background: rgba(0,7,15,.82); font-size: 10.5px; }
+    .hor-page .picker .pc-select .pc-list ul { max-height: 220px; margin-top: 4px; }
+    .hor-page .picker .pc-select .pc-list li, .hor-page .picker .pc-select .pc-list li:nth-child(even) { padding: 6px 8px; color: rgba(236,250,255,.83); border-radius: 5px; background: transparent; font-size: 10.5px; }
+    .hor-page .picker .pc-select .pc-list li:hover { color: #04171d; background: var(--hor-cyan); }
+    .hor-page .picker .pc-select .pc-list li .searched { color: var(--hor-cyan); }
+    .hor-page .picker .pc-select .pc-list li:hover .searched { color: #04171d; }
+    .input-group > .picker { flex: 1 1 auto; width: 1%; }
+    @@media(max-width:991px){.hor-tabs{grid-template-columns:repeat(4,minmax(110px,1fr))}.hor-hero p{white-space:normal}}
+    @@media(max-width:767px){.hor-page{padding:6px 2px 16px}.hor-card,.hor-hero{padding:11px;border-radius:10px}.hor-tabs{grid-template-columns:repeat(2,1fr)}.hor-table{min-width:760px}.hor-tabs a{text-align:center}}
+    @@media(prefers-reduced-motion:reduce){.hor-card,.hor-tabs a,.hor-page .btn,.hor-check,.hor-page .form-control{transition:none}}
+</style>
+
+<div class="container-fluid hor-page">
+    <div class="hor-hero">
+        <h3><i class="bi bi-diagram-3 ms-2"></i>تنظیمات ستاد جهت ارجاع متمرکز</h3>
+        <p>فیلدهای مبنا، محدودیت‌ها، عنوان لیست‌ها و شروط حذف رکورد را بر اساس گزارش‌های تعریف‌شده مدیریت کنید.</p>
+    </div>
+
+    @if (TempData["ReferralSuccess"] != null) { <div class="alert alert-success">@TempData["ReferralSuccess"]</div> }
+    @if (TempData["ReferralError"] != null) { <div class="alert alert-danger">@TempData["ReferralError"]</div> }
+
+    <div class="hor-tabs">
+        <a class="@(active == "base" ? "active" : "")" href="@Url.Action("Index", new { tab="base" })">۲. تعریف فیلدهای پایه</a>
+        <a class="@(active == "priority" ? "active" : "")" href="@Url.Action("Index", new { tab="priority" })">۳. محدودیت و اولویت</a>
+        <a class="@(active == "lists" ? "active" : "")" href="@Url.Action("Index", new { tab="lists" })">۴. تعریف عنوان لیست</a>
+        <a class="@(active == "conditions" ? "active" : "")" href="@Url.Action("Index", new { tab="conditions" })">۵. تعریف شروط</a>
+    </div>
+
+    @if (active == "base")
+    {
+        <div class="hor-card">
+            <div class="hor-title">انتخاب جدول و فیلدهای پایه</div>
+            @using (Html.BeginForm("SaveBaseFields", "HeadOfficeReferral", new { area="Setting" }, FormMethod.Post, new { id="base-form" }))
+            {
+                @Html.AntiForgeryToken()
+                <div class="row">
+                    <div class="col-lg-4 mb-3">
+                        <label>جدول مورد نظر</label>
+                        <select class="form-control" name="ReportId" id="base-report" required>
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var item in Model.Reports) { <option value="@item.Id">@item.Title</option> }
+                        </select>
+                    </div>
+                    <div class="col-lg-8 mb-3 d-flex align-items-end"><div class="hor-help">با انتخاب گزارش، فیلدهای قبلی تیک‌خورده نمایش داده می‌شوند. ذخیره فقط فیلدهای جدید را اضافه می‌کند؛ برداشتن تیک، فیلد ثبت‌شده را حذف نمی‌کند. برای حذف از دکمه حذف جدول پایین استفاده کنید.</div></div>
+                </div>
+                <div id="base-fields" class="hor-fields"><div class="hor-empty">ابتدا جدول را انتخاب کنید.</div></div>
+                <div class="mt-3"><button class="btn btn-primary" type="submit"><i class="bi bi-check2-circle ms-1"></i>ثبت فیلدهای پایه</button></div>
+            }
+        </div>
+        <div class="hor-card">
+            <div class="hor-title">فیلدهای پایه ثبت‌شده</div>
+            <div class="table-responsive"><table class="table table-hover hor-table mb-0"><thead><tr><th>جدول</th><th>فیلد</th><th>عملیات</th></tr></thead><tbody>
+            @if (!Model.BaseFields.Any()) { <tr><td colspan="3" class="hor-empty">فیلد پایه‌ای ثبت نشده است.</td></tr> }
+            @foreach (var item in Model.BaseFields)
+            {
+                <tr><td>@item.ReportTitle</td><td><span class="hor-badge">@item.FieldTitle</span></td><td>
+                @using (Html.BeginForm("DeleteBaseField", "HeadOfficeReferral", new { area="Setting" }, FormMethod.Post, new { @class="d-inline hor-confirm-delete" })) { @Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.BaseFieldId"/><button class="btn btn-sm btn-outline-danger">حذف</button> }
+                </td></tr>
+            }
+            </tbody></table></div>
+        </div>
+    }
+
+    @if (active == "priority")
+    {
+        <div class="hor-card">
+            <div class="hor-title">آیا این تنظیمات برای کل مدیریت‌های برق یکسان است؟</div>
+            <div class="row align-items-end">
+                <div class="col-md-3 mb-3"><select id="priority-scope" class="form-control"><option value="all" @(Model.Scope=="all"?"selected":"")>بلی، تنظیمات سراسری</option><option value="city" @(Model.Scope=="city"?"selected":"")>خیر، به تفکیک مدیریت برق</option></select></div>
+                <div class="col-md-4 mb-3" id="priority-city-wrap" style="@(Model.Scope=="city"?"":"display:none")"><label>مدیریت برق</label><select id="priority-city" class="form-control"><option value="">انتخاب کنید</option>@foreach(var city in Model.Cities){<option value="@city.Id" @(Model.CityId==city.Id?"selected":"")>@city.Title @(Model.ConfiguredCityIds.Contains((int)city.Id)?"✓":"")</option>}</select></div>
+                <div class="col-md-4 mb-3" id="copy-city-wrap" style="@(Model.Scope=="city"&&Model.CityId.HasValue?"":"display:none")"><label>کپی تنظیمات از مدیریت</label><div class="input-group"><select id="copy-city" class="form-control"><option value="">انتخاب کنید</option>@foreach(var city in Model.Cities.Where(x=>x.Id!=Model.CityId)){<option value="@city.Id">@city.Title</option>}</select><button type="button" id="copy-priority" class="btn btn-outline-secondary">کپی</button></div></div>
+            </div>
+            @if (!Model.Indicators.Any()) { <div class="alert alert-warning">ابتدا در صفحه «تعریف شاخص اصلی» حداقل یک شاخص بسازید.</div> }
+            @if (!Model.PriorityRows.Any()) { <div class="alert alert-warning">ابتدا در زبانه «تعریف فیلدهای پایه» فیلدها را انتخاب کنید.</div> }
+            <form id="priority-form">@Html.AntiForgeryToken()
+                <div class="table-responsive"><table class="table table-bordered hor-table"><thead><tr><th>فیلد</th><th>زیرمجموعه</th><th>کمترین مبلغ قابل قبول</th><th>بیشترین مبلغ قابل قبول</th>@foreach(var indicator in Model.Indicators){<th>@indicator.Title (@indicator.Unit)</th>}<th>جمع</th></tr></thead><tbody>
+                @{ var pi=0; }
+                @foreach(var row in Model.PriorityRows)
+                {
+                    <tr class="priority-row" data-field="@row.FieldId" data-subset="@(row.SubsetId.HasValue?row.SubsetId.Value.ToString():"")"><td>@row.FieldTitle</td><td>@(row.SubsetTitle??"—")</td><td><input class="form-control hor-money p-min" type="text" inputmode="decimal" autocomplete="off" value="@(row.MinimumAmount.HasValue?row.MinimumAmount.Value.ToString("#,##0.##",CultureInfo.InvariantCulture):"")"/></td><td><input class="form-control hor-money p-max" type="text" inputmode="decimal" autocomplete="off" value="@(row.MaximumAmount.HasValue?row.MaximumAmount.Value.ToString("#,##0.##",CultureInfo.InvariantCulture):"")"/></td>
+                    @foreach(var indicator in Model.Indicators){ decimal weight=0; row.Weights.TryGetValue(indicator.IndicatorId,out weight);<td><input class="form-control hor-weight p-weight" data-indicator="@indicator.IndicatorId" type="number" min="0" max="100" step="0.01" value="@weight.ToString(CultureInfo.InvariantCulture)"/></td>}<td class="hor-sum bad">۰</td></tr>
+                    pi++;
+                }
+                </tbody></table></div>
+                <button type="button" id="save-priority" class="btn btn-primary" @(!Model.Indicators.Any()||!Model.PriorityRows.Any()?"disabled":"")><i class="bi bi-save ms-1"></i>ذخیره محدودیت و اولویت</button>
+            </form>
+        </div>
+    }
+
+    @if (active == "lists")
+    {
+        <div class="hor-card">
+            <div class="hor-title" id="list-form-title">تعریف عنوان لیست</div>
+            @using(Html.BeginForm("SaveList","HeadOfficeReferral",new{area="Setting"},FormMethod.Post,new{id="list-form",enctype="multipart/form-data"}))
+            {
+                @Html.AntiForgeryToken()<input type="hidden" name="ListId" id="list-id" value="0"/>
+                <div class="row">
+                    <div class="col-md-4 mb-3"><label>عنوان لیست</label><input class="form-control" name="Title" id="list-title" maxlength="200" required placeholder="مثال: لیست وصول"/></div>
+                    <div class="col-md-4 mb-3"><label>جدول</label><select class="form-control" name="ReportId" id="list-report" required><option value="">انتخاب کنید</option>@foreach(var item in Model.Reports){<option value="@item.Id">@item.Title</option>}</select></div>
+                    <div class="col-md-4 mb-3"><label>کلید یونیک جدول</label><select class="form-control" name="KeyFieldId" id="list-key" required><option value="">انتخاب کلید یونیک</option>@foreach(var item in Model.ReportUniqueFields){<option value="@item.Id">@item.Title</option>}</select></div>
+                    <div class="col-md-3 mb-3"><label>مقدار روزانه</label><input class="form-control" name="DailyAmount" id="list-daily" type="number" min="1" required/></div>
+                    <div class="col-md-3 mb-3"><label>بازه زمانی لیست (روز)</label><input class="form-control" name="DurationDays" id="list-days" type="number" min="1" required/></div>
+                    <div class="col-md-3 mb-3"><label>نوع مسیریابی</label><select class="form-control" name="RoutingType" id="list-routing"><option value="address">بر اساس آدرس</option><option value="gis">مطابق GIS</option></select></div>
+                    <div class="col-md-3 mb-3"><label>دستور کار تکراری</label><select class="form-control" name="AllowDuplicate" id="list-duplicate"><option value="false">خیر</option><option value="true">بلی</option></select></div>
+                    <div class="col-md-3 mb-3"><label>دامنه تنظیمات</label><select class="form-control" name="Scope" id="list-scope"><option value="all">کل مدیریت‌های برق</option><option value="city">مدیریت برق مشخص</option></select></div>
+                    <div class="col-md-4 mb-3" id="list-city-wrap" style="display:none"><label>مدیریت برق</label><select class="form-control" name="CityId" id="list-city"><option value="">انتخاب کنید</option>@foreach(var city in Model.Cities){<option value="@city.Id">@city.Title</option>}</select></div>
+                </div>
+                <hr/><div class="d-flex flex-wrap justify-content-between align-items-center mb-2"><div><strong>استثنائات</strong><div class="hor-help">زیرمجموعه‌هایی را که نباید وارد لیست شوند انتخاب کنید.</div></div><div><a class="btn btn-sm btn-outline-success" href="@Url.Action("ExceptionSample")">دریافت فایل نمونه</a><label class="btn btn-sm btn-outline-secondary mb-0">خواندن فایل تکمیل‌شده<input type="file" id="exception-file" accept=".xlsx" hidden/></label></div></div>
+                <div class="hor-fields" id="exception-fields">@foreach(var group in Model.Subsets.GroupBy(x=>new{x.ParentId,x.ParentTitle})){<div><strong>@group.Key.ParentTitle</strong>@foreach(var sub in group){<label class="hor-check"><input type="checkbox" name="ExceptionSubsetIds" value="@sub.Id"/> @sub.Title</label>}</div>}</div>
+                <div class="mt-3"><button class="btn btn-primary" type="submit">ثبت تنظیمات لیست</button><button class="btn btn-light border" type="button" id="list-cancel" style="display:none">انصراف از ویرایش</button></div>
+            }
+        </div>
+        <div class="hor-card"><div class="hor-title">لیست‌های تعریف‌شده</div><div class="table-responsive"><table class="table table-hover hor-table"><thead><tr><th>عنوان</th><th>جدول / فیلد کلیدی</th><th>روزانه / بازه</th><th>مسیریابی</th><th>دامنه</th><th>استثنا</th><th>عملیات</th></tr></thead><tbody>
+        @if(!Model.Lists.Any()){<tr><td colspan="7" class="hor-empty">عنوان لیستی ثبت نشده است.</td></tr>}
+        @foreach(var item in Model.Lists){<tr><td><strong>@item.Title</strong></td><td>@item.ReportTitle / @item.KeyFieldTitle</td><td>@item.DailyAmount / @item.DurationDays روز</td><td>@(item.RoutingType=="gis"?"GIS":"آدرس")</td><td>@(item.CityId.HasValue?item.CityTitle:"همه مدیریت‌ها")</td><td>@item.ExceptionCount</td><td><button type="button" class="btn btn-sm btn-outline-primary list-edit" data-id="@item.ListId">ویرایش</button> @using(Html.BeginForm("DeleteList","HeadOfficeReferral",new{area="Setting"},FormMethod.Post,new{@class="d-inline hor-confirm-delete"})){@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.ListId"/><button class="btn btn-sm btn-outline-danger">حذف</button>}</td></tr>}
+        </tbody></table></div></div>
+    }
+
+    @if(active=="conditions")
+    {
+        <div class="hor-card"><div class="hor-title" id="condition-form-title">تعریف شرط حذف یونیک از لیست نهایی</div>
+        @using(Html.BeginForm("SaveCondition","HeadOfficeReferral",new{area="Setting"},FormMethod.Post,new{id="condition-form"}))
+        {@Html.AntiForgeryToken()<input type="hidden" name="ConditionId" id="condition-id" value="0"/><div class="row"><div class="col-md-4 mb-3"><label>عنوان شرط</label><input class="form-control" name="Title" id="condition-title" required/></div><div class="col-md-8 mb-3"><label>شرح مختصر</label><input class="form-control" name="Description" id="condition-description" maxlength="1000"/></div><div class="col-md-4 mb-3"><label>فیلد</label><select class="form-control" id="builder-field"><option value="">انتخاب کنید</option>@foreach(var f in Model.Fields){<option value="[Field:@f.Id]">@f.Title</option>}</select></div><div class="col-md-4 mb-3"><label>زیرمجموعه فیلد</label><select class="form-control" id="builder-subset"><option value="">انتخاب کنید</option>@foreach(var s in Model.Subsets){<option value="[Subset:@s.Id]">@s.ParentTitle - @s.Title</option>}</select></div></div>
+        <textarea class="form-control hor-expression" name="ExpressionText" id="condition-expression" required placeholder="عبارت شرط را با دکمه‌های زیر بسازید"></textarea><div class="hor-builder"><button type="button" class="btn btn-outline-secondary op" data-value=" + ">+</button><button type="button" class="btn btn-outline-secondary op" data-value=" - ">−</button><button type="button" class="btn btn-outline-secondary op" data-value=" * ">×</button><button type="button" class="btn btn-outline-secondary op" data-value=" / ">÷</button><button type="button" class="btn btn-outline-secondary op" data-value=" = ">=</button><button type="button" class="btn btn-outline-secondary op" data-value=" < ">&lt;</button><button type="button" class="btn btn-outline-secondary op" data-value=" > ">&gt;</button><button type="button" class="btn btn-outline-secondary op" data-value="(">(</button><button type="button" class="btn btn-outline-secondary op" data-value=")">)</button><button type="button" class="btn btn-outline-info" id="add-field-token">افزودن فیلد</button><button type="button" class="btn btn-outline-info" id="add-subset-token">افزودن زیرمجموعه</button><button type="button" class="btn btn-outline-danger" id="clear-expression">پاک کردن عبارت</button></div><div class="mt-3"><button class="btn btn-primary">ثبت شرط</button><button type="button" class="btn btn-light border" id="condition-cancel" style="display:none">انصراف</button></div>}
+        </div>
+        <div class="hor-card"><div class="hor-title">شروط تعریف‌شده</div><div class="table-responsive"><table class="table table-hover hor-table"><thead><tr><th>عنوان</th><th>شرح</th><th>عبارت</th><th>عملیات</th></tr></thead><tbody>@if(!Model.Conditions.Any()){<tr><td colspan="4" class="hor-empty">شرطی ثبت نشده است.</td></tr>}@foreach(var item in Model.Conditions){<tr><td><strong>@item.Title</strong></td><td>@item.Description</td><td><code dir="ltr">@item.ExpressionText</code></td><td><button type="button" class="btn btn-sm btn-outline-primary condition-edit" data-id="@item.ConditionId" data-title="@item.Title" data-description="@item.Description" data-expression="@item.ExpressionText">ویرایش</button> @using(Html.BeginForm("DeleteCondition","HeadOfficeReferral",new{area="Setting"},FormMethod.Post,new{@class="d-inline hor-confirm-delete"})){@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.ConditionId"/><button class="btn btn-sm btn-outline-danger">حذف</button>}</td></tr>}</tbody></table></div></div>
+    }
+</div>
+
+<script>
+(function(){
+    function q(s,p){return (p||document).querySelector(s)} function qa(s,p){return Array.prototype.slice.call((p||document).querySelectorAll(s))}
+    function esc(v){var d=document.createElement('div');d.textContent=v==null?'':v;return d.innerHTML}
+    function latinDigits(v){return String(v==null?'':v).replace(/[۰-۹]/g,function(x){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(x)}).replace(/[٠-٩]/g,function(x){return '٠١٢٣٤٥٦٧٨٩'.indexOf(x)})}
+    function moneyRaw(v){
+        var raw=latinDigits(v).replace(/[،,\s]/g,'').replace(/[^0-9.]/g,''),dot=raw.indexOf('.');
+        if(dot>=0)raw=raw.slice(0,dot+1)+raw.slice(dot+1).replace(/\./g,'');
+        return raw;
+    }
+    function formatMoney(input){
+        var raw=moneyRaw(input.value),parts=raw.split('.'),integer=(parts[0]||'').replace(/^0+(?=\d)/,''),formatted=integer.replace(/\B(?=(\d{3})+(?!\d))/g,',');
+        if(raw.indexOf('.')>=0)formatted+='.'+(parts[1]||'').slice(0,2);
+        input.value=formatted;
+    }
+
+    // جست‌وجو داخل Dropdown: با کلیک روی Selector باز می‌شود و Select اصلی را برای Model Binding حفظ می‌کند.
+    function refreshPicker(select){
+        if(!select || !window.jQuery || !jQuery.fn.picker)return;
+        Array.prototype.forEach.call(select.options,function(o){if(o.value===select.value)o.setAttribute('selected','selected');else o.removeAttribute('selected')});
+        var $select=jQuery(select);$select.off('.horPicker');
+        if($select.data('plugin_picker'))$select.picker('destroy');
+        $select.picker({search:true,searchAutofocus:false,texts:{trigger:'انتخاب کنید',noResult:'نتیجه‌ای پیدا نشد',search:'جستجو در گزینه‌ها...'}});
+        $select.on('sp-open.horPicker',function(){
+            var $picker=$select.next('.picker'),$list=$picker.find('.pc-list');
+            $picker.closest('.hor-card').addClass('picker-open');
+            var input=$list.find('input[type=search]')[0];
+            if(input){try{input.focus({preventScroll:true})}catch(e){input.focus()}}
+        });
+        $select.on('sp-close.horPicker',function(){$select.next('.picker').closest('.hor-card').removeClass('picker-open')});
+        $select.on('sp-change.horPicker',function(){this.dispatchEvent(new Event('change',{bubbles:true}))});
+    }
+    function syncAllPickers(){qa('.hor-page select').forEach(refreshPicker)}
+
+    // فیلتر مستقل زیر هر ستون تمام جدول‌های صفحه.
+    function addColumnFilters(table){
+        if(!table || !table.tHead || !table.tBodies.length || table.getAttribute('data-filter-ready')==='1')return;
+        table.setAttribute('data-filter-ready','1');
+        var headings=table.tHead.rows[0].cells,filterRow=document.createElement('tr'),filters=[];filterRow.className='hor-filter-row';
+        Array.prototype.forEach.call(headings,function(heading,index){
+            var th=document.createElement('th'),title=(heading.textContent||'').trim();
+            if(title.indexOf('عملیات')<0){var input=document.createElement('input');input.type='search';input.className='hor-column-filter';input.placeholder='جستجوی '+title;input.setAttribute('aria-label','جستجوی ستون '+title);th.appendChild(input);filters.push({index:index,input:input})}
+            filterRow.appendChild(th);
+        });
+        table.tHead.appendChild(filterRow);
+        function apply(){Array.prototype.forEach.call(table.tBodies[0].rows,function(row){var visible=filters.every(function(f){var cell=row.cells[f.index],term=(f.input.value||'').toLowerCase().trim();if(!term)return true;if(!cell)return false;var values=Array.prototype.map.call(cell.querySelectorAll('input,select,textarea'),function(x){return x.value}).join(' ');return ((cell.textContent||'')+' '+values).toLowerCase().indexOf(term)>=0});row.style.display=visible?'':'none'})}
+        filters.forEach(function(f){f.input.addEventListener('input',apply)});
+    }
+    qa('.hor-table').forEach(addColumnFilters);
+    window.addEventListener('load',syncAllPickers);
+    qa('.hor-confirm-delete').forEach(function(f){f.addEventListener('submit',function(e){if(!confirm('آیا از حذف این مورد اطمینان دارید؟'))e.preventDefault()})});
+
+    var baseReport=q('#base-report'),baseFields=q('#base-fields');
+    var baseLoadVersion=0,baseForm=q('#base-form'),baseSubmit=baseForm?baseForm.querySelector('button[type="submit"]'):null;
+    async function loadBaseFields(){
+        var version=++baseLoadVersion,reportId=baseReport.value;
+        if(baseSubmit)baseSubmit.disabled=true;
+        baseFields.innerHTML='<div class="hor-empty">'+(reportId?'در حال بارگذاری...':'ابتدا گزارش را انتخاب کنید.')+'</div>';
+        if(!reportId)return;
+        try{
+            var response=await fetch('@Url.Action("SavedBaseFields", "HeadOfficeReferral", new { area="Setting" })?reportId='+encodeURIComponent(reportId),{credentials:'same-origin',headers:{Accept:'application/json'}});
+            var raw=await response.text(),payload;
+            if(version!==baseLoadVersion)return;
+            try{payload=JSON.parse(raw)}catch(parseError){
+                if(response.redirected)throw Error('نشست کاربری یا دسترسی را بررسی کنید؛ درخواست به صفحه دیگری هدایت شد.');
+                throw Error('سرور به‌جای اطلاعات فیلدها صفحه HTML برگرداند (HTTP '+response.status+'). فایل کنترلر جدید را جایگزین و پروژه را Build کنید.');
+            }
+            if(!response.ok||!payload.success)throw Error(payload.message||('خطای سرور HTTP '+response.status));
+            if(!Array.isArray(payload.items))throw Error('نسخه صفحه و کنترلر هماهنگ نیست؛ هر دو فایل بسته جدید را جایگزین کنید.');
+            baseFields.innerHTML=payload.items.length?'':'<div class="hor-empty">فیلدی برای این گزارش یافت نشد.</div>';
+            payload.items.forEach(function(x){baseFields.insertAdjacentHTML('beforeend','<label class="hor-check"><input type="checkbox" name="FieldIds" value="'+esc(x.Id)+'"'+(x.Selected?' checked':'')+'> '+esc(x.Title)+(x.Selected?' <small>ثبت‌شده</small>':'')+'</label>')});
+            if(baseSubmit)baseSubmit.disabled=false;
+        }catch(error){if(version===baseLoadVersion)baseFields.innerHTML='<div class="hor-empty">'+esc(error.message||'دریافت فیلدها انجام نشد.')+'</div>'}
+    }
+    if(baseReport){baseReport.addEventListener('change',loadBaseFields);var initialReport=@(ViewBag.BaseReportId ?? 0);if(initialReport)baseReport.value=String(initialReport);loadBaseFields()}
+
+
+    var scope=q('#priority-scope'),city=q('#priority-city');
+    qa('.hor-money').forEach(function(input){formatMoney(input);input.addEventListener('input',function(){formatMoney(this)})});
+    function priorityNavigate(){var s=scope.value,u='@Url.Action("Index")?tab=priority&scope='+s;if(s==='city'&&city&&city.value)u+='&cityId='+city.value;location.href=u}
+    if(scope)scope.addEventListener('change',priorityNavigate);if(city)city.addEventListener('change',priorityNavigate);
+    function updateSums(){qa('.priority-row').forEach(function(row){var sum=qa('.p-weight',row).reduce(function(a,x){return a+(parseFloat(x.value)||0)},0),cell=q('.hor-sum',row);cell.textContent=sum.toLocaleString('fa-IR');cell.className='hor-sum '+(Math.abs(sum-100)<.001?'ok':'bad')})}
+    qa('.p-weight').forEach(function(x){x.addEventListener('input',updateSums)});updateSums();
+    function priorityData(copyId){var fd=new FormData(),token=q('#priority-form input[name="__RequestVerificationToken"]');fd.append('__RequestVerificationToken',token.value);fd.append('Scope',scope.value);if(city&&city.value)fd.append('CityId',city.value);if(copyId){fd.append('CopyFromCityId',copyId);return fd}qa('.priority-row').forEach(function(row,i){fd.append('Rules['+i+'].FieldId',row.dataset.field);if(row.dataset.subset)fd.append('Rules['+i+'].SubsetId',row.dataset.subset);fd.append('Rules['+i+'].MinimumAmount',moneyRaw(q('.p-min',row).value));fd.append('Rules['+i+'].MaximumAmount',moneyRaw(q('.p-max',row).value));qa('.p-weight',row).forEach(function(w,j){fd.append('Rules['+i+'].Weights['+j+'].IndicatorId',w.dataset.indicator);fd.append('Rules['+i+'].Weights['+j+'].Weight',w.value||0)})});return fd}
+    function postPriority(fd){fetch('@Url.Action("SavePriorities")',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(x){alert(x.message);if(x.success)location.reload()}).catch(function(){alert('خطا در ذخیره تنظیمات.')})}
+    var savePriority=q('#save-priority');if(savePriority)savePriority.addEventListener('click',function(){postPriority(priorityData())});var copy=q('#copy-priority');if(copy)copy.addEventListener('click',function(){var v=q('#copy-city').value;if(!v)return alert('مدیریت مبنا را انتخاب کنید.');if(confirm('تنظیمات فعلی این مدیریت با مدیریت مبنا جایگزین شود؟'))postPriority(priorityData(v))});
+
+    var uniqueFieldsRequestNo=0;
+    function loadUniqueFields(report,select,selected){
+        if(!report){select.disabled=true;select.innerHTML='<option value="">ابتدا جدول را انتخاب کنید</option>';refreshPicker(select);return}
+        var requestNo=++uniqueFieldsRequestNo;
+        select.disabled=true;
+        select.innerHTML='<option value="">در حال خواندن کلید یونیک...</option>';
+        refreshPicker(select);
+        fetch('@Url.Action("UniqueFields")?reportId='+encodeURIComponent(report),{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
+            .then(function(response){
+                if(!response.ok)throw new Error('HTTP '+response.status);
+                var contentType=response.headers.get('content-type')||'';
+                if(contentType.indexOf('application/json')<0)throw new Error('پاسخ سرور JSON نیست؛ احتمالاً نشست کاربری منقضی شده است.');
+                return response.json();
+            })
+            .then(function(items){
+                if(requestNo!==uniqueFieldsRequestNo)return;
+                select.innerHTML='';
+                if(!Array.isArray(items)||!items.length){
+                    select.innerHTML='<option value="">برای این گزارش، در «تعریف جدول و یونیک» کلید یونیک مرتبط ثبت نشده است</option>';
+                    select.disabled=true;
+                    refreshPicker(select);
+                    return;
+                }
+                select.disabled=false;
+                select.innerHTML='<option value="">انتخاب کلید یونیک</option>';
+                items.forEach(function(x){var o=document.createElement('option');o.value=x.Id;o.textContent=x.Title;if(String(x.Id)===String(selected))o.selected=true;select.appendChild(o)});
+                if(items.length===1&&!selected){select.value=String(items[0].Id);select.options[1].setAttribute('selected','selected')}
+                refreshPicker(select);
+            })
+            .catch(function(error){
+                if(requestNo!==uniqueFieldsRequestNo)return;
+                select.disabled=true;
+                select.innerHTML='<option value="">خطا در دریافت کلید یونیک</option>';
+                refreshPicker(select);
+                console.error('UniqueFields:',error);
+            });
+    }
+    var listReport=q('#list-report'),listKey=q('#list-key'),listScope=q('#list-scope');
+    if(listReport){
+        var uniqueLoadTimer=null;
+        var refreshListUnique=function(){
+            clearTimeout(uniqueLoadTimer);
+            uniqueLoadTimer=setTimeout(function(){loadUniqueFields(listReport.value,listKey)},0);
+        };
+        listReport.addEventListener('change',refreshListUnique);
+        if(window.jQuery)jQuery(listReport).off('sp-change.listUnique').on('sp-change.listUnique',refreshListUnique);
+        if(listReport.value)refreshListUnique();
+    }
+    if(listScope)listScope.addEventListener('change',function(){q('#list-city-wrap').style.display=this.value==='city'?'block':'none'});
+    var exceptionFile=q('#exception-file');if(exceptionFile)exceptionFile.addEventListener('change',function(){var fd=new FormData(),token=q('#list-form input[name="__RequestVerificationToken"]');fd.append('__RequestVerificationToken',token.value);fd.append('file',this.files[0]);fetch('@Url.Action("ReadExceptionFile")',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(x){alert(x.message);if(x.success){qa('input[name="ExceptionSubsetIds"]').forEach(function(c){c.checked=x.subsetIds.map(String).indexOf(c.value)>=0})}})});
+    function resetList(){q('#list-form').reset();q('#list-id').value=0;q('#list-key').disabled=true;q('#list-key').innerHTML='<option value="">ابتدا جدول را انتخاب کنید</option>';q('#list-form-title').textContent='تعریف عنوان لیست';q('#list-cancel').style.display='none';q('#list-city-wrap').style.display='none';qa('input[name="ExceptionSubsetIds"]').forEach(function(c){c.checked=false});setTimeout(syncAllPickers,0)}
+    var lc=q('#list-cancel');if(lc)lc.addEventListener('click',resetList);qa('.list-edit').forEach(function(b){b.addEventListener('click',function(){fetch('@Url.Action("ListDetails")?id='+this.dataset.id).then(function(r){return r.json()}).then(function(x){if(!x.success)return alert(x.message);var i=x.item;q('#list-id').value=i.ListId;q('#list-title').value=i.Title;q('#list-report').value=i.ReportId;loadUniqueFields(i.ReportId,listKey,i.KeyFieldId);q('#list-daily').value=i.DailyAmount;q('#list-days').value=i.DurationDays;q('#list-routing').value=i.RoutingType;q('#list-duplicate').value=String(i.AllowDuplicate).toLowerCase();q('#list-scope').value=i.CityId?'city':'all';q('#list-city').value=i.CityId||'';q('#list-city-wrap').style.display=i.CityId?'block':'none';qa('input[name="ExceptionSubsetIds"]').forEach(function(c){c.checked=x.exceptionSubsetIds.map(String).indexOf(c.value)>=0});q('#list-form-title').textContent='ویرایش عنوان لیست';q('#list-cancel').style.display='inline-block';setTimeout(syncAllPickers,0);q('#list-form').scrollIntoView({behavior:'smooth'})})})});
+
+    var exp=q('#condition-expression');function addToken(v){if(!v)return;var s=exp.selectionStart||exp.value.length;exp.value=exp.value.slice(0,s)+v+exp.value.slice(s);exp.focus();exp.selectionStart=exp.selectionEnd=s+v.length}
+    qa('.op').forEach(function(b){b.addEventListener('click',function(){addToken(this.dataset.value)})});var af=q('#add-field-token');if(af)af.addEventListener('click',function(){addToken(q('#builder-field').value)});var as=q('#add-subset-token');if(as)as.addEventListener('click',function(){addToken(q('#builder-subset').value)});var ce=q('#clear-expression');if(ce)ce.addEventListener('click',function(){exp.value=''});
+    function resetCondition(){q('#condition-form').reset();q('#condition-id').value=0;q('#condition-form-title').textContent='تعریف شرط حذف یونیک از لیست نهایی';q('#condition-cancel').style.display='none';setTimeout(syncAllPickers,0)}var cc=q('#condition-cancel');if(cc)cc.addEventListener('click',resetCondition);qa('.condition-edit').forEach(function(b){b.addEventListener('click',function(){q('#condition-id').value=this.dataset.id;q('#condition-title').value=this.dataset.title;q('#condition-description').value=this.dataset.description;q('#condition-expression').value=this.dataset.expression;q('#condition-form-title').textContent='ویرایش شرط';q('#condition-cancel').style.display='inline-block';q('#condition-form').scrollIntoView({behavior:'smooth'})})});
+})();
+</script>

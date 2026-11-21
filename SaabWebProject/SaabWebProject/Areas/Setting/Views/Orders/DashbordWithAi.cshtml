@@ -1,0 +1,3662 @@
+﻿
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "AI";
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>DashbordWithAi</title>
+
+    <style>
+        /* ================================================================
+                   Dashboard Builder - Base
+                ================================================================ */
+
+        #dashboardBuilder {
+            --db-accent: #00ffff;
+            --db-accent-soft: rgba(0, 255, 255, .12);
+            --db-panel: rgba(8, 20, 31, .78);
+            --db-card: rgba(18, 35, 49, .72);
+            --db-border: rgba(255, 255, 255, .10);
+            --db-border-strong: rgba(0, 255, 255, .38);
+            --db-text: #edfaff;
+            --db-muted: #91a9b7;
+            --db-danger: #ff4d6d;
+            --db-success: #32d583;
+            --db-radius: .75rem;
+            --db-gap: .65rem;
+            position: relative;
+            height: 100%;
+            min-height: 620px;
+            width: 100%;
+            direction: rtl;
+            color: var(--db-text);
+            font-family: inherit;
+            overflow: hidden;
+        }
+
+            #dashboardBuilder * {
+                box-sizing: border-box;
+            }
+
+            #dashboardBuilder button,
+            #dashboardBuilder input,
+            #dashboardBuilder select,
+            #dashboardBuilder textarea {
+                font-family: inherit !important;
+            }
+
+            #dashboardBuilder .bi {
+                font-family: "bootstrap-icons" !important;
+                font-style: normal !important;
+                font-weight: normal !important;
+                line-height: 1 !important;
+                speak: none !important;
+                text-rendering: auto !important;
+                -webkit-font-smoothing: antialiased !important;
+            }
+
+
+            /* ================================================================
+                   Toolbar
+                ================================================================ */
+
+            #dashboardBuilder .db-toolbar {
+                margin: 0 0 10px !important;
+                align-items: center;
+            }
+
+                #dashboardBuilder .db-toolbar > .col-xl-8,
+                #dashboardBuilder .db-toolbar > .col-xl-4 {
+                    display: flex;
+                    align-items: center;
+                }
+
+            #dashboardBuilder .db-toolbar-actions {
+                justify-content: flex-end;
+                gap: .45rem;
+            }
+
+            #dashboardBuilder .db-brand {
+                display: flex;
+                align-items: center;
+                gap: .65rem;
+            }
+
+                #dashboardBuilder .db-brand .glass-field-icon {
+                    flex: 0 0 2.2rem;
+                }
+
+            #dashboardBuilder .db-save-btn {
+                width: 8rem !important;
+                margin: 0 !important;
+            }
+
+
+            /* ================================================================
+                   Workspace
+                ================================================================ */
+
+            #dashboardBuilder .db-workspace {
+                height: calc(100% - 68px);
+                display: grid;
+                grid-template-columns: 250px minmax(0, 1fr);
+                gap: var(--db-gap);
+                position: relative;
+                min-height: 0;
+            }
+
+            #dashboardBuilder .db-library,
+            #dashboardBuilder .db-canvas-wrap,
+            #dashboardBuilder .db-settings {
+                min-width: 0;
+                min-height: 0;
+                overflow: hidden;
+            }
+
+
+            /* ================================================================
+                   Widget Library
+                ================================================================ */
+
+            #dashboardBuilder .db-library {
+                display: flex;
+                flex-direction: column;
+            }
+
+            #dashboardBuilder .db-library-body,
+            #dashboardBuilder .db-settings-body,
+            #dashboardBuilder .db-canvas-body {
+                min-height: 0;
+                overflow: hidden;
+            }
+
+            #dashboardBuilder .db-library-body {
+                display: flex;
+                flex-direction: column;
+                padding: .55rem !important;
+            }
+
+            #dashboardBuilder .db-library-search {
+                position: relative;
+                margin-bottom: .55rem;
+            }
+
+                #dashboardBuilder .db-library-search .glass-input-ag {
+                    padding-right: 2rem !important;
+                    margin: 0 !important;
+                }
+
+                #dashboardBuilder .db-library-search i {
+                    position: absolute;
+                    right: .65rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    z-index: 2;
+                    color: var(--db-muted);
+                    pointer-events: none;
+                }
+
+            #dashboardBuilder .db-widget-list {
+                overflow: auto;
+                min-height: 0;
+                padding: .1rem .15rem .5rem;
+            }
+
+            #dashboardBuilder .db-widget-item {
+                display: flex;
+                align-items: center;
+                gap: .55rem;
+                width: 100%;
+                min-height: 3rem;
+                margin: .3rem 0;
+                padding: .45rem;
+                border: 1px solid transparent;
+                border-radius: .65rem;
+                background: rgba(255, 255, 255, .025);
+                cursor: grab;
+                user-select: none;
+                transition: .2s;
+            }
+
+                #dashboardBuilder .db-widget-item:hover,
+                #dashboardBuilder .db-widget-item.db-dragging {
+                    border-color: var(--db-border-strong);
+                    background: var(--db-accent-soft);
+                }
+
+                #dashboardBuilder .db-widget-item:active {
+                    cursor: grabbing;
+                }
+
+            #dashboardBuilder .db-widget-icon {
+                width: 2rem;
+                height: 2rem;
+                display: grid;
+                place-items: center;
+                flex: 0 0 2rem;
+                border-radius: .55rem;
+                color: var(--db-accent);
+                background: var(--db-accent-soft);
+            }
+
+            #dashboardBuilder .db-widget-item strong {
+                display: block;
+                font-size: .72rem;
+            }
+
+            #dashboardBuilder .db-widget-item small {
+                display: block;
+                color: var(--db-muted);
+                font-size: .6rem;
+                margin-top: 2px;
+            }
+
+
+            /* ================================================================
+                   Canvas Wrapper
+                ================================================================ */
+
+            #dashboardBuilder .db-canvas-wrap {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+
+                #dashboardBuilder .db-canvas-wrap > .glass-field-header {
+                    flex: 0 0 auto;
+                }
+
+            #dashboardBuilder .db-canvas-tools {
+                margin-right: auto;
+                display: flex;
+                align-items: center;
+                gap: .45rem;
+                color: var(--db-muted);
+                font-size: .65rem;
+            }
+
+            #dashboardBuilder .db-status-dot {
+                display: inline-block;
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--db-success);
+                box-shadow: 0 0 8px var(--db-success);
+                margin-left: 5px;
+            }
+
+            #dashboardBuilder .db-canvas-body {
+                padding: .65rem !important;
+                display: flex;
+            }
+
+            #dashboardBuilder .db-canvas-scroll {
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+            }
+
+            #dashboardBuilder .db-canvas {
+                position: relative;
+                min-width: 900px;
+                min-height: 900px;
+                border: 1px dashed rgba(255, 255, 255, .11);
+                border-radius: .7rem;
+                background-color: rgba(0, 0, 0, .08);
+                background-image: linear-gradient( rgba(255, 255, 255, .035) 1px, transparent 1px ), linear-gradient( 90deg, rgba(255, 255, 255, .035) 1px, transparent 1px );
+                background-size: 24px 24px;
+                padding: 12px;
+            }
+
+
+            /* ================================================================
+                   Empty Canvas
+                ================================================================ */
+
+            #dashboardBuilder .db-empty {
+                position: absolute;
+                inset: 30% 20%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+                text-align: center;
+                gap: .45rem;
+                color: var(--db-muted);
+                pointer-events: none;
+            }
+
+                #dashboardBuilder .db-empty i {
+                    font-size: 2rem;
+                    color: var(--db-accent);
+                }
+
+                #dashboardBuilder .db-empty strong {
+                    font-size: .85rem;
+                    color: var(--db-text);
+                }
+
+                #dashboardBuilder .db-empty span {
+                    font-size: .65rem;
+                }
+
+
+            /* ================================================================
+                   Dashboard Widgets
+                ================================================================ */
+
+            #dashboardBuilder .db-widget {
+                position: absolute;
+                overflow: visible;
+                z-index: 2;
+                cursor: default;
+            }
+
+                #dashboardBuilder .db-widget > .glass-field-ag {
+                    height: 100%;
+                    width: 100%;
+                    margin: 0 !important;
+                    overflow: hidden;
+                }
+
+                #dashboardBuilder .db-widget.is-selected > .glass-field-ag {
+                    border-color: var(--db-border-strong);
+                    box-shadow: 0 0 0 1px rgba(0, 255, 255, .09), 0 0 22px rgba(0, 255, 255, .08);
+                }
+
+                #dashboardBuilder .db-widget.is-dragging {
+                    z-index: 100;
+                    opacity: .92;
+                }
+
+            #dashboardBuilder .db-widget-head {
+                cursor: move;
+                touch-action: none;
+            }
+
+                #dashboardBuilder .db-widget-head .glass-field-heading {
+                    min-width: 0;
+                }
+
+                #dashboardBuilder .db-widget-head .glass-field-title {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+            #dashboardBuilder .db-widget-type {
+                font-size: .58rem;
+                color: var(--db-muted);
+                white-space: nowrap;
+            }
+
+            #dashboardBuilder .db-widget-drag {
+                color: var(--db-muted);
+                cursor: grab;
+                margin-left: .35rem;
+            }
+
+            #dashboardBuilder .db-widget-body {
+                height: calc(100% - 3.2rem);
+                overflow: auto;
+            }
+
+
+            /* ================================================================
+                   Widget Actions
+                ================================================================ */
+
+            #dashboardBuilder .db-widget-actions {
+                position: absolute;
+                left: .45rem;
+                top: .4rem;
+                display: none;
+                align-items: center;
+                gap: .25rem;
+                z-index: 8;
+            }
+
+            #dashboardBuilder .db-widget.is-selected .db-widget-actions {
+                display: flex;
+            }
+
+            #dashboardBuilder .db-widget-action {
+                font-size: .99rem;
+                width: 1.8rem;
+                height: 1.8rem;
+                border: 1px solid var(--db-border);
+                border-radius: .5rem;
+                background: rgba(5, 15, 23, .86);
+                color: var(--db-text);
+                display: grid;
+                place-items: center;
+                cursor: pointer;
+            }
+
+                #dashboardBuilder .db-widget-action:hover {
+                    border-color: var(--db-border-strong);
+                    color: var(--db-accent);
+                }
+
+
+            /* ================================================================
+                   Resize Handles
+                ================================================================ */
+
+            #dashboardBuilder .db-resize-handle {
+                position: absolute;
+                display: none;
+                width: 14px;
+                height: 14px;
+                z-index: 30;
+                background: rgba(0, 255, 255, .12);
+                border: 1px solid var(--db-accent);
+                border-radius: 3px;
+                box-shadow: 0 0 8px rgba(0, 255, 255, .18);
+            }
+
+            #dashboardBuilder .db-widget.is-resize-mode .db-resize-handle {
+                display: block;
+            }
+
+            #dashboardBuilder .db-resize-handle.db-resize-nw {
+                left: -5px;
+                top: -5px;
+                cursor: nwse-resize;
+            }
+
+            #dashboardBuilder .db-resize-handle.db-resize-ne {
+                right: -5px;
+                top: -5px;
+                cursor: nesw-resize;
+            }
+
+            #dashboardBuilder .db-resize-handle.db-resize-sw {
+                left: -5px;
+                bottom: -5px;
+                cursor: nesw-resize;
+            }
+
+            #dashboardBuilder .db-resize-handle.db-resize-se {
+                right: -5px;
+                bottom: -5px;
+                cursor: nwse-resize;
+            }
+
+            #dashboardBuilder .db-widget.is-resizing {
+                z-index: 200;
+                opacity: .94;
+            }
+
+
+            /* ================================================================
+                   Settings Panel
+                ================================================================ */
+
+            #dashboardBuilder .db-settings {
+                position: absolute;
+                z-index: 500;
+                top: 0;
+                bottom: 0;
+                right: 0;
+                width: min(16rem, calc(100% - 20px));
+                transform: translateX(105%);
+                transition: transform .28s cubic-bezier(.22, .61, .36, 1);
+                box-shadow: -20px 0 45px rgba(0, 0, 0, .32);
+                background: rgba(7, 17, 27, .96);
+            }
+
+                #dashboardBuilder .db-settings.is-open {
+                    transform: translateX(0);
+                }
+
+                /* دکمه بستن پنل تنظیمات در گوشه چپ هدر */
+                #dashboardBuilder .db-settings .glass-field-header {
+                    display: flex;
+                    align-items: center;
+                }
+
+                    #dashboardBuilder .db-settings .glass-field-header [data-db-action="close-settings"] {
+                        margin-right: auto !important;
+                        margin-left: 0 !important;
+                        flex: 0 0 auto;
+                    }
+
+            #dashboardBuilder .db-settings-body {
+                overflow: auto !important;
+                padding: .7rem !important;
+            }
+
+            #dashboardBuilder .db-setting-section {
+                margin-bottom: .7rem;
+                padding: .65rem;
+                border: 1px solid var(--db-border);
+                border-radius: .7rem;
+                background: rgba(255, 255, 255, .025);
+            }
+
+            #dashboardBuilder .db-setting-title {
+                font-size: .72rem;
+                color: var(--db-accent);
+                margin-bottom: .55rem;
+            }
+
+            #dashboardBuilder .db-setting-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: .55rem;
+            }
+
+            #dashboardBuilder .db-field {
+                margin-bottom: .55rem;
+            }
+
+                #dashboardBuilder .db-field:last-child {
+                    margin-bottom: 0;
+                }
+
+                #dashboardBuilder .db-field > label {
+                    display: block;
+                    font-size: .62rem;
+                    color: var(--db-muted);
+                    margin-bottom: .3rem;
+                }
+
+                #dashboardBuilder .db-field .glass-input-ag,
+                #dashboardBuilder .db-field .glass-select-ag,
+                #dashboardBuilder .db-field .glass-textarea-ag {
+                    width: 100%;
+                    margin: 0 !important;
+                }
+
+            #dashboardBuilder .db-check {
+                display: flex;
+                align-items: center;
+                gap: .4rem;
+                font-size: .65rem;
+                color: var(--db-text);
+                min-height: 2rem;
+            }
+
+
+            /* ================================================================
+                   Chart Settings / Series
+                ================================================================ */
+
+            #dashboardBuilder .db-series {
+                border-top: 1px solid var(--db-border);
+                margin-top: .55rem;
+                padding-top: .55rem;
+            }
+
+                #dashboardBuilder .db-series:first-child {
+                    border-top: 0;
+                    margin-top: 0;
+                    padding-top: 0;
+                }
+
+            #dashboardBuilder .db-series-head {
+                display: flex;
+                align-items: center;
+                gap: .35rem;
+                margin-bottom: .35rem;
+            }
+
+                #dashboardBuilder .db-series-head strong {
+                    font-size: .65rem;
+                    flex: 1;
+                }
+
+            #dashboardBuilder .db-series-values {
+                width: 100%;
+                min-height: 2.2rem;
+                resize: vertical;
+            }
+
+            #dashboardBuilder .db-labels-input {
+                min-height: 4rem;
+                resize: vertical;
+            }
+
+
+            /* ================================================================
+                   Settings Actions
+                ================================================================ */
+
+            #dashboardBuilder .db-settings-actions {
+                position: sticky;
+                bottom: -.7rem;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: .45rem;
+                margin: 0 !important;
+                padding: .65rem 0 .1rem;
+                background: linear-gradient( transparent, rgba(7, 17, 27, .98) 25% );
+                z-index: 5;
+            }
+
+                #dashboardBuilder .db-settings-actions button {
+                    margin: 0 !important;
+                    width: 100% !important;
+                }
+
+            #dashboardBuilder .db-full-btn {
+                width: 100% !important;
+                margin-top: .4rem !important;
+            }
+
+
+            /* ================================================================
+                   KPI / Progress
+                ================================================================ */
+
+            #dashboardBuilder .db-kpi-value {
+                font-weight: 700;
+                letter-spacing: .3px;
+            }
+
+            #dashboardBuilder .db-kpi-label {
+                font-size: .65rem;
+                color: var(--db-muted);
+                margin-top: .4rem;
+            }
+
+            #dashboardBuilder .db-progress {
+                height: 8px;
+                border-radius: 99px;
+                background: rgba(255, 255, 255, .08);
+                overflow: hidden;
+                margin-top: 1rem;
+            }
+
+                #dashboardBuilder .db-progress i {
+                    display: block;
+                    height: 100%;
+                    border-radius: 99px;
+                }
+
+
+            /* ================================================================
+                   Chart
+                ================================================================ */
+
+            #dashboardBuilder .db-chart {
+                width: 100%;
+                height: 100%;
+                min-height: 130px;
+            }
+
+            #dashboardBuilder .db-chart-placeholder {
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+                gap: .5rem;
+                color: var(--db-muted);
+                font-size: .7rem;
+            }
+
+
+            /* ================================================================
+           Dashboard Builder - Data Table
+        ================================================================ */
+
+            /* ================================================================
+           TABLE WRAPPER
+        ================================================================ */
+
+            #dashboardBuilder .db-table-wrap {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                border: 1px solid rgba(255, 255, 255, .06);
+                border-radius: .7rem;
+                background: transparent;
+            }
+
+
+            /* ================================================================
+           TABLE
+        ================================================================ */
+
+            #dashboardBuilder .db-table {
+                width: 100%;
+                height: 100%;
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr);
+                border-collapse: separate;
+                border-spacing: 0;
+                direction: rtl;
+                color: #fff;
+                font-size: .62rem;
+                table-layout: fixed;
+            }
+
+
+                /* ================================================================
+           TABLE HEADER
+        ================================================================ */
+
+                #dashboardBuilder .db-table thead {
+                    display: table;
+                    width: 100%;
+                    table-layout: fixed;
+                }
+
+                #dashboardBuilder .db-table th {
+                    height: 2.5rem;
+                    padding: .75rem 1rem;
+                    text-align: center;
+                    vertical-align: middle;
+                    font-weight: 600;
+                    white-space: nowrap;
+                    color: #ecfbff;
+                    background: linear-gradient( 135deg, rgba(255, 255, 255, .10), rgba(255, 255, 255, .045) );
+                    border-top: 1px solid rgba(255, 255, 255, .18);
+                    border-bottom: 1px solid rgba(0, 255, 255, .20);
+                    border-left: 1px solid rgba(255, 255, 255, .08);
+                    backdrop-filter: blur(15px) saturate(150%);
+                    -webkit-backdrop-filter: blur(15px) saturate(150%);
+                    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14);
+                }
+
+
+                /* ================================================================
+           TABLE BODY - AUTO HEIGHT + SCROLL
+        ================================================================ */
+
+                #dashboardBuilder .db-table tbody {
+                    display: block;
+                    width: 100%;
+                    min-height: 0;
+                    height: 100%;
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255, 255, 255, .18) transparent;
+                }
+
+
+                    /* ================================================================
+           BODY ROW
+        ================================================================ */
+
+                    #dashboardBuilder .db-table tbody tr {
+                        display: table;
+                        width: 100%;
+                        table-layout: fixed;
+                        transition: background .25s ease;
+                    }
+
+                /* ================================================================
+           TABLE CELLS
+        ================================================================ */
+
+                #dashboardBuilder .db-table td {
+                    height: 2.5rem;
+                    padding: .5rem .75rem;
+                    text-align: center;
+                    vertical-align: middle;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    background: transparent;
+                    color: rgba(255, 255, 255, .88);
+                    border: none;
+                    border-bottom: 1px solid rgba(255, 255, 255, .06);
+                    box-sizing: border-box;
+                    transition: background .25s ease, color .25s ease, border-color .25s ease;
+                }
+
+
+                    /* ================================================================
+           VERTICAL CELL BORDERS
+        ================================================================ */
+
+                    #dashboardBuilder .db-table td:not(:last-child) {
+                        border-left: 1px solid rgba(255, 255, 255, .045);
+                    }
+
+
+                /* ================================================================
+           LAST ROW
+        ================================================================ */
+
+                #dashboardBuilder .db-table tbody tr:last-child td {
+                    border-bottom: none;
+                }
+
+
+                /* ================================================================
+           ROW HOVER
+        ================================================================ */
+
+                #dashboardBuilder .db-table tbody tr:hover td {
+                    color: #f2fcff;
+                    border-bottom-color: rgba(0, 255, 255, .10);
+                }
+
+
+                /* ================================================================
+           BODY SCROLLBAR
+        ================================================================ */
+
+                #dashboardBuilder .db-table tbody::-webkit-scrollbar {
+                    width: 5px;
+                }
+
+                #dashboardBuilder .db-table tbody::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+
+                #dashboardBuilder .db-table tbody::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, .18);
+                    border-radius: 10px;
+                }
+
+                    #dashboardBuilder .db-table tbody::-webkit-scrollbar-thumb:hover {
+                        background: rgba(0, 255, 255, .32);
+                    }
+
+            /* ================================================================
+                   Text / List
+                ================================================================ */
+
+            #dashboardBuilder .db-text-content {
+                line-height: 1.9;
+                white-space: normal;
+            }
+
+            #dashboardBuilder .db-list-content {
+                margin: 0;
+                padding-right: 1.1rem;
+                line-height: 2;
+            }
+
+
+            /* ================================================================
+                   Toast
+                ================================================================ */
+
+            /*                    #dashboardBuilder .db-toast {
+                        position: absolute;
+                        z-index: 999999;
+                        left: 50%;
+                        bottom: 15px;
+                        transform: translate(-50%, 20px);
+                        min-width: 260px;
+                        max-width: calc(100% - 30px);
+                        opacity: 0;
+                        pointer-events: none;
+                        transition: .25s;
+                    }
+
+                        #dashboardBuilder .db-toast.show {
+                            opacity: 1;
+                            transform: translate(-50%, 0);
+                        }
+
+                        #dashboardBuilder .db-toast.error {
+                            border-color: rgba(255, 77, 109, .45);
+                        }*/
+
+
+            /* ================================================================
+                   Utility
+                ================================================================ */
+
+            #dashboardBuilder .scrollbar {
+                min-height: 0;
+            }
+
+
+        /* ================================================================
+                   Responsive
+                ================================================================ */
+
+        @@media (max-width: 1100px) {
+
+            #dashboardBuilder .db-workspace {
+                grid-template-columns: 220px minmax(0, 1fr);
+            }
+        }
+
+        @@media (max-width: 850px) {
+
+            #dashboardBuilder .db-workspace {
+                grid-template-columns: 1fr;
+            }
+
+            #dashboardBuilder .db-library {
+                max-height: 250px;
+            }
+
+            #dashboardBuilder .db-settings {
+                width: min(390px, 95%);
+            }
+        }
+
+        #dashboardBuilder .db-data-widget {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: .15rem .2rem;
+            direction: rtl;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.18) transparent;
+        }
+
+            #dashboardBuilder .db-data-widget::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            #dashboardBuilder .db-data-widget::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            #dashboardBuilder .db-data-widget::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,.18);
+                border-radius: 10px;
+            }
+
+        #dashboardBuilder .db-data-row {
+            width: 100%;
+            min-height: 2.45rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .45rem .65rem;
+            border-bottom: 1px solid rgba(255,255,255,.065);
+            transition: background .25s ease, border-color .25s ease;
+        }
+
+            #dashboardBuilder .db-data-row:last-child {
+                border-bottom: none;
+            }
+
+            #dashboardBuilder .db-data-row:hover {
+                background: rgba(255,255,255,.035);
+                border-bottom-color: rgba(0,255,255,.15);
+            }
+
+        #dashboardBuilder .db-data-name {
+            flex: 1 1 auto;
+            min-width: 0;
+            text-align: right;
+            color: rgba(255,255,255,.78);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #dashboardBuilder .db-data-value {
+            flex: 0 0 auto;
+            text-align: left;
+            font-weight: 700;
+            white-space: nowrap;
+            direction: rtl;
+            text-shadow: 0 0 10px rgba(0,255,255,.18);
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="tab-content tab-AG" id="pills-tabContent">
+        <section id="dashboardBuilder" class="db-builder" dir="rtl" aria-label="داشبورد ساز">
+
+            <div class="row row-btn-AG db-toolbar">
+                <div class="col-xl-8">
+                    <div class="db-brand">
+                        <div class="glass-field-icon"><i class="bi bi-grid-3x3-gap"></i></div>
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title">داشبورد ساز</div>
+                            <div class="glass-field-subtitle">طراحی و مدیریت داشبورد</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4 db-toolbar-actions">
+                    <button type="button" class="glass-btn-icon glass-btn-icon-suggest" data-db-action="undo" title="واگرد"><i class="bi bi-arrow-counterclockwise"></i></button>
+                    <button type="button" class="glass-btn-icon glass-btn-icon-suggest" data-db-action="redo" title="بازانجام"><i class="bi bi-arrow-clockwise"></i></button>
+                    <button type="button" class="glass-btn-icon glass-btn-icon-reject" data-db-action="clear" title="پاک کردن"><i class="bi bi-trash"></i></button>
+                    <button type="button" class="glass-btn-ag glass-btn-ag-primary db-save-btn" data-db-action="save"><i class="bi bi-cloud-arrow-up"></i><p>ذخیره</p></button>
+                </div>
+            </div>
+
+            <div class="db-workspace">
+                <div class="db-library glass-field-ag" id="dbWidgetLibrary">
+                    <div class="glass-field-header">
+                        <div class="glass-field-icon"><i class="bi bi-boxes"></i></div>
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title">کتابخانه ویجت‌ها</div>
+                            <div class="glass-field-subtitle">برای افزودن بکشید یا کلیک کنید</div>
+                        </div>
+                    </div>
+                    <div class="glass-field-body db-library-body" style="max-height:32rem;">
+                        <div class="db-library-search">
+                            <i class="bi bi-search"></i>
+                            <input id="dbWidgetSearch" class="glass-input-ag" type="search" placeholder="جستجوی ویجت..." autocomplete="off" />
+                        </div>
+                        <div id="dbWidgetList" class="db-widget-list scrollbar"></div>
+                    </div>
+                </div>
+
+                <div class="db-canvas-wrap glass-field-ag">
+                    <div class="glass-field-header">
+                        <div class="glass-field-icon"><i class="bi bi-grid"></i></div>
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title">بوم داشبورد</div>
+                            <div class="glass-field-subtitle"><span class="db-status-dot"></span><span id="dbCanvasStatus">آماده طراحی</span></div>
+                        </div>
+                        <div class="db-canvas-tools">
+                            <span id="dbWidgetCount">۰ ویجت</span>
+                            <button type="button" class="glass-btn-icon glass-btn-icon-suggest" data-db-action="fit" title="نمایش ابتدا"><i class="bi bi-arrows-fullscreen"></i></button>
+                        </div>
+                    </div>
+                    <div class="row" style="padding-right: .65rem;">
+                        <div class="col-xl-3">
+                            <label class="glass-label-ag">
+                                نام داشبورد
+                            </label>
+
+                            <input class="glass-input-ag"
+                                   id="dbDashboardName"
+                                   type="text"
+                                   autocomplete="off" />
+                        </div>
+
+                    </div>
+                    <div class="glass-field-body db-canvas-body" style="max-height:33rem;">
+                        <div class="db-canvas-scroll scrollbar">
+                            <div id="dbCanvas" class="db-canvas" tabindex="0">
+                                <div id="dbEmptyState" class="db-empty">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                    <strong>داشبورد شما خالی است</strong>
+                                    <span>یک ویجت را از کتابخانه انتخاب یا به بوم بکشید.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="db-settings glass-field-ag" id="dbSettings" aria-hidden="true">
+                    <div class="glass-field-header">
+                        <div class="glass-field-icon"><i class="bi bi-sliders"></i></div>
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title" id="dbSettingsTitle">تنظیمات</div>
+                            <div class="glass-field-subtitle" id="dbSettingsType">ویجتی انتخاب نشده</div>
+                        </div>
+                        <button type="button" class="glass-btn-icon glass-btn-icon-reject" data-db-action="close-settings" title="بستن"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                    <div id="dbSettingsBody" class="glass-field-body db-settings-body scrollbar"></div>
+                </aside>
+            </div>
+
+            <div id="dbToast" class="glass-alert glass-alert-success db-toast" role="status"></div>
+        </section>
+    </div>
+    <script src="~/Scripts/Sortable.min.js"></script>
+    <script src="~/Scripts/highcharts.js"></script>
+    <script src="~/Scripts/highcharts-more.js"></script>
+    <script src="~/Scripts/highcharts-3d.js"></script>
+    <script>
+        (function (window, document) {
+            'use strict';
+
+            const root = document.getElementById('dashboardBuilder');
+            if (!root) return;
+
+            /* ================================================================
+               1. Configuration
+               ================================================================ */
+            const CFG = {
+                columns: 12,
+                rowHeight: 34,
+                gap: 10,
+                canvasPadding: 12,
+                storageKey: 'SaabDashboardBuilder.v3',
+                maxHistory: 60,
+                api: {
+                    saveUrl: '/Orders/SaveDashboardAI',
+                    loadUrl: '/Orders/LoadDashboardAI',
+                    method: 'POST'
+                }
+            };
+
+            /* ================================================================
+               2. State Management
+               ================================================================ */
+            const state = {
+                dashboardId: 'default',
+                dashboardName: '',
+                widgets: [],
+                selectedId: null,
+                resizeMode: false,
+                drag: null,
+                resize: null,
+                settingsDraft: null,
+                settingsBaseline: null,
+                history: [],
+                historyIndex: -1,
+                dirty: false,
+                fontFamily: 'sans-serif'
+            };
+
+            const $ = s => root.querySelector(s);
+            const $$ = s => Array.from(root.querySelectorAll(s));
+            const clone = o => JSON.parse(JSON.stringify(o));
+            const uid = t => (t || 'Widget') + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+            const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+            const escapeHtml = v => String(v ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+            const toFa = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+
+            function deepMerge(a, b) {
+                const out = clone(a || {});
+                Object.keys(b || {}).forEach(k => {
+                    if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) out[k] = deepMerge(out[k], b[k]);
+                    else if (b[k] !== undefined) out[k] = b[k];
+                });
+                return out;
+            }
+
+            function pageFont() {
+                const source = document.body || document.documentElement;
+                const f = window.getComputedStyle(source).fontFamily;
+                return f || 'sans-serif';
+            }
+
+            state.fontFamily = pageFont();
+            root.style.setProperty('--db-page-font', state.fontFamily);
+
+            function toast(message, type) {
+                const el = $('#dbToast'); if (!el) return;
+                el.textContent = message;
+                el.className = 'glass-alert glass-alert-success db-toast ' + (type === 'error' ? 'glass-alert-error error' : '') + ' show';
+                clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove('show'), 2600);
+            }
+
+            /* ================================================================
+               3. Widget Registry
+               ================================================================ */
+            const Registry = {};
+            const register = d => Registry[d.type] = d;
+
+            /* ================================================================
+               4. Widget Definitions
+               ================================================================ */
+            const chartDefaults = {
+                chartType: 'spline',
+
+                labels: ['هفته اول', 'هفته دوم', 'هفته سوم', 'هفته چهارم'],
+
+                series: [
+                    {
+                        name: 'مقدار',
+                        values: [28, 48, 42, 76],
+                        color: ''
+                    }
+                ],
+
+                xTitle: '',
+                yTitle: '',
+                yMin: '',
+                yMax: '',
+
+                legend: true,
+                legendPosition: 'bottom',
+                tooltip: true,
+                dataLabels: false,
+                marker: true,
+                shadow: false,
+                grid: false,
+
+                stacked: false,
+                donut: false,
+
+                barDirection: 'vertical'
+            };
+
+            register({
+                type: 'kpi',
+                title: 'KPI',
+                icon: 'bi-speedometer2',
+                description: 'شاخص کلیدی',
+                defaultSize: { w: 3, h: 4 },
+                constraints: { minW: 2, maxW: 6, minH: 3, maxH: 8 },
+                defaults: {
+                    core: {
+                        title: 'شاخص عملکرد',
+                        subtitle: 'نرخ تحقق'
+                    },
+                    data: {
+                        value: '۸۴٪',
+                        label: 'نرخ تحقق'
+                    },
+                    visual: {
+                        accent: '#00ffff',
+                        fontSize: 28,
+                        align: 'right'
+                    }
+                }
+            });
+
+            register({
+                type: 'progress',
+                title: 'Progress',
+                icon: 'bi-bar-chart',
+                description: 'پیشرفت',
+                defaultSize: { w: 4, h: 4 },
+                constraints: { minW: 2, maxW: 8, minH: 3, maxH: 7 },
+                defaults: {
+                    core: {
+                        title: 'پیشرفت',
+                        subtitle: 'درصد تکمیل'
+                    },
+                    data: {
+                        value: 68,
+                        label: 'درصد تکمیل'
+                    },
+                    visual: {
+                        accent: '#00ffff',
+                        fontSize: 22,
+                        align: 'right'
+                    }
+                }
+            });
+
+            register({
+                type: 'lineChart',
+                title: 'Line Chart',
+                icon: 'bi-graph-up',
+                description: 'نمودار خطی',
+                defaultSize: { w: 6, h: 8 },
+                constraints: { minW: 4, maxW: 12, minH: 6, maxH: 16 },
+                defaults: {
+                    core: {
+                        title: 'نمودار عملکرد',
+                        subtitle: 'تحلیل روند'
+                    },
+                    data: deepMerge(chartDefaults, {
+                        chartType: 'line'
+                    }),
+                    visual: {
+                        accent: '#00ffff',
+                        lineWidth: 3
+                    }
+                }
+            });
+
+            register({
+                type: 'barChart',
+                title: 'Bar Chart',
+                icon: 'bi-bar-chart',
+                description: 'نمودار میله‌ای',
+                defaultSize: { w: 6, h: 8 },
+                constraints: { minW: 4, maxW: 12, minH: 6, maxH: 16 },
+                defaults: {
+                    core: {
+                        title: 'نمودار مقایسه‌ای',
+                        subtitle: 'مقایسه داده‌ها'
+                    },
+                    data: deepMerge(chartDefaults, {
+                        chartType: 'bar'
+                    }),
+                    visual: {
+                        accent: '#00ffff',
+                        lineWidth: 3
+                    }
+                }
+            });
+
+            register({
+                type: 'pieChart',
+                title: 'Pie Chart',
+                icon: 'bi-pie-chart',
+                description: 'نمودار دایره‌ای',
+                defaultSize: { w: 6, h: 8 },
+                constraints: { minW: 4, maxW: 12, minH: 6, maxH: 16 },
+                defaults: {
+                    core: {
+                        title: 'نمودار سهم',
+                        subtitle: 'توزیع داده‌ها'
+                    },
+                    data: deepMerge(chartDefaults, {
+                        chartType: 'pie'
+                    }),
+                    visual: {
+                        accent: '#00ffff',
+                        lineWidth: 3
+                    }
+                }
+            });
+
+            register({
+                type: 'table',
+                title: 'Data Table',
+                icon: 'bi-table',
+                description: 'جدول داده',
+                defaultSize: { w: 7, h: 8 },
+                constraints: { minW: 5, maxW: 12, minH: 6, maxH: 15 },
+                defaults: {
+                    core: {
+                        title: 'آخرین داده‌ها',
+                        subtitle: 'اطلاعات'
+                    },
+                    data: {
+                        columns: ['عنوان', 'وضعیت', 'مقدار'],
+                        rows: [
+                            ['شاخص اول', 'فعال', '۸۴'],
+                            ['شاخص دوم', 'در انتظار', '۶۱'],
+                            ['شاخص سوم', 'تکمیل', '۹۲']
+                        ],
+                        filter: true,
+                        pagination: false,
+                        pageSize: 5
+                    },
+                    visual: {
+                        accent: '#00ffff',
+                        fontSize: 10
+                    }
+                }
+            });
+            register({
+                type: 'data',
+                title: 'Data',
+                icon: 'bi-list-columns',
+                description: 'نمایش نام و مقدار داده',
+                defaultSize: { w: 4, h: 6 },
+                constraints: { minW: 3, maxW: 8, minH: 4, maxH: 12 },
+                defaults: {
+                    core: {
+                        title: 'اطلاعات',
+                        subtitle: 'داده‌ها'
+                    },
+                    data: {
+                        items: [
+                            { name: 'تعداد کاربران', value: '۱۲۵' },
+                            { name: 'فروش', value: '۲۵,۰۰۰' },
+                            { name: 'سفارش‌ها', value: '۴۸' },
+                            { name: 'درخواست‌ها', value: '۱۲' }
+                        ]
+                    },
+                    visual: {
+                        accent: '#00ffff',
+                        fontSize: 11
+                    }
+                }
+            });
+            register({
+                type: 'text',
+                title: 'Text',
+                icon: 'bi-fonts',
+                description: 'متن و توضیح',
+                defaultSize: { w: 4, h: 5 },
+                constraints: { minW: 2, maxW: 12, minH: 3, maxH: 12 },
+                defaults: {
+                    core: {
+                        title: 'توضیحات',
+                        subtitle: 'متن'
+                    },
+                    data: {
+                        text: 'متن اطلاعاتی داشبورد را اینجا وارد کنید.'
+                    },
+                    visual: {
+                        accent: '#00ffff',
+                        fontSize: 13,
+                        align: 'right'
+                    }
+                }
+            });
+
+            register({
+                type: 'list',
+                title: 'List',
+                icon: 'bi-list-ul',
+                description: 'فهرست اطلاعات',
+                defaultSize: { w: 4, h: 6 },
+                constraints: { minW: 3, maxW: 8, minH: 4, maxH: 12 },
+                defaults: {
+                    core: {
+                        title: 'فهرست',
+                        subtitle: 'موارد'
+                    },
+                    data: {
+                        items: ['مورد اول', 'مورد دوم', 'مورد سوم']
+                    },
+                    visual: {
+                        accent: '#00ffff',
+                        fontSize: 11
+                    }
+                }
+            });
+            /* ================================================================
+               5. Widget Rendering
+               ================================================================ */
+            function makeWidget(type) {
+                const d = Registry[type];
+                return { id: uid(type), type, x: 0, y: 0, w: d.defaultSize.w, h: d.defaultSize.h, config: deepMerge(d.defaults, {}), metadata: { createdAt: new Date().toISOString() } };
+            }
+
+            function renderLibrary() {
+                const q = ($('#dbWidgetSearch').value || '').trim().toLowerCase();
+
+                const items = Object.values(Registry).filter(d => {
+                    if (!q) return true;
+
+                    return (
+                        d.title +
+                        ' ' +
+                        d.description +
+                        ' ' +
+                        d.type
+                    ).toLowerCase().includes(q);
+                });
+
+                $('#dbWidgetList').innerHTML = items.map(d => `
+            <div class="db-widget-item"
+                 draggable="true"
+                 data-widget-type="${d.type}">
+
+                <span class="db-widget-icon">
+                    <i class="bi ${d.icon}"></i>
+                </span>
+
+                <span>
+                    <strong>${escapeHtml(d.title)}</strong>
+                    <small>${escapeHtml(d.description)}</small>
+                </span>
+
+            </div>
+        `).join('');
+            }
+
+            function gridMetrics() {
+                const c = $('#dbCanvas');
+                const width = Math.max(c.clientWidth || 900, 900) - CFG.canvasPadding * 2;
+                return { cw: (width - CFG.gap * (CFG.columns - 1)) / CFG.columns, rh: CFG.rowHeight };
+            }
+
+            function pxRect(w) {
+                const m = gridMetrics();
+                return {
+                    left: CFG.canvasPadding + w.x * (m.cw + CFG.gap),
+                    top: CFG.canvasPadding + w.y * (m.rh + CFG.gap),
+                    width: w.w * m.cw + (w.w - 1) * CFG.gap,
+                    height: w.h * m.rh + (w.h - 1) * CFG.gap
+                };
+            }
+
+            function updateCanvasContentHeight() {
+                const canvas = $('#dbCanvas');
+                if (!canvas) return;
+                const maxBottom = state.widgets.reduce((max, w) => Math.max(max, w.y + w.h), 0);
+                const height = Math.max(420, CFG.canvasPadding * 2 + maxBottom * CFG.rowHeight + Math.max(0, maxBottom - 1) * CFG.gap);
+                canvas.style.height = height + 'px';
+                canvas.style.minHeight = height + 'px';
+            }
+
+            function widgetInner(w) {
+                const c = w.config;
+
+                if (w.type === 'kpi') {
+                    return `
+                <div class="db-kpi-value"
+                     style="font-size:${Number(c.visual.fontSize) || 28}px;
+                            text-align:${c.visual.align || 'right'};
+                            color:${escapeHtml(c.visual.accent)}">
+                    ${escapeHtml(c.data.value)}
+                </div>
+
+                <div class="db-kpi-label"
+                     style="text-align:${c.visual.align || 'right'}">
+                    ${escapeHtml(c.data.label)}
+                </div>
+            `;
+                }
+
+                if (w.type === 'progress') {
+                    return `
+                <div class="db-kpi-value"
+                     style="font-size:${Number(c.visual.fontSize) || 22}px;
+                            text-align:${c.visual.align || 'right'}">
+                    ${escapeHtml(c.data.value)}%
+                </div>
+
+                <div class="db-progress">
+                    <i style="
+                        width:${clamp(Number(c.data.value) || 0, 0, 100)}%;
+                        background:${escapeHtml(c.visual.accent)}
+                    "></i>
+                </div>
+
+                <div class="db-kpi-label">
+                    ${escapeHtml(c.data.label)}
+                </div>
+            `;
+                }
+
+                if (['lineChart', 'barChart', 'pieChart'].includes(w.type)) {
+                    return `<div class="db-chart" data-chart-id="${w.id}"></div>`;
+                }
+
+                if (w.type === 'data') {
+                    return renderDataWidget(w);
+                }
+
+                if (w.type === 'table') {
+                    return renderTable(w);
+                }
+
+                if (w.type === 'text') {
+                    return `
+                <div class="db-text-content"
+                     style="
+                        font-size:${Number(c.visual.fontSize) || 13}px;
+                        text-align:${c.visual.align || 'right'}
+                     ">
+                    ${escapeHtml(c.data.text).replace(/\n/g, '<br>')}
+                </div>
+            `;
+                }
+
+                if (w.type === 'list') {
+                    return `
+                <ul class="db-list-content"
+                    style="font-size:${Number(c.visual.fontSize) || 11}px">
+                    ${(c.data.items || []).map(x => `
+                        <li>${escapeHtml(x)}</li>
+                    `).join('')}
+                </ul>
+            `;
+                }
+
+                return '';
+            }
+
+            function renderTable(w) {
+                const d = w.config.data, cols = d.columns || [], rows = d.rows || [];
+                return `<div class="db-table-wrap"><table class="db-table"><thead><tr>${cols.map(x => `<th>${escapeHtml(x)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${cols.map((_, i) => `<td title="${escapeHtml(r[i] ?? '')}">${escapeHtml(r[i] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+            }
+            function renderDataWidget(w) {
+                const d = w.config.data || {};
+                const v = w.config.visual || {};
+                const items = d.items || [];
+                const fontSize = Number(v.fontSize) || 11;
+                const accent = v.accent || '#00ffff';
+
+                return `
+            <div class="db-data-widget"
+                 style="font-size:${fontSize}px">
+
+                ${items.map(item => `
+                    <div class="db-data-row">
+
+                        <div class="db-data-name"
+                             title="${escapeHtml(item.name)}">
+                            ${escapeHtml(item.name)}
+                        </div>
+
+                        <div class="db-data-value"
+                             style="color:${escapeHtml(accent)}"
+                             title="${escapeHtml(item.value)}">
+                            ${escapeHtml(item.value)}
+                        </div>
+
+                    </div>
+                `).join('')}
+
+            </div>
+        `;
+            }
+            function renderCanvas() {
+                const canvas = $('#dbCanvas');
+                if (!canvas) return;
+
+                canvas.querySelectorAll('.db-widget').forEach(el => destroyChart(el));
+                canvas.querySelectorAll('.db-widget').forEach(el => el.remove());
+
+                state.widgets.forEach(w => {
+                    const d = Registry[w.type];
+                    if (!d) return;
+
+                    const r = pxRect(w);
+                    const el = document.createElement('article');
+                    el.className = 'db-widget' +
+                        (w.id === state.selectedId ? ' is-selected' : '') +
+                        (w.id === state.selectedId && state.resizeMode ? ' is-resize-mode' : '');
+                    el.dataset.id = w.id;
+                    el.style.left = r.left + 'px';
+                    el.style.top = r.top + 'px';
+                    el.style.width = r.width + 'px';
+                    el.style.height = r.height + 'px';
+
+                    el.innerHTML = `
+                            <div class="glass-field-ag">
+                                <div class="glass-field-header db-widget-head">
+                                    <div class="glass-field-icon"><i class="bi ${d.icon}"></i></div>
+                                    <div class="glass-field-heading">
+                                        <div class="glass-field-title">${escapeHtml(w.config.core.title || d.title)}</div>
+                                        <div class="glass-field-subtitle">${escapeHtml(w.config.core.subtitle || d.title)}</div>
+                                    </div>
+                                </div>
+                                <div class="glass-field-body db-widget-body">${widgetInner(w)}</div>
+                            </div>
+                            <div class="db-widget-actions">
+                                <button type="button" class="db-widget-action" data-widget-action="settings" title="تنظیمات"><i class="bi bi-gear"></i></button>
+                                <button type="button" class="db-widget-action" data-widget-action="duplicate" title="کپی"><i class="bi bi-clipboard"></i></button>
+                                <button type="button" class="db-widget-action" data-widget-action="delete" title="حذف"><i class="bi bi-trash"></i></button>
+                            </div>
+                            <div class="db-resize-handle db-resize-nw" data-resize="nw"></div>
+                            <div class="db-resize-handle db-resize-ne" data-resize="ne"></div>
+                            <div class="db-resize-handle db-resize-sw" data-resize="sw"></div>
+                            <div class="db-resize-handle db-resize-se" data-resize="se"></div>`;
+
+                    canvas.appendChild(el);
+                    if (['lineChart', 'barChart', 'pieChart'].includes(w.type)) {
+                        renderChart(w, el.querySelector('.db-chart'));
+                    }
+                });
+
+                updateCanvasContentHeight();
+                const empty = $('#dbEmptyState');
+                const count = $('#dbWidgetCount');
+                if (empty) empty.style.display = state.widgets.length ? 'none' : 'flex';
+                if (count) count.textContent = toFa(state.widgets.length) + ' ویجت';
+            }
+
+            function destroyChart(widgetElement) {
+                if (!widgetElement) return;
+                const chart = widgetElement.querySelector('.db-chart');
+                if (chart && chart.__dbChart) {
+                    try { chart.__dbChart.destroy(); } catch (ignore) { }
+                    chart.__dbChart = null;
+                }
+            }
+
+            /* ================================================================
+               6. Grid System
+               ================================================================ */
+            function occupied(x, y, w, h, ignore) { return state.widgets.some(a => a.id !== ignore && x < a.x + a.w && x + w > a.x && y < a.y + a.h && y + h > a.y) }
+            function valid(w, x, y, ww = w.w, hh = w.h) { const c = Registry[w.type].constraints; return x >= 0 && y >= 0 && x + ww <= CFG.columns && ww >= c.minW && ww <= c.maxW && hh >= c.minH && hh <= c.maxH && !occupied(x, y, ww, hh, w.id) }
+            function nearestFree(w, nx, ny) { nx = clamp(Math.round(nx ?? 0), 0, CFG.columns - w.w); ny = Math.max(0, Math.round(ny ?? 0)); if (valid(w, nx, ny)) return { x: nx, y: ny }; for (let r = 1; r <= 30; r++) { for (let yy = Math.max(0, ny - r); yy <= ny + r; yy++) { for (let xx = Math.max(0, nx - r); xx <= Math.min(CFG.columns - w.w, nx + r); xx++) { if (Math.abs(xx - nx) !== r && Math.abs(yy - ny) !== r) continue; if (valid(w, xx, yy)) return { x: xx, y: yy } } } } let y = 0; while (y < 300) { if (valid(w, 0, y)) return { x: 0, y }; y++ } return { x: 0, y: 0 } }
+            function canvasPoint(e) { const m = gridMetrics(), canvas = $('#dbCanvas'), r = canvas.getBoundingClientRect(); return { x: clamp(Math.floor((e.clientX - r.left - CFG.canvasPadding) / (m.cw + CFG.gap)), 0, CFG.columns - 1), y: Math.max(0, Math.floor((e.clientY - r.top - CFG.canvasPadding) / (m.rh + CFG.gap))) } }
+
+            /* ================================================================
+               7. Drag & Drop
+               ================================================================ */
+            function setupDrag() {
+                const list = $('#dbWidgetList'), canvas = $('#dbCanvas');
+                list.addEventListener('click', e => { const item = e.target.closest('.db-widget-item'); if (item) addWidget(item.dataset.widgetType) });
+                list.addEventListener('dragstart', e => { const item = e.target.closest('.db-widget-item'); if (!item) return; e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/dashboard-widget', item.dataset.widgetType); item.classList.add('db-dragging') });
+                list.addEventListener('dragend', e => e.target.closest('.db-widget-item')?.classList.remove('db-dragging'));
+                canvas.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('text/dashboard-widget')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } });
+                canvas.addEventListener('drop', e => { e.preventDefault(); const t = e.dataTransfer.getData('text/dashboard-widget'); if (t) { const p = canvasPoint(e); addWidget(t, p.x, p.y) } });
+
+
+            }
+
+            function addWidget(type, x = 0, y = 0) {
+
+                const nameInput = $('#dbDashboardName');
+                const dashboardName = nameInput?.value.trim();
+
+                if (!dashboardName) {
+                    toast('ابتدا نام داشبورد را وارد کنید.', 'warning');
+                    nameInput?.focus();
+                    return;
+                }
+
+                state.dashboardName = dashboardName;
+
+                const w = makeWidget(type);
+                const p = nearestFree(w, x, y);
+
+                w.x = p.x;
+                w.y = p.y;
+
+                state.widgets.push(w);
+                state.selectedId = w.id;
+
+                commit('افزودن ویجت');
+                renderCanvas();
+                openSettings(w);
+            }
+
+            /* ================================================================
+               8. Collision Detection
+               ================================================================ */
+            function moveWidget(w, nx, ny) { const p = nearestFree(w, nx, ny); w.x = p.x; w.y = p.y; return true }
+
+            /* ================================================================
+               9. Resize Engine
+               ================================================================ */
+            function setupResize() {
+                const canvas = $('#dbCanvas');
+
+                canvas.addEventListener('pointerdown', e => {
+                    const h = e.target.closest('.db-resize-handle');
+                    if (!h || !state.resizeMode) return;
+
+                    const el = h.closest('.db-widget');
+                    const w = state.widgets.find(a => a.id === el?.dataset.id);
+                    if (!w) return;
+
+                    const direction = h.dataset.resize || 'se';
+                    const m = gridMetrics();
+
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    state.selectedId = w.id;
+                    state.resize = {
+                        id: w.id,
+                        direction,
+                        startX: e.clientX,
+                        startY: e.clientY,
+                        startW: w.w,
+                        startH: w.h,
+                        startGridX: w.x,
+                        startGridY: w.y,
+                        cw: m.cw,
+                        rh: m.rh,
+                        changed: false,
+                        element: el
+                    };
+
+                    el.classList.add('is-resizing');
+                    try { el.setPointerCapture(e.pointerId) } catch (ignore) { }
+                });
+
+                canvas.addEventListener('pointermove', e => {
+                    const q = state.resize;
+                    if (!q) return;
+
+                    const w = state.widgets.find(a => a.id === q.id);
+                    if (!w) return;
+
+                    const c = Registry[w.type].constraints;
+                    const dx = Math.round((e.clientX - q.startX) / (q.cw + CFG.gap));
+                    const dy = Math.round((e.clientY - q.startY) / (q.rh + CFG.gap));
+                    let x = q.startGridX, y = q.startGridY, nw = q.startW, nh = q.startH;
+
+                    if (q.direction.includes('e')) nw = q.startW + dx;
+                    if (q.direction.includes('w')) { nw = q.startW - dx; x = q.startGridX + dx; }
+                    if (q.direction.includes('s')) nh = q.startH + dy;
+                    if (q.direction.includes('n')) { nh = q.startH - dy; y = q.startGridY + dy; }
+
+                    nw = clamp(nw, c.minW, Math.min(c.maxW, CFG.columns - x));
+                    nh = clamp(nh, c.minH, c.maxH);
+
+                    if (q.direction.includes('w')) x = q.startGridX + (q.startW - nw);
+                    if (q.direction.includes('n')) y = q.startGridY + (q.startH - nh);
+
+                    x = clamp(x, 0, CFG.columns - nw);
+                    y = Math.max(0, y);
+
+                    if (!valid(w, x, y, nw, nh)) return;
+
+                    if (x === w.x && y === w.y && nw === w.w && nh === w.h) return;
+
+                    w.x = x; w.y = y; w.w = nw; w.h = nh; q.changed = true;
+                    applyWidgetRect(q.element, w);
+                });
+
+                const finish = () => {
+                    const q = state.resize;
+                    if (!q) return;
+                    const w = state.widgets.find(a => a.id === q.id);
+                    if (q.element) q.element.classList.remove('is-resizing');
+                    state.resize = null;
+                    if (q.changed && w) {
+                        commit('تغییر اندازه');
+                        renderCanvas();
+                        openSettings(w);
+                    }
+                };
+
+                canvas.addEventListener('pointerup', finish);
+                canvas.addEventListener('pointercancel', finish);
+            }
+
+            function applyWidgetRect(el, w) {
+                if (!el) return;
+                const r = pxRect(w);
+                el.style.left = r.left + 'px';
+                el.style.top = r.top + 'px';
+                el.style.width = r.width + 'px';
+                el.style.height = r.height + 'px';
+            }
+
+            /* ================================================================
+               10. Constraint Validation
+               ================================================================ */
+            function validate() { return state.widgets.every(w => Registry[w.type] && valid(w, w.x, w.y, w.w, w.h)) }
+
+            /* ================================================================
+               11. Selection System
+               ================================================================ */
+            function setupSelection() {
+                const canvas = $('#dbCanvas');
+
+                canvas.addEventListener('pointerdown', e => {
+                    const el = e.target.closest('.db-widget');
+                    if (!el) return;
+
+                    const id = el.dataset.id;
+                    const action = e.target.closest('[data-widget-action]');
+                    const head = e.target.closest('.db-widget-head');
+
+                    if (state.selectedId !== id) {
+                        commitSettingsIfChanged();
+                        state.selectedId = id;
+                    }
+
+                    if (action) return;
+
+                    if (head && !state.resizeMode && !e.target.closest('button')) {
+                        startMove(e, el);
+                        return;
+                    }
+
+                    el.classList.add('is-selected');
+                    if (state.resizeMode) el.classList.add('is-resize-mode');
+                });
+
+                canvas.addEventListener('click', e => {
+                    const action = e.target.closest('[data-widget-action]');
+                    if (!action) return;
+                    const el = action.closest('.db-widget');
+                    if (!el) return;
+                    const id = el.dataset.id;
+                    const w = state.widgets.find(item => item.id === id);
+                    if (!w) return;
+
+                    if (action.dataset.widgetAction === 'settings') openSettings(w);
+                    if (action.dataset.widgetAction === 'duplicate') duplicate(id);
+                    if (action.dataset.widgetAction === 'delete') remove(id);
+                });
+
+                document.addEventListener('pointerdown', e => {
+                    if (!root.contains(e.target)) return;
+                    if (!e.target.closest('.db-widget') && !e.target.closest('#dbSettings')) {
+                        commitSettingsIfChanged();
+                        state.selectedId = null;
+                        closeSettings(false);
+                        renderCanvas();
+                    }
+                });
+            }
+
+            function startMove(e, el) {
+                const w = state.widgets.find(x => x.id === el.dataset.id);
+                if (!w || state.resize) return;
+
+                const m = gridMetrics();
+                const start = {
+                    x: e.clientX,
+                    y: e.clientY,
+                    wX: w.x,
+                    wY: w.y,
+                    changed: false,
+                    id: w.id,
+                    cw: m.cw,
+                    rh: m.rh,
+                    element: el
+                };
+
+                state.drag = start;
+                el.classList.add('is-dragging');
+                try { el.setPointerCapture(e.pointerId); } catch (ignore) { }
+                e.preventDefault();
+
+                const move = ev => {
+                    const q = state.drag;
+                    if (!q) return;
+
+                    const target = state.widgets.find(x => x.id === q.id);
+                    if (!target) return;
+
+                    const dx = Math.round((ev.clientX - q.x) / (q.cw + CFG.gap));
+                    const dy = Math.round((ev.clientY - q.y) / (q.rh + CFG.gap));
+                    const p = nearestFree(target, q.wX + dx, q.wY + dy);
+
+                    if (p.x === target.x && p.y === target.y) return;
+
+                    target.x = p.x;
+                    target.y = p.y;
+                    q.changed = true;
+                    applyWidgetRect(q.element, target);
+                    updateCanvasContentHeight();
+                };
+
+                const finish = () => {
+                    const q = state.drag;
+                    state.drag = null;
+                    el.classList.remove('is-dragging');
+                    document.removeEventListener('pointermove', move);
+                    document.removeEventListener('pointerup', finish);
+                    if (q?.changed) {
+                        commit('جابجایی ویجت');
+                        renderCanvas();
+                    }
+                };
+
+                document.addEventListener('pointermove', move);
+                document.addEventListener('pointerup', finish);
+            }
+
+            /* ================================================================
+               12. Settings System
+               ================================================================ */
+            function field(label, path, value, type = 'text') { return `<div class="db-field"><label>${label}</label><input class="glass-input-ag" data-setting="${path}" type="${type}" value="${escapeHtml(value ?? '')}" /></div>` }
+            function textarea(label, path, value, cls = '') { return `<div class="db-field"><label>${label}</label><textarea class="glass-textarea-ag ${cls}" data-setting="${path}">${escapeHtml(value ?? '')}</textarea></div>` }
+            function select(label, path, value, options) { return `<div class="db-field"><label>${label}</label><select class="glass-select-ag" data-setting="${path}" style="margin-bottom:0!important">${options.map(o => `<option value="${escapeHtml(o[0])}" ${String(value) === String(o[0]) ? 'selected' : ''}>${escapeHtml(o[1])}</option>`).join('')}</select></div>` }
+            function check(label, path, value) { return `<label class="db-check"><input class="glass-checkbox-ag" type="checkbox" data-setting="${path}" ${value ? 'checked' : ''}/> ${label}</label>` }
+
+            function getDraftSize(w) { return state.settingsDraft?.id === w.id ? state.settingsDraft : { id: w.id, config: clone(w.config), w: w.w, h: w.h }; }
+
+            function renderSettings(w) {
+                if (!w) { $('#dbSettingsBody').innerHTML = ''; return }
+
+                if (!state.settingsDraft || state.settingsDraft.id !== w.id) {
+                    state.settingsDraft = { id: w.id, config: clone(w.config), w: w.w, h: w.h };
+                }
+
+                const draft = state.settingsDraft;
+                const c = draft.config, d = w.type; let html = '';
+                html += `<div class="db-setting-section"><div class="db-setting-title">اطلاعات اصلی</div>${field('عنوان', 'core.title', c.core.title)}${field('زیرعنوان', 'core.subtitle', c.core.subtitle || '')}${select('حالت تغییر اندازه', 'resizeMode', state.resizeMode ? '1' : '0', [['0', 'عادی'], ['1', 'فعال']])}</div>`;
+                if (['kpi', 'progress'].includes(d)) {
+                    html += `
+            <div class="db-setting-section">
+                <div class="db-setting-title">داده</div>
+                ${field('مقدار', 'data.value', c.data.value)}
+                ${field('برچسب', 'data.label', c.data.label)}
+                ${field('اندازه فونت', 'visual.fontSize', c.visual.fontSize, 'number')}
+                ${field('رنگ', 'visual.accent', c.visual.accent || '#00ffff')}
+                ${select(
+                        'تراز متن',
+                        'visual.align',
+                        c.visual.align || 'right',
+                        [
+                            ['right', 'راست'],
+                            ['center', 'وسط'],
+                            ['left', 'چپ']
+                        ]
+                    )}
+            </div>
+        `;
+                }
+                if (d === 'text') {
+                    html += `
+        <div class="db-setting-section">
+
+            <div class="db-setting-title">
+                متن
+            </div>
+
+            ${textarea(
+                        'متن ویجت',
+                        'data.text',
+                        c.data.text || ''
+                    )}
+
+            ${field(
+                        'اندازه فونت',
+                        'visual.fontSize',
+                        c.visual.fontSize || 14,
+                        'number'
+                    )}
+
+            ${select(
+                        'تراز متن',
+                        'visual.align',
+                        c.visual.align || 'right',
+                        [
+                            ['right', 'راست'],
+                            ['center', 'وسط'],
+                            ['left', 'چپ']
+                        ]
+                    )}
+
+        </div>
+    `;
+                }
+                if (d === 'list') html += `<div class="db-setting-section"><div class="db-setting-title">آیتم‌ها</div>${textarea('هر آیتم در یک خط', 'data.itemsText', (c.data.items || []).join('\n'))}${field('اندازه فونت', 'visual.fontSize', c.visual.fontSize, 'number')}</div>`;
+                if (d === 'image') html += `<div class="db-setting-section"><div class="db-setting-title">تصویر</div>${field('آدرس تصویر', 'data.src', c.data.src)}${field('متن جایگزین', 'data.alt', c.data.alt)}${select('نحوه نمایش', 'data.fit', c.data.fit, [['cover', 'Cover'], ['contain', 'Contain'], ['fill', 'Fill']])}</div>`;
+                if (d === 'calendar') html += `<div class="db-setting-section"><div class="db-setting-title">تقویم</div>${field('تاریخ / متن', 'data.text', c.data.text)}${field('اندازه فونت', 'visual.fontSize', c.visual.fontSize, 'number')}</div>`;
+                if (d === 'table') html += `<div class="db-setting-section"><div class="db-setting-title">جدول</div>${textarea('ستون‌ها؛ هر ستون در یک خط', 'data.columnsText', (c.data.columns || []).join('\n'))}${textarea('ردیف‌ها؛ هر ردیف در یک خط و سلول‌ها با | جدا شوند', 'data.rowsText', (c.data.rows || []).map(r => r.join(' | ')).join('\n'))}${check('فعال بودن فیلتر', 'data.filter', !!c.data.filter)}${check('فعال بودن صفحه‌بندی', 'data.pagination', !!c.data.pagination)}${field('تعداد ردیف هر صفحه', 'data.pageSize', c.data.pageSize, 'number')}</div>`;
+                if (d === 'data') {
+                    html += `
+    <div class="db-setting-section">
+
+        <div class="db-setting-title">
+            داده‌ها
+        </div>
+
+        ${textarea(
+                        'داده‌ها؛ هر خط به صورت نام | مقدار',
+                        'data.dataItemsText',
+                        (c.data.items || [])
+                            .map(x => `${x.name} | ${x.value}`)
+                            .join('\n')
+                    )}
+
+        ${field(
+                        'اندازه فونت',
+                        'visual.fontSize',
+                        c.visual.fontSize,
+                        'number'
+                    )}
+
+        ${field(
+                        'رنگ مقدار',
+                        'visual.accent',
+                        c.visual.accent || '#00ffff'
+                    )}
+
+    </div>
+`;
+                }
+                if (['lineChart', 'barChart', 'pieChart'].includes(d)) {
+                    html += renderChartSettings(c);
+                }
+                $('#dbSettingsTitle').textContent = c.core.title || Registry[d].title;
+                $('#dbSettingsType').textContent = Registry[d].title;
+                $('#dbSettingsBody').innerHTML = html;
+
+                // تنظیم وضعیت اولیه رنگ سری‌ها
+                if (['lineChart', 'barChart', 'pieChart'].includes(d)) {
+
+                    const body = $('#dbSettingsBody');
+
+                    (c.data.series || []).forEach((s, i) => {
+
+                        // Line / Bar
+                        const colorInput = body.querySelector(
+                            `[data-setting="data.series.${i}.color"]`
+                        );
+
+                        if (colorInput) {
+                            colorInput.disabled = !s.customColor;
+                        }
+
+                        // Pie
+                        if (d === 'pieChart') {
+
+                            (s.colors || []).forEach((slice, j) => {
+
+                                const sliceColorInput = body.querySelector(
+                                    `[data-setting="data.series.${i}.colors.${j}.color"]`
+                                );
+
+                                if (sliceColorInput) {
+                                    sliceColorInput.disabled = !slice.customColor;
+                                }
+
+                            });
+                        }
+
+                    });
+                }
+            }
+
+            function renderChartSettings(c) {
+
+                const d = c.data || {};
+                const v = c.visual || {};
+                const series = d.series || [];
+
+                const type =
+                    c.chartType ||
+                    d.chartType ||
+                    'line';
+
+
+                let html = `
+            <div class="db-setting-section">
+
+                <div class="db-setting-title">
+                    تنظیمات نمودار
+                </div>
+
+                ${check(
+                    'نمایش راهنمای نمودار',
+                    'data.legend',
+                    d.legend !== false
+                )}
+
+                ${select(
+                    'موقعیت راهنما',
+                    'data.legendPosition',
+                    d.legendPosition || 'bottom',
+                    [
+                        ['bottom', 'پایین'],
+                        ['top', 'بالا'],
+                        ['left', 'چپ'],
+                        ['right', 'راست']
+                    ]
+                )}
+
+                ${check(
+                    'نمایش Tooltip',
+                    'data.tooltip',
+                    d.tooltip !== false
+                )}
+
+                ${check(
+                    'نمایش مقدار روی نمودار',
+                    'data.dataLabels',
+                    !!d.dataLabels
+                )}
+
+                ${check(
+                    'خطوط شبکه',
+                    'data.grid',
+                    d.grid !== false
+                )}
+
+            </div>
+        `;
+
+
+                /* ============================================================
+                   محورهای نمودار
+                   ============================================================ */
+
+                if (type !== 'pieChart' && type !== 'pie') {
+
+                    html += `
+                <div class="db-setting-section">
+
+                    <div class="db-setting-title">
+                        محورها
+                    </div>
+
+                    ${field(
+                        'عنوان محور افقی',
+                        'data.xTitle',
+                        d.xTitle || ''
+                    )}
+
+                    ${field(
+                        'عنوان محور عمودی',
+                        'data.yTitle',
+                        d.yTitle || ''
+                    )}
+
+                    <div class="db-setting-grid">
+
+                        ${field(
+                        'حداقل Y',
+                        'data.yMin',
+                        d.yMin ?? ''
+                    )}
+
+                        ${field(
+                        'حداکثر Y',
+                        'data.yMax',
+                        d.yMax ?? ''
+                    )}
+
+                    </div>
+
+                </div>
+            `;
+                }
+
+
+                /* ============================================================
+                   Line Chart
+                   ============================================================ */
+
+                if (type === 'lineChart' ||
+                    type === 'line' ||
+                    type === 'spline' ||
+                    type === 'area' ||
+                    type === 'areaspline') {
+
+                    html += `
+                <div class="db-setting-section">
+
+                    <div class="db-setting-title">
+                        ظاهر نمودار خطی
+                    </div>
+                    ${select(
+                        'نوع نمایش',
+                        'data.chartType',
+                        c.data.chartType || 'spline',
+                        [
+                            ['line', 'خطی'],
+                            ['spline', 'خط منحنی'],
+                            ['area', 'ناحیه‌ای'],
+                            ['areaspline', 'ناحیه‌ای منحنی']
+                        ]
+                    )}
+                    ${field(
+                        'ضخامت خط',
+                        'visual.lineWidth',
+                        v.lineWidth || 3,
+                        'number'
+                    )}
+
+                    ${check(
+                        'نمایش نقاط',
+                        'data.marker',
+                        d.marker !== false
+                    )}
+
+                    ${check(
+                        'سایه خط',
+                        'data.shadow',
+                        !!d.shadow
+                    )}
+
+
+
+                </div>
+            `;
+                }
+
+
+                /* ============================================================
+                   Bar Chart
+                   ============================================================ */
+
+                if (type === 'barChart' || type === 'bar') {
+
+                    html += `
+                <div class="db-setting-section">
+
+                    <div class="db-setting-title">
+                        ظاهر نمودار میله‌ای
+                    </div>
+                    ${select(
+                        'جهت نمایش',
+                        'data.barDirection',
+                        c.data.barDirection || 'vertical',
+                        [
+                            ['vertical', 'عمودی'],
+                            ['horizontal', 'افقی']
+                        ]
+                    )}
+                    ${check(
+                        'سایه نمودار',
+                        'data.shadow',
+                        !!d.shadow
+                    )}
+
+                    ${check(
+                        'Stacked',
+                        'data.stacked',
+                        !!d.stacked
+                    )}
+
+
+
+                </div>
+            `;
+                }
+
+
+                /* ============================================================
+                   Pie Chart
+                   ============================================================ */
+
+                if (type === 'pieChart' || type === 'pie') {
+
+                    html += `
+                <div class="db-setting-section">
+
+                    <div class="db-setting-title">
+                        ظاهر نمودار دایره‌ای
+                    </div>
+
+                    ${check(
+                        'Donut',
+                        'data.donut',
+                        !!d.donut
+                    )}
+
+
+
+                </div>
+            `;
+                }
+
+
+                /* ============================================================
+                   Labels
+                   ============================================================ */
+
+                html += `
+            <div class="db-setting-section">
+
+                <div class="db-setting-title">
+                    برچسب‌های نمودار
+                </div>
+
+                ${textarea(
+                    'هر برچسب در یک خط',
+                    'data.labelsText',
+                    (d.labels || []).join('\n'),
+                    'db-labels-input'
+                )}
+
+            </div>
+        `;
+
+
+                /* ============================================================
+                   Series
+                   ============================================================ */
+
+                html += `
+            <div class="db-setting-section">
+
+                <div class="db-setting-title">
+                    سری‌های داده
+                </div>
+        `;
+
+
+                series.forEach((s, i) => {
+
+                    // Pie Chart
+                    if (type === 'pieChart' || type === 'pie') {
+
+                        const labels = d.labels || [];
+                        const values = s.values || [];
+                        const colors = s.colors || [];
+
+                        html += `
+        <div class="db-series">
+
+            <div class="db-series-head">
+                <strong>
+                    رنگ‌بندی مقادیر
+                </strong>
+            </div>
+
+            ${labels.map((label, index) => {
+
+                            const slice = colors[index] || {};
+
+                            return `
+                    <div class="db-pie-value-row">
+
+                        <div style="flex:1;">
+                            ${field(
+                                label || `مقدار ${toFa(index + 1)}`,
+                                `data.series.${i}.values.${index}`,
+                                values[index] ?? '',
+                                'number'
+                            )}
+                        </div>
+
+                        <div style="flex:1;">
+                            ${check(
+                                'استفاده از رنگ دستی',
+                                `data.series.${i}.colors.${index}.customColor`,
+                                !!slice.customColor
+                            )}
+                        </div>
+
+                        <div style="width:70px;">
+                            ${field(
+                                '',
+                                `data.series.${i}.colors.${index}.color`,
+                                slice.color || '#00ffff',
+                                'color'
+                            )}
+                        </div>
+
+                    </div>
+                `;
+                        }).join('')}
+
+        </div>
+    `;
+
+                    } else {
+
+                        // Line / Bar
+                        html += `
+            <div class="db-series">
+
+                <div class="db-series-head">
+
+                    <strong>
+                        سری ${toFa(i + 1)}
+                    </strong>
+
+                    ${series.length > 1
+                                ? `
+                            <button
+                                type="button"
+                                class="glass-btn-icon glass-btn-icon-reject"
+                                data-series-remove="${i}"
+                                title="حذف سری">
+
+                                <i class="bi bi-trash"></i>
+
+                            </button>
+                          `
+                                : ''
+                            }
+
+                </div>
+
+                ${field(
+                                'نام سری',
+                                `data.series.${i}.name`,
+                                s.name || ''
+                            )}
+
+                ${textarea(
+                                'مقادیر؛ با کاما جدا شوند',
+                                `data.series.${i}.valuesText`,
+                                (s.values || []).join(', '),
+                                'db-series-values'
+                            )}
+
+                ${check(
+                                'استفاده از رنگ دستی',
+                                `data.series.${i}.customColor`,
+                                !!s.customColor
+                            )}
+
+                ${field(
+                                'رنگ سری',
+                                `data.series.${i}.color`,
+                                s.color || '',
+                                'color'
+                            )}
+
+            </div>
+        `;
+                    }
+
+                });
+
+                /*
+                   Pie فقط یک سری نیاز دارد.
+                   برای Line و Bar امکان افزودن سری داریم.
+                */
+
+                if (type !== 'pieChart' && type !== 'pie') {
+
+                    html += `
+                <button
+                    type="button"
+                    class="glass-btn-ag glass-btn-ag-primary db-full-btn"
+                    data-chart-add-series>
+
+                    <i class="bi bi-plus-lg"></i>
+                    <p>افزودن سری</p>
+
+                </button>
+            `;
+                }
+
+
+                html += `
+            </div>
+        `;
+                setTimeout(() => {
+                    series.forEach((s, i) => {
+                        const colorInput = body.querySelector(
+                            `[data-setting="data.series.${i}.color"]`
+                        );
+
+                        if (colorInput) {
+                            colorInput.disabled = !s.customColor;
+                        }
+                    });
+                }, 0);
+
+                return html;
+            }
+            function setPath(obj, path, value) {
+                const parts = path.split('.');
+                let current = obj;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (!current[parts[i]] || typeof current[parts[i]] !== 'object') current[parts[i]] = {};
+                    current = current[parts[i]];
+                }
+                current[parts[parts.length - 1]] = value;
+            }
+
+            function applySettingsToDraft() {
+
+                const draft = state.settingsDraft;
+                if (!draft) return;
+
+                const body = $('#dbSettingsBody');
+                if (!body) return;
+
+                draft.config.data = draft.config.data || {};
+                draft.config.visual = draft.config.visual || {};
+                draft.config.core = draft.config.core || {};
+                draft.config.data.series = draft.config.data.series || [];
+
+                body.querySelectorAll('[data-setting]').forEach(el => {
+
+                    const path = el.dataset.setting;
+
+                    if (path === 'resizeMode')
+                        return;
+
+                    let value = el.type === 'checkbox'
+                        ? el.checked
+                        : el.value;
+
+
+                    /* ============================================================
+                       Numeric values
+                       ============================================================ */
+
+                    if (
+                        path === 'visual.fontSize' ||
+                        path === 'visual.lineWidth' ||
+                        path === 'data.pageSize' ||
+                        path === 'data.donutSize'
+                    ) {
+                        value = Number(value) || 0;
+                    }
+
+
+                    /* ============================================================
+                       List
+                       ============================================================ */
+
+                    if (path === 'data.itemsText') {
+
+                        draft.config.data.items =
+                            String(value)
+                                .split(/\r?\n/)
+                                .map(x => x.trim())
+                                .filter(Boolean);
+
+                        return;
+                    }
+
+
+                    /* ============================================================
+                       Data Widget
+                       ============================================================ */
+
+                    if (path === 'data.dataItemsText') {
+
+                        draft.config.data.items =
+                            String(value)
+                                .split(/\r?\n/)
+                                .filter(Boolean)
+                                .map(line => {
+
+                                    const parts = line.split('|');
+
+                                    return {
+                                        name: (parts[0] || '').trim(),
+                                        value: (parts.slice(1).join('|') || '').trim()
+                                    };
+
+                                })
+                                .filter(x => x.name || x.value);
+
+                        return;
+                    }
+
+
+                    /* ============================================================
+                       Table Columns
+                       ============================================================ */
+
+                    if (path === 'data.columnsText') {
+
+                        draft.config.data.columns =
+                            String(value)
+                                .split(/\r?\n/)
+                                .map(x => x.trim())
+                                .filter(Boolean);
+
+                        return;
+                    }
+
+
+                    /* ============================================================
+                       Table Rows
+                       ============================================================ */
+
+                    if (path === 'data.rowsText') {
+
+                        draft.config.data.rows =
+                            String(value)
+                                .split(/\r?\n/)
+                                .filter(Boolean)
+                                .map(r =>
+                                    r.split('|').map(x => x.trim())
+                                );
+
+                        return;
+                    }
+
+
+                    /* ============================================================
+                       Chart Labels
+                       ============================================================ */
+
+                    if (path === 'data.labelsText') {
+
+                        draft.config.data.labels =
+                            String(value)
+                                .split(/\r?\n/)
+                                .map(x => x.trim())
+                                .filter(Boolean);
+
+                        return;
+                    }
+
+
+                    /* ============================================================
+                       Widget Size
+                       ============================================================ */
+
+                    if (path === 'size.w') {
+
+                        draft.w = Number(value) || draft.w;
+                        return;
+                    }
+
+                    if (path === 'size.h') {
+
+                        draft.h = Number(value) || draft.h;
+                        return;
+                    }
+
+
+                    /* ============================================================
+                       Series Values
+                       ============================================================ */
+
+                    const valuesMatch =
+                        path.match(/^data\.series\.(\d+)\.valuesText$/);
+
+                    if (valuesMatch) {
+
+                        const index = Number(valuesMatch[1]);
+
+                        draft.config.data.series[index] =
+                            draft.config.data.series[index] || {
+                                name: 'سری ' + toFa(index + 1),
+                                values: []
+                            };
+
+                        draft.config.data.series[index].values =
+                            String(value)
+                                .split(',')
+                                .map(x => Number(String(x).trim()))
+                                .filter(Number.isFinite);
+
+                        return;
+                    }
+                    /* Pie Values */
+                    const pieValueMatch =
+                        path.match(/^data\.series\.(\d+)\.values\.(\d+)$/);
+
+                    if (pieValueMatch) {
+
+                        const seriesIndex = Number(pieValueMatch[1]);
+                        const valueIndex = Number(pieValueMatch[2]);
+
+                        draft.config.data.series[seriesIndex] =
+                            draft.config.data.series[seriesIndex] || {
+                                name: 'مقدار',
+                                values: [],
+                                colors: []
+                            };
+
+                        draft.config.data.series[seriesIndex].values =
+                            draft.config.data.series[seriesIndex].values || [];
+
+                        draft.config.data.series[seriesIndex].values[valueIndex] =
+                            Number(value);
+
+                        return;
+                    }
+
+
+                    /* Pie Custom Color */
+                    const pieCustomColorMatch =
+                        path.match(/^data\.series\.(\d+)\.colors\.(\d+)\.customColor$/);
+
+                    if (pieCustomColorMatch) {
+
+                        const seriesIndex = Number(pieCustomColorMatch[1]);
+                        const colorIndex = Number(pieCustomColorMatch[2]);
+
+                        draft.config.data.series[seriesIndex] =
+                            draft.config.data.series[seriesIndex] || {
+                                name: 'مقدار',
+                                values: [],
+                                colors: []
+                            };
+
+                        draft.config.data.series[seriesIndex].colors =
+                            draft.config.data.series[seriesIndex].colors || [];
+
+                        draft.config.data.series[seriesIndex].colors[colorIndex] =
+                            draft.config.data.series[seriesIndex].colors[colorIndex] || {
+                                customColor: false,
+                                color: ''
+                            };
+
+                        draft.config.data.series[seriesIndex].colors[colorIndex].customColor =
+                            !!value;
+
+                        return;
+                    }
+
+
+                    /* Pie Color */
+                    const pieColorMatch =
+                        path.match(/^data\.series\.(\d+)\.colors\.(\d+)\.color$/);
+
+                    if (pieColorMatch) {
+
+                        const seriesIndex = Number(pieColorMatch[1]);
+                        const colorIndex = Number(pieColorMatch[2]);
+
+                        draft.config.data.series[seriesIndex] =
+                            draft.config.data.series[seriesIndex] || {
+                                name: 'مقدار',
+                                values: [],
+                                colors: []
+                            };
+
+                        draft.config.data.series[seriesIndex].colors =
+                            draft.config.data.series[seriesIndex].colors || [];
+
+                        draft.config.data.series[seriesIndex].colors[colorIndex] =
+                            draft.config.data.series[seriesIndex].colors[colorIndex] || {
+                                customColor: false,
+                                color: ''
+                            };
+
+                        draft.config.data.series[seriesIndex].colors[colorIndex].color = value;
+
+                        return;
+                    }
+                    /* ============================================================
+                       Series Name
+                       ============================================================ */
+
+                    const nameMatch =
+                        path.match(/^data\.series\.(\d+)\.name$/);
+
+                    if (nameMatch) {
+
+                        const index = Number(nameMatch[1]);
+
+                        draft.config.data.series[index] =
+                            draft.config.data.series[index] || {
+                                name: 'سری ' + toFa(index + 1),
+                                values: []
+                            };
+
+                        draft.config.data.series[index].name = value;
+
+                        return;
+                    }
+
+                    // ============================================================
+                    // Series Custom Color
+                    // ============================================================
+
+                    const customColorMatch =
+                        path.match(/^data\.series\.(\d+)\.customColor$/);
+
+                    if (customColorMatch) {
+
+                        const index = Number(customColorMatch[1]);
+
+                        draft.config.data.series[index] =
+                            draft.config.data.series[index] || {
+                                name: 'سری ' + toFa(index + 1),
+                                values: [],
+                                customColor: false,
+                                color: ''
+                            };
+
+                        draft.config.data.series[index].customColor = !!value;
+
+                        return;
+                    }
+                    // ============================================================
+                    // Series Color
+                    // ============================================================
+
+                    const colorMatch =
+                        path.match(/^data\.series\.(\d+)\.color$/);
+
+                    if (colorMatch) {
+
+                        const index = Number(colorMatch[1]);
+
+                        draft.config.data.series[index] =
+                            draft.config.data.series[index] || {
+                                name: 'سری ' + toFa(index + 1),
+                                values: [],
+                                customColor: false,
+                                color: ''
+                            };
+
+                        draft.config.data.series[index].color = value;
+
+                        return;
+                    }
+
+
+                    /* ============================================================
+                       Normal Settings
+                       ============================================================ */
+
+                    setPath(draft.config, path, value);
+                });
+            }
+
+            function syncSettingsToWidget(options = {}) {
+                const draft = state.settingsDraft;
+                if (!draft) return false;
+
+                applySettingsToDraft();
+
+                const w = state.widgets.find(item => item.id === draft.id);
+                if (!w) return false;
+
+                const constraints = Registry[w.type].constraints;
+                const nextW = clamp(Number(draft.w) || w.w, constraints.minW, Math.min(constraints.maxW, CFG.columns - w.x));
+                const nextH = clamp(Number(draft.h) || w.h, constraints.minH, constraints.maxH);
+
+                if (!valid(w, w.x, w.y, nextW, nextH)) {
+                    if (options.notify !== false) toast('این ابعاد با ویجت‌های دیگر تداخل دارد.', 'error');
+                    return false;
+                }
+
+                w.config = clone(draft.config);
+                w.w = nextW;
+                w.h = nextH;
+                state.dirty = true;
+
+                const el = $(`#dbCanvas .db-widget[data-id="${w.id}"]`);
+                if (el) {
+                    applyWidgetRect(el, w);
+                    const title = el.querySelector('.glass-field-title');
+                    const subtitle = el.querySelector('.glass-field-subtitle');
+                    const body = el.querySelector('.db-widget-body');
+
+                    if (title) title.textContent = w.config.core.title || Registry[w.type].title;
+                    if (subtitle) subtitle.textContent = w.config.core.subtitle || Registry[w.type].title;
+
+                    if (
+                        body &&
+                        !['lineChart', 'barChart', 'pieChart'].includes(w.type)
+                    ) {
+                        body.innerHTML = widgetInner(w);
+                    } else if (
+                        body &&
+                        ['lineChart', 'barChart', 'pieChart'].includes(w.type)
+                    ) {
+                        let chart = body.querySelector('.db-chart');
+                        if (!chart) {
+                            body.innerHTML = widgetInner(w);
+                            chart = body.querySelector('.db-chart');
+                        }
+                        renderChart(w, chart);
+                    }
+
+                    el.classList.toggle('is-selected', state.selectedId === w.id);
+                    el.classList.toggle('is-resize-mode', state.selectedId === w.id && state.resizeMode);
+                }
+
+                updateCanvasContentHeight();
+                return true;
+            }
+
+            function settingsSignature(w) {
+                return JSON.stringify({ config: w.config, w: w.w, h: w.h });
+            }
+
+            function commitSettingsIfChanged() {
+                const draft = state.settingsDraft;
+                if (!draft) return false;
+
+                const w = state.widgets.find(item => item.id === draft.id);
+                if (!w) {
+                    state.settingsDraft = null;
+                    state.settingsBaseline = null;
+                    return false;
+                }
+
+                const current = settingsSignature(w);
+                const baseline = state.settingsBaseline;
+                if (baseline && current !== baseline) {
+                    commit('تغییر تنظیمات ویجت');
+                    state.settingsBaseline = current;
+                    return true;
+                }
+                return false;
+            }
+
+            function openSettings(w) {
+                if (!w) return;
+
+                if (state.settingsDraft && state.settingsDraft.id !== w.id) {
+                    commitSettingsIfChanged();
+                }
+
+                state.selectedId = w.id;
+                state.settingsDraft = { id: w.id, config: clone(w.config), w: w.w, h: w.h };
+                state.settingsBaseline = settingsSignature(w);
+                $('#dbSettings').classList.add('is-open');
+                $('#dbSettings').setAttribute('aria-hidden', 'false');
+                renderSettings(w);
+            }
+
+            function closeSettings(commitChanges = true) {
+                if (commitChanges) commitSettingsIfChanged();
+                state.settingsDraft = null;
+                state.settingsBaseline = null;
+                state.resizeMode = false;
+                $('#dbSettings').classList.remove('is-open');
+                $('#dbSettings').setAttribute('aria-hidden', 'true');
+            }
+
+            /* ================================================================
+               13. Chart System
+               ================================================================ */
+            const CHART_DEFAULT_COLORS = [
+                '#00BFFF',
+                '#008CFF',
+                '#00A8D6',
+                '#00C8C8',
+                '#00D9A5',
+                '#00E676',
+                '#39D353',
+                '#7CFF4F'
+            ];
+            function renderChart(w, container) {
+                if (!container) return;
+
+                if (container.__dbChart) {
+                    try { container.__dbChart.destroy(); } catch (ignore) { }
+                    container.__dbChart = null;
+                }
+
+                if (!window.Highcharts) {
+                    container.innerHTML = '<div class="db-chart-placeholder"><i class="bi bi-exclamation-triangle"></i><span>Highcharts بارگذاری نشده است.</span></div>';
+                    return;
+                }
+
+                const d = w.config.data || {};
+                const v = w.config.visual || {};
+
+                let type = d.chartType || 'line';
+
+                // نوع نمودار
+                if (w.type === 'lineChart') {
+                    type = d.chartType || 'line';
+                }
+
+                if (w.type === 'barChart') {
+                    type = d.barDirection === 'horizontal' ? 'bar' : 'column';
+                }
+
+                if (w.type === 'pieChart') {
+                    type = 'pie';
+                }
+
+                const font = state.fontFamily;
+                const position = d.legendPosition || 'bottom';
+                const horizontalLegend = position === 'top' || position === 'bottom';
+
+                // پالت رنگ پیش‌فرض نمودارها
+                //const defaultSeriesColors = [
+                //    '#00BFFF', // Deep Sky Blue
+                //    '#008CFF', // Blue
+                //    '#00A8D6', // Cyan Blue
+                //    '#00C8C8', // Cyan
+                //    '#00D9A5', // Aqua Green
+                //    '#00E676', // Green
+                //    '#39D353', // Bright Green
+                //    '#7CFF4F'  // Lime Green
+                //];
+
+                // تولید رنگ هر سری
+                function getSeriesColor(series, index) {
+
+                    // اگر کاربر رنگ دستی تعیین کرده باشد
+                    if (series && series.customColor && series.color) {
+                        return series.color;
+                    }
+
+                    // در غیر این صورت رنگ خودکار
+                    return CHART_DEFAULT_COLORS[
+                        index % CHART_DEFAULT_COLORS.length
+                    ];
+                }
+
+                const series = (d.series || []).map((item, index) => ({
+                    name: item.name || ('سری ' + toFa(index + 1)),
+                    data: (item.values || []).map(Number),
+                    colors: item.colors || [],
+                    color: getSeriesColor(item, index),
+
+                    marker: {
+                        enabled: d.marker !== false
+                    },
+
+                    shadow: !!d.shadow
+                }));
+
+                const options = {
+                    chart: {
+                        type,
+                        backgroundColor: 'transparent',
+                        animation: false,
+                        spacing: [8, 8, 8, 8],
+                        style: {
+                            fontFamily: font
+                        }
+                    },
+
+                    title: {
+                        text: null
+                    },
+
+                    credits: {
+                        enabled: false
+                    },
+
+                    accessibility: {
+                        enabled: false
+                    },
+
+                    legend: {
+                        enabled: d.legend !== false,
+                        align: position === 'left'
+                            ? 'left'
+                            : position === 'right'
+                                ? 'right'
+                                : 'center',
+
+                        verticalAlign: position === 'top'
+                            ? 'top'
+                            : position === 'bottom'
+                                ? 'bottom'
+                                : 'middle',
+
+                        layout: horizontalLegend
+                            ? 'horizontal'
+                            : 'vertical',
+
+                        itemStyle: {
+                            color: '#d5e8ee',
+                            fontFamily: font,
+                            fontSize: '10px',
+                            fontWeight: 'normal'
+                        }
+                    },
+
+                    xAxis: {
+                        categories: d.labels || [],
+
+                        title: {
+                            text: d.xTitle || null,
+                            style: {
+                                color: '#a9c0cc',
+                                fontFamily: font
+                            }
+                        },
+
+                        labels: {
+                            style: {
+                                color: '#b2c5ce',
+                                fontFamily: font,
+                                fontSize: '9px'
+                            }
+                        },
+
+                        gridLineWidth: d.grid === false ? 0 : 1,
+                        gridLineColor: 'rgba(255,255,255,.07)',
+                        lineColor: 'rgba(255,255,255,.12)'
+                    },
+
+                    yAxis: {
+                        min: d.yMin === '' || d.yMin == null
+                            ? undefined
+                            : Number(d.yMin),
+
+                        max: d.yMax === '' || d.yMax == null
+                            ? undefined
+                            : Number(d.yMax),
+
+                        title: {
+                            text: d.yTitle || null,
+                            style: {
+                                color: '#a9c0cc',
+                                fontFamily: font
+                            }
+                        },
+
+                        labels: {
+                            style: {
+                                color: '#b2c5ce',
+                                fontFamily: font,
+                                fontSize: '9px'
+                            }
+                        },
+
+                        gridLineWidth: d.grid === false ? 0 : 1,
+                        gridLineColor: 'rgba(255,255,255,.07)'
+                    },
+
+                    tooltip: {
+                        enabled: d.tooltip !== false,
+                        shared: type !== 'pie',
+                        useHTML: true,
+                        style: {
+                            fontFamily: font,
+                            fontSize: '11px'
+                        }
+                    },
+
+                    plotOptions: {
+                        series: {
+                            animation: false,
+                            lineWidth: Number(v.lineWidth) || 3,
+                            shadow: !!d.shadow,
+
+                            stacking: d.stacked
+                                ? 'normal'
+                                : undefined,
+
+                            dataLabels: {
+                                enabled: !!d.dataLabels,
+                                style: {
+                                    fontFamily: font,
+                                    textOutline: 'none',
+                                    color: '#fff'
+                                }
+                            }
+                        },
+
+                        pie: {
+                            showInLegend: true,
+                            borderWidth: 0,
+                            borderColor: 'transparent',
+                            innerSize: d.donut
+                                ? '55%'
+                                : '0%',
+
+                            dataLabels: {
+                                enabled: !!d.dataLabels,
+                                style: {
+                                    fontFamily: font,
+                                    textOutline: 'none',
+                                    color: '#fff'
+                                }
+                            }
+                        },
+
+                        column: {
+                            borderWidth: 0
+                        },
+
+                        bar: {
+                            borderWidth: 0
+                        }
+                    },
+
+                    series: type === 'pie'
+                        ? buildPieSeries(series, d.labels || [])
+                        : series
+                };
+
+                try {
+                    container.innerHTML = '';
+                    container.__dbChart = Highcharts.chart(container, options);
+                } catch (error) {
+                    container.__dbChart = null;
+                    container.innerHTML = '<div class="db-chart-placeholder">خطا در ساخت نمودار</div>';
+                }
+            }
+
+            function buildPieSeries(series, labels) {
+
+                const first = series[0] || {
+                    name: 'مقدار',
+                    data: [],
+                    colors: []
+                };
+
+                return [{
+                    type: 'pie',
+                    name: first.name || 'مقدار',
+
+                    data: labels.map((name, i) => {
+
+                        const slice = first.colors?.[i];
+
+                        return {
+                            name: name,
+                            y: Number(first.data[i]) || 0,
+
+                            color:
+                                slice?.customColor && slice?.color
+                                    ? slice.color
+                                    : CHART_DEFAULT_COLORS[
+                                    i % CHART_DEFAULT_COLORS.length
+                                    ]
+                        };
+                    })
+                }];
+            }
+
+            /* ================================================================
+               14. Data Table System
+               ================================================================ */
+            /* Table rendering is handled by renderTable(); widget data stays in config.data. */
+
+            /* ================================================================
+               15. Persistence
+               ================================================================ */
+            function snapshot() {
+                return clone({
+                    dashboardId: state.dashboardId,
+                    dashboardName: state.dashboardName,
+                    widgets: state.widgets
+                });
+            }
+
+            function normalizeLoaded(w) {
+                if (!w || !Registry[w.type]) return null;
+                w.config = deepMerge(Registry[w.type].defaults, w.config || {});
+                const c = Registry[w.type].constraints;
+                w.x = Math.max(0, Number(w.x) || 0);
+                w.y = Math.max(0, Number(w.y) || 0);
+                w.w = clamp(Number(w.w) || Registry[w.type].defaultSize.w, c.minW, Math.min(c.maxW, CFG.columns));
+                w.h = clamp(Number(w.h) || Registry[w.type].defaultSize.h, c.minH, c.maxH);
+                return w;
+            }
+
+            function restore(s, options = {}) {
+                const source = s || {};
+
+                state.dashboardId = source.dashboardId || 'default';
+                state.dashboardName = source.dashboardName || '';
+
+                state.widgets = (source.widgets || [])
+                    .map(normalizeLoaded)
+                    .filter(Boolean);
+
+                state.selectedId = null;
+                state.settingsDraft = null;
+                state.settingsBaseline = null;
+                state.resizeMode = false;
+                state.dirty = options.dirty ?? false;
+
+                const nameInput = $('#dbDashboardName');
+
+                if (nameInput) {
+                    nameInput.value = state.dashboardName;
+                }
+
+                renderCanvas();
+            }
+
+            async function save() {
+                commitSettingsIfChanged();
+
+                const payload = snapshot();
+                const dashboardName = document.getElementById('dbDashboardName')?.value.trim();
+
+                if (!dashboardName) {
+                    toast('لطفاً نام داشبورد را وارد کنید.', 'warning');
+                    return;
+                }
+
+                try {
+                    if (CFG.api.saveUrl) {
+
+                        const response = await fetch(CFG.api.saveUrl, {
+                            method: CFG.api.method,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                dashboardName: dashboardName,
+                                dashboardConfigJson: JSON.stringify(payload)
+                            })
+                        });
+
+                        if (!response.ok) throw new Error('save');
+
+                    } else {
+
+                        localStorage.setItem(
+                            CFG.storageKey,
+                            JSON.stringify(payload)
+                        );
+                    }
+
+                    state.dirty = false;
+                    toast('داشبورد با موفقیت ذخیره شد.', 'success');
+
+                } catch (error) {
+                    toast('ذخیره داشبورد انجام نشد.', 'error');
+                }
+            }
+
+            function load() {
+                try {
+                    if (CFG.api.loadUrl) return loadFromApi();
+                    const raw = localStorage.getItem(CFG.storageKey);
+                    if (raw) restore(JSON.parse(raw), { dirty: false });
+                } catch (error) {
+                    toast('خواندن داشبورد ذخیره‌شده ناموفق بود.', 'error');
+                }
+            }
+
+            async function loadFromApi() {
+                try {
+                    const response = await fetch(CFG.api.loadUrl, {
+                        method: 'GET'
+                    });
+
+                    const raw = await response.text();
+
+                    console.log('Load status:', response.status);
+                    console.log('Load raw:', raw);
+
+                    if (!response.ok) {
+                        throw new Error('Load HTTP Error');
+                    }
+
+                    if (!raw || raw === 'null') {
+                        console.log('No dashboard found.');
+                        return;
+                    }
+
+                    const result = JSON.parse(raw);
+
+                    console.log('Load result:', result);
+
+                    // JSON داشبورد
+                    const payload = JSON.parse(result.config);
+
+                    console.log('Load payload:', payload);
+
+                    restore(payload, { dirty: false });
+
+                    // نام واقعی داشبورد از دیتابیس
+                    state.dashboardName = result.name || '';
+
+                    const nameInput = document.getElementById('dbDashboardName');
+
+                    if (nameInput) {
+                        nameInput.value = state.dashboardName;
+                    }
+
+                    console.log('After restore - widgets:', state.widgets);
+                    console.log('After restore - name:', state.dashboardName);
+
+                } catch (error) {
+                    console.error('Load Dashboard Error:', error);
+                    toast('خواندن داشبورد از سرور ناموفق بود.', 'error');
+                }
+            }
+
+            /* ================================================================
+               18. Undo / Redo
+               ================================================================ */
+            function commit(label) {
+                const next = snapshot();
+                const previous = state.history[state.historyIndex]?.snapshot;
+                if (previous && JSON.stringify(previous) === JSON.stringify(next)) return false;
+
+                state.history = state.history.slice(0, state.historyIndex + 1);
+                state.history.push({ label, snapshot: next });
+
+                if (state.history.length > CFG.maxHistory) {
+                    state.history.shift();
+                }
+
+                state.historyIndex = state.history.length - 1;
+                state.dirty = true;
+                return true;
+            }
+
+            function undo() {
+                commitSettingsIfChanged();
+                if (state.historyIndex <= 0) {
+                    toast('عملی برای واگرد وجود ندارد.', 'error');
+                    return;
+                }
+                state.historyIndex--;
+                restore(state.history[state.historyIndex].snapshot, { dirty: true });
+            }
+
+            function redo() {
+                commitSettingsIfChanged();
+                if (state.historyIndex >= state.history.length - 1) {
+                    toast('عملی برای بازانجام وجود ندارد.', 'error');
+                    return;
+                }
+                state.historyIndex++;
+                restore(state.history[state.historyIndex].snapshot, { dirty: true });
+            }
+
+            /* ================================================================
+               19. Event Management
+               ================================================================ */
+            function duplicate(id) {
+                commitSettingsIfChanged();
+
+                const w = state.widgets.find(item => item.id === id);
+                if (!w) return;
+
+                const n = clone(w);
+                n.id = uid(w.type);
+                n.metadata = n.metadata || {};
+                n.metadata.createdAt = new Date().toISOString();
+
+                const p = nearestFree(n, w.x + 1, w.y);
+                n.x = p.x;
+                n.y = p.y;
+                state.widgets.push(n);
+                state.selectedId = n.id;
+
+                commit('کپی ویجت');
+                renderCanvas();
+                openSettings(n);
+            }
+
+            function remove(id) {
+                commitSettingsIfChanged();
+
+                const index = state.widgets.findIndex(item => item.id === id);
+                if (index < 0) return;
+
+                state.widgets.splice(index, 1);
+                if (state.selectedId === id) {
+                    state.selectedId = null;
+                    closeSettings(false);
+                }
+
+                commit('حذف ویجت');
+                renderCanvas();
+            }
+
+            function clearAll() {
+                commitSettingsIfChanged();
+                if (!state.widgets.length) return;
+
+                state.widgets = [];
+                state.selectedId = null;
+                closeSettings(false);
+                commit('پاک کردن داشبورد');
+                renderCanvas();
+            }
+
+            function setupSettings() {
+                const body = $('#dbSettingsBody');
+                if (!body) return;
+
+                body.addEventListener('input', e => {
+                    if (!e.target.dataset.setting) return;
+                    syncSettingsToWidget({ notify: false });
+                });
+
+                body.addEventListener('change', e => {
+                    const path = e.target.dataset.setting;
+                    if (!path) return;
+
+                    if (path === 'resizeMode') {
+                        state.resizeMode = e.target.value === '1';
+                        renderCanvas();
+
+                        const w = state.widgets.find(item => item.id === state.selectedId);
+                        if (w) renderSettings(w);
+
+                        return;
+                    }
+
+                    // فعال / غیرفعال کردن رنگ دستی سری
+                    // فعال / غیرفعال کردن رنگ دستی سری
+                    const colorMatch = path.match(/^data\.series\.(\d+)\.customColor$/);
+
+                    if (colorMatch) {
+
+                        const index = Number(colorMatch[1]);
+
+                        const colorInput = body.querySelector(
+                            `[data-setting="data.series.${index}.color"]`
+                        );
+
+                        if (colorInput) {
+                            colorInput.disabled = !e.target.checked;
+                        }
+                    }
+
+
+                    // فعال / غیرفعال کردن رنگ دستی Pie
+                    const pieColorMatch = path.match(
+                        /^data\.series\.(\d+)\.colors\.(\d+)\.customColor$/
+                    );
+
+                    if (pieColorMatch) {
+
+                        const seriesIndex = Number(pieColorMatch[1]);
+                        const colorIndex = Number(pieColorMatch[2]);
+
+                        const colorInput = body.querySelector(
+                            `[data-setting="data.series.${seriesIndex}.colors.${colorIndex}.color"]`
+                        );
+
+                        if (colorInput) {
+                            colorInput.disabled = !e.target.checked;
+                        }
+                    }
+
+                    syncSettingsToWidget({ notify: true });
+                });
+
+                body.addEventListener('click', e => {
+                    const addSeries = e.target.closest('[data-chart-add-series]');
+                    if (addSeries) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const draft = state.settingsDraft;
+                        if (!draft) return;
+
+                        applySettingsToDraft();
+                        const series = draft.config.data.series || (draft.config.data.series = []);
+                        const labels = draft.config.data.labels || [];
+                        const index = series.length;
+                        series.push({
+                            name: 'سری ' + toFa(index + 1),
+                            values: labels.length ? labels.map((_, i) => (i + 1) * 10) : [10, 20, 30, 40]
+                        });
+
+                        syncSettingsToWidget({ notify: false });
+                        const w = state.widgets.find(item => item.id === draft.id);
+                        if (w) renderSettings(w);
+                        return;
+                    }
+
+                    const removeSeries = e.target.closest('[data-series-remove]');
+
+                    if (removeSeries) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const draft = state.settingsDraft;
+                        if (!draft) return;
+
+                        applySettingsToDraft();
+
+                        const index = Number(removeSeries.dataset.seriesRemove);
+                        const series = draft.config.data.series || [];
+
+                        if (
+                            Number.isInteger(index) &&
+                            index >= 0 &&
+                            index < series.length &&
+                            series.length > 1
+                        ) {
+                            series.splice(index, 1);
+                        }
+
+                        draft.config.data.series = series;
+
+                        const w = state.widgets.find(item => item.id === draft.id);
+
+                        if (w) {
+                            w.config = clone(draft.config);
+                            state.dirty = true;
+
+                            renderSettings(w);
+                            renderCanvas();
+
+                            const updated = state.widgets.find(item => item.id === draft.id);
+
+                            if (updated) {
+                                state.selectedId = updated.id;
+                                state.settingsDraft = {
+                                    id: updated.id,
+                                    config: clone(updated.config),
+                                    w: updated.w,
+                                    h: updated.h
+                                };
+                            }
+                        }
+
+                        return;
+                    }
+                });
+            }
+
+            function setupGlobal() {
+                root.addEventListener('click', e => {
+                    const action = e.target.closest('[data-db-action]');
+                    if (!action) return;
+
+                    switch (action.dataset.dbAction) {
+                        case 'undo': undo(); break;
+                        case 'redo': redo(); break;
+                        case 'save': save(); break;
+                        case 'clear': clearAll(); break;
+                        case 'close-settings': closeSettings(true); break;
+                        case 'fit': {
+                            const viewport = root.querySelector('.db-canvas-scroll');
+                            if (viewport) viewport.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+                            break;
+                        }
+                    }
+                });
+
+                const search = $('#dbWidgetSearch');
+                if (search) search.addEventListener('input', renderLibrary);
+
+                window.addEventListener('resize', () => {
+                    state.fontFamily = pageFont();
+                    root.style.setProperty('--db-page-font', state.fontFamily);
+                    renderCanvas();
+                });
+            }
+
+            /* ================================================================
+               20. Utility Functions
+               ================================================================ */
+            function initHistory() { state.history = [{ label: 'شروع', snapshot: snapshot() }]; state.historyIndex = 0 }
+
+            /* ================================================================
+               21. Initialization
+               ================================================================ */
+            renderLibrary(); setupDrag(); setupResize(); setupSelection(); setupSettings(); setupGlobal(); load(); initHistory(); renderCanvas();
+
+            window.DashboardBuilder = { state, Registry, config: CFG, addWidget, remove, duplicate, save, load, undo, redo, validate, render: renderCanvas };
+        })(window, document);
+
+    </script>
+</body>
+</html>

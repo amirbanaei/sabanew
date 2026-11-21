@@ -1,0 +1,550 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "آموزش دستیار هوشمند";
+}
+
+<style>
+    .teach-root {
+        --border: rgba(121, 203, 255, .16);
+        --cyan: #33edff;
+        --green: #50f1ae;
+        --danger: #ff6688;
+        --warn: #ffcb6b;
+        --text: #ecf8ff;
+        --muted: #8ba3b9;
+        /* جریان عادی صفحه: اسکرول را خود Layout انجام می‌دهد و پس‌زمینه‌ی Layout دیده می‌شود */
+        padding: 18px 18px 60px;
+        direction: rtl;
+        color: var(--text);
+        font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+    }
+
+        .teach-root, .teach-root *, .teach-root *::before, .teach-root *::after {
+            box-sizing: border-box;
+        }
+
+            .teach-root .wrap {
+                max-width: 1100px;
+                margin: 0 auto;
+                display: grid;
+                gap: 16px;
+            }
+
+            .teach-root h1 {
+                margin: 0;
+                font-size: 1.1rem;
+                color: var(--text);
+            }
+
+            .teach-root h2 {
+                margin: 0 0 10px;
+                font-size: .95rem;
+                color: var(--text);
+            }
+
+            .teach-root .card {
+                padding: 16px;
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                background: rgba(13, 29, 52, .85);
+            }
+
+            .teach-root .warn {
+                border-color: rgba(255, 203, 107, .35);
+                background: rgba(255, 203, 107, .06);
+                color: #ffe3a3;
+                font-size: .78rem;
+                line-height: 1.9;
+            }
+
+                .teach-root .warn ul {
+                    margin: 6px 0 0;
+                    padding-right: 18px;
+                }
+
+            .teach-root label {
+                display: block;
+                margin: 10px 0 6px;
+                color: var(--muted);
+                font-size: .76rem;
+            }
+
+            .teach-root textarea, .teach-root input[type=text], .teach-root input[type=search] {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                outline: 0;
+                color: var(--text);
+                background: rgba(4, 13, 25, .75);
+                font: inherit;
+                font-size: .82rem;
+                line-height: 1.8;
+            }
+
+                .teach-root textarea:focus, .teach-root input:focus {
+                    border-color: rgba(51, 237, 255, .5);
+                }
+
+            .teach-root textarea {
+                min-height: 110px;
+                resize: vertical;
+            }
+
+            .teach-root .row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                margin-top: 12px;
+            }
+
+            .teach-root button, .teach-root .btn {
+                padding: 9px 16px;
+                border: 1px solid var(--border);
+                border-radius: 11px;
+                color: var(--text);
+                background: rgba(255, 255, 255, .04);
+                cursor: pointer;
+                font: inherit;
+                font-size: .78rem;
+                text-decoration: none;
+            }
+
+                .teach-root button:hover, .teach-root .btn:hover {
+                    border-color: rgba(51, 237, 255, .45);
+                    color: var(--cyan);
+                }
+
+                .teach-root button.primary {
+                    color: #031119;
+                    border-color: transparent;
+                    background: linear-gradient(145deg, var(--cyan), #65a9ff);
+                }
+
+                    .teach-root button.primary:hover {
+                        color: #031119;
+                    }
+
+                .teach-root button.danger:hover {
+                    color: var(--danger);
+                    border-color: rgba(255, 102, 136, .5);
+                }
+
+                .teach-root button:disabled {
+                    opacity: .4;
+                    cursor: not-allowed;
+                }
+
+            .teach-root .answer {
+                margin-top: 10px;
+                padding: 12px;
+                border: 1px dashed var(--border);
+                border-radius: 12px;
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+                font-size: .82rem;
+                line-height: 1.95;
+                background: rgba(16, 34, 56, .6);
+            }
+
+                .teach-root .answer.error {
+                    color: var(--danger);
+                }
+
+            .teach-root .tag {
+                display: inline-block;
+                padding: 2px 9px;
+                border-radius: 99px;
+                color: var(--cyan);
+                background: rgba(51, 237, 255, .08);
+                font-size: .68rem;
+            }
+
+            .teach-root .status {
+                min-height: 20px;
+                font-size: .76rem;
+                color: var(--muted);
+            }
+
+                .teach-root .status.ok {
+                    color: var(--green);
+                }
+
+                .teach-root .status.bad {
+                    color: var(--danger);
+                }
+
+            .teach-root .item {
+                padding: 12px;
+                margin-top: 10px;
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                background: rgba(8, 22, 39, .6);
+            }
+
+                .teach-root .item.off {
+                    opacity: .5;
+                }
+
+                .teach-root .item .q {
+                    font-size: .84rem;
+                    font-weight: bold;
+                    line-height: 1.8;
+                    overflow-wrap: anywhere;
+                }
+
+                .teach-root .item .a {
+                    margin-top: 6px;
+                    color: #c9dcea;
+                    font-size: .78rem;
+                    line-height: 1.9;
+                    white-space: pre-wrap;
+                    overflow-wrap: anywhere;
+                }
+
+                .teach-root .item .meta {
+                    margin-top: 8px;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    align-items: center;
+                    color: var(--muted);
+                    font-size: .68rem;
+                }
+
+                    .teach-root .item .meta button {
+                        padding: 4px 10px;
+                        font-size: .7rem;
+                    }
+
+    @@media (max-width: 600px) {
+        .teach-root {
+            padding: 10px;
+        }
+    }
+</style>
+
+<div class="teach-root">
+    <div class="wrap">
+        <div class="card warn">
+            <b>نکته‌های مهم قبل از شروع:</b>
+            <ul>
+                <li>سؤال‌های آزمایشی با <b>داده‌ی فیش خود شما</b> جواب داده می‌شوند؛ پس پاسخ مدل شامل مبلغ‌های واقعی شماست.</li>
+                <li>در «پاسخ مطلوب» <b>عدد، مبلغ، نام شخص و کدملی ننویسید.</b> فقط ساختار، لحن و توضیح دلیل‌ها را بنویسید؛ اعداد را دستیار از داده‌ی خود هر کاربر می‌گیرد.</li>
+                <li>نمونه‌های ذخیره‌شده برای سؤال‌های شبیه به همین سؤال به مدل داده می‌شوند. هر مدلی که بعداً تنظیم کنید از همین نمونه‌ها استفاده می‌کند.</li>
+            </ul>
+        </div>
+
+        <form id="askForm" class="card" autocomplete="off">
+            @Html.AntiForgeryToken()
+            <h2>۱) سؤال آزمایشی بپرسید</h2>
+            <label for="askInput">سؤال (حداکثر ۵۰۰ کاراکتر)</label>
+            <input type="text" id="askInput" maxlength="500" placeholder="مثلاً: چرا فیش من در مهر ۱۴۰۴ نسبت به تیر ۱۴۰۴ کم شده است؟" />
+            <div class="row">
+                <button type="submit" class="primary" id="askButton">بپرس</button>
+                <span class="status" id="askStatus"></span>
+            </div>
+            <div id="modelBox" style="display:none">
+                <label>پاسخ فعلی دستیار <span class="tag" id="intentTag"></span></label>
+                <div class="answer" id="modelAnswer"></div>
+            </div>
+        </form>
+
+        <div class="card" id="teachCard">
+            <h2>۲) پاسخ مطلوب را بنویسید و ذخیره کنید <span class="tag" id="editTag" style="display:none">حالت ویرایش</span></h2>
+            <label for="idealInput">پاسخی که دستیار باید بدهد (بدون عدد و نام)</label>
+            <textarea id="idealInput" maxlength="4000" placeholder="پاسخ درست را اینجا بنویسید یا از «کپی پاسخ دستیار» شروع و آن را اصلاح کنید."></textarea>
+            <label for="notesInput">یادداشت (اختیاری)</label>
+            <input type="text" id="notesInput" maxlength="500" placeholder="مثلاً: برای سؤال‌های مربوط به کاهش حقوق" />
+            <div class="row">
+                <button type="button" id="copyButton">کپی پاسخ دستیار به کادر</button>
+                <button type="button" class="primary" id="saveButton">ذخیره به‌عنوان نمونه آموزشی</button>
+                <button type="button" id="cancelEditButton" style="display:none">انصراف از ویرایش</button>
+                <span class="status" id="saveStatus"></span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>۳) نمونه‌های ذخیره‌شده <span class="tag" id="countTag">0</span></h2>
+            <div class="row" style="margin-top:0">
+                <input type="search" id="filterInput" placeholder="جستجو در سؤال و پاسخ…" style="flex:1; min-width:200px" />
+                <a class="btn" href="@Url.Action("TrainExport", "Hosh", new { area = "Setting", format = "json" })">دانلود JSON</a>
+                <a class="btn" href="@Url.Action("TrainExport", "Hosh", new { area = "Setting", format = "jsonl" })" title="قالب آموزش مدل (fine-tuning)">دانلود JSONL</a>
+            </div>
+            <div id="list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        "use strict";
+
+        var urls = {
+            ask: '@Url.Action("TrainAsk", "Hosh", new { area = "Setting" })',
+            save: '@Url.Action("TrainSave", "Hosh", new { area = "Setting" })',
+            list: '@Url.Action("TrainList", "Hosh", new { area = "Setting" })',
+            toggle: '@Url.Action("TrainToggle", "Hosh", new { area = "Setting" })',
+            del: '@Url.Action("TrainDelete", "Hosh", new { area = "Setting" })'
+        };
+
+        var token = document.querySelector('#askForm input[name="__RequestVerificationToken"]').value;
+        var askInput = document.getElementById("askInput");
+        var askButton = document.getElementById("askButton");
+        var askStatus = document.getElementById("askStatus");
+        var modelBox = document.getElementById("modelBox");
+        var modelAnswer = document.getElementById("modelAnswer");
+        var intentTag = document.getElementById("intentTag");
+        var idealInput = document.getElementById("idealInput");
+        var notesInput = document.getElementById("notesInput");
+        var saveButton = document.getElementById("saveButton");
+        var copyButton = document.getElementById("copyButton");
+        var cancelEditButton = document.getElementById("cancelEditButton");
+        var saveStatus = document.getElementById("saveStatus");
+        var editTag = document.getElementById("editTag");
+        var listEl = document.getElementById("list");
+        var countTag = document.getElementById("countTag");
+        var filterInput = document.getElementById("filterInput");
+
+        var lastQuestion = "";
+        var lastModelAnswer = "";
+        var lastIntent = "";
+        var editingId = null;
+        var items = [];
+
+        function setStatus(el, text, kind) {
+            el.textContent = text || "";
+            el.className = "status" + (kind ? " " + kind : "");
+        }
+
+        async function post(url, data) {
+            var body = new URLSearchParams();
+            Object.keys(data).forEach(function (key) {
+                if (data[key] !== null && data[key] !== undefined) {
+                    body.append(key, data[key]);
+                }
+            });
+            body.append("__RequestVerificationToken", token);
+
+            var response = await fetch(url, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: body.toString()
+            });
+
+            var text = await response.text();
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                return { success: false, message: "پاسخ سرور معتبر نیست (کد " + response.status + ")." };
+            }
+        }
+
+        // ---- ۱) سؤال آزمایشی ----
+        document.getElementById("askForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            var question = askInput.value.trim();
+            if (!question) {
+                setStatus(askStatus, "سؤال را وارد کنید.", "bad");
+                return;
+            }
+
+            askButton.disabled = true;
+            setStatus(askStatus, "در حال دریافت پاسخ…");
+
+            try {
+                var data = await post(urls.ask, { message: question });
+
+                modelBox.style.display = "block";
+                if (data.success) {
+                    lastQuestion = question;
+                    lastModelAnswer = data.answer;
+                    lastIntent = data.intent || "";
+                    intentTag.textContent = "intent: " + lastIntent;
+                    modelAnswer.className = "answer";
+                    modelAnswer.textContent = data.answer;
+                    setStatus(askStatus, data.seconds ? "زمان پاسخ: " + data.seconds + " ثانیه" : "");
+                } else {
+                    modelAnswer.className = "answer error";
+                    modelAnswer.textContent = data.message || "خطا در دریافت پاسخ";
+                    setStatus(askStatus, "");
+                }
+            } catch (error) {
+                setStatus(askStatus, "ارتباط با سرور برقرار نشد.", "bad");
+            } finally {
+                askButton.disabled = false;
+            }
+        });
+
+        // ---- ۲) ذخیره / ویرایش ----
+        copyButton.addEventListener("click", function () {
+            if (!lastModelAnswer) {
+                setStatus(saveStatus, "ابتدا یک سؤال آزمایشی بپرسید.", "bad");
+                return;
+            }
+            idealInput.value = lastModelAnswer;
+            idealInput.focus();
+        });
+
+        function leaveEditMode() {
+            editingId = null;
+            editTag.style.display = "none";
+            cancelEditButton.style.display = "none";
+            saveButton.textContent = "ذخیره به‌عنوان نمونه آموزشی";
+        }
+
+        cancelEditButton.addEventListener("click", function () {
+            leaveEditMode();
+            idealInput.value = "";
+            notesInput.value = "";
+            setStatus(saveStatus, "");
+        });
+
+        saveButton.addEventListener("click", async function () {
+            var question = editingId ? (askInput.value.trim() || lastQuestion) : (lastQuestion || askInput.value.trim());
+            var ideal = idealInput.value.trim();
+
+            if (!question) {
+                setStatus(saveStatus, "ابتدا سؤال را بپرسید یا در کادر سؤال بنویسید.", "bad");
+                return;
+            }
+            if (!ideal) {
+                setStatus(saveStatus, "پاسخ مطلوب را بنویسید.", "bad");
+                return;
+            }
+
+            saveButton.disabled = true;
+            setStatus(saveStatus, "در حال ذخیره…");
+
+            try {
+                var data = await post(urls.save, {
+                    id: editingId,
+                    question: question,
+                    idealAnswer: ideal,
+                    modelAnswer: lastModelAnswer,
+                    intent: lastIntent,
+                    notes: notesInput.value.trim()
+                });
+
+                if (data.success) {
+                    setStatus(saveStatus, editingId ? "ویرایش ذخیره شد." : "ذخیره شد. می‌توانید همان سؤال را دوباره بپرسید و نتیجه را ببینید.", "ok");
+                    leaveEditMode();
+                    idealInput.value = "";
+                    notesInput.value = "";
+                    await loadList();
+                } else {
+                    setStatus(saveStatus, data.message || "ذخیره انجام نشد.", "bad");
+                }
+            } catch (error) {
+                setStatus(saveStatus, "ارتباط با سرور برقرار نشد.", "bad");
+            } finally {
+                saveButton.disabled = false;
+            }
+        });
+
+        // ---- ۳) فهرست ----
+        function render() {
+            var term = filterInput.value.trim().toLowerCase();
+            var shown = items.filter(function (item) {
+                if (!term) { return true; }
+                return (item.question + " " + item.idealAnswer).toLowerCase().indexOf(term) >= 0;
+            });
+
+            countTag.textContent = items.length;
+            listEl.textContent = "";
+
+            if (shown.length === 0) {
+                var empty = document.createElement("p");
+                empty.className = "status";
+                empty.textContent = items.length === 0 ? "هنوز نمونه‌ای ذخیره نشده است." : "موردی پیدا نشد.";
+                listEl.appendChild(empty);
+                return;
+            }
+
+            shown.forEach(function (item) {
+                var box = document.createElement("div");
+                box.className = "item" + (item.isActive ? "" : " off");
+
+                var q = document.createElement("div");
+                q.className = "q";
+                q.textContent = item.question;
+
+                var a = document.createElement("div");
+                a.className = "a";
+                a.textContent = item.idealAnswer;
+
+                var meta = document.createElement("div");
+                meta.className = "meta";
+
+                var date = document.createElement("span");
+                date.textContent = item.createdAt + (item.notes ? " • " + item.notes : "");
+                meta.appendChild(date);
+
+                var editButton = document.createElement("button");
+                editButton.type = "button";
+                editButton.textContent = "ویرایش";
+                editButton.addEventListener("click", function () {
+                    editingId = item.id;
+                    askInput.value = item.question;
+                    idealInput.value = item.idealAnswer;
+                    notesInput.value = item.notes || "";
+                    editTag.style.display = "inline-block";
+                    cancelEditButton.style.display = "inline-block";
+                    saveButton.textContent = "ذخیره‌ی ویرایش";
+                    setStatus(saveStatus, "");
+                    document.getElementById("teachCard").scrollIntoView({ block: "center" });
+                });
+                meta.appendChild(editButton);
+
+                var toggleButton = document.createElement("button");
+                toggleButton.type = "button";
+                toggleButton.textContent = item.isActive ? "غیرفعال کن" : "فعال کن";
+                toggleButton.addEventListener("click", async function () {
+                    var data = await post(urls.toggle, { id: item.id, isActive: !item.isActive });
+                    if (data.success) { await loadList(); }
+                });
+                meta.appendChild(toggleButton);
+
+                var deleteButton = document.createElement("button");
+                deleteButton.type = "button";
+                deleteButton.className = "danger";
+                deleteButton.textContent = "حذف";
+                deleteButton.addEventListener("click", async function () {
+                    if (!window.confirm("این نمونه حذف شود؟")) { return; }
+                    var data = await post(urls.del, { id: item.id });
+                    if (data.success) { await loadList(); }
+                });
+                meta.appendChild(deleteButton);
+
+                box.appendChild(q);
+                box.appendChild(a);
+                box.appendChild(meta);
+                listEl.appendChild(box);
+            });
+        }
+
+        async function loadList() {
+            try {
+                var response = await fetch(urls.list, { credentials: "same-origin" });
+                var data = await response.json();
+                if (data.success) {
+                    items = data.items || [];
+                    render();
+                } else {
+                    listEl.textContent = data.message || "خواندن فهرست انجام نشد.";
+                }
+            } catch (error) {
+                listEl.textContent = "خواندن فهرست انجام نشد.";
+            }
+        }
+
+        filterInput.addEventListener("input", render);
+        loadList();
+    })();
+</script>

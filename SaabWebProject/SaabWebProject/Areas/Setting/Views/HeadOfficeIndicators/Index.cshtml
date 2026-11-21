@@ -1,0 +1,338 @@
+﻿@model SaabWebProject.Models.ViewModels.Setting.HeadOfficeIndicatorPageViewModel
+@{
+    ViewBag.Title = "تعریف شاخص اصلی";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    Response.ContentEncoding = System.Text.Encoding.UTF8;
+    Response.Charset = "utf-8";
+}
+
+<nav dir="rtl" style="padding:12px" aria-label="ناوبری تنظیمات">
+<a href="@Url.Action("Index", "ProcedureDesigner", new { area = "Setting" })" target="_blank" rel="noopener">طراحی و ویرایش پروسیجر</a> |
+<a href="@Url.Action("Index", "HeadOfficeIndicators", new { area = "Setting" })" target="_blank" rel="noopener">شاخص اصلی</a> |
+<a href="@Url.Action("Index", "HeadOfficeReferral", new { area = "Setting", tab = "lists" })" target="_blank" rel="noopener">عنوان لیست</a>
+</nav>
+<style>
+    .hoi-page {
+        --hoi-cyan: #40f4ff;
+        --hoi-cyan-soft: rgba(64, 244, 255, .16);
+        --hoi-violet: #9d7cff;
+        --hoi-panel: rgba(10, 24, 39, .64);
+        --hoi-panel-strong: rgba(10, 24, 39, .86);
+        --hoi-line: rgba(139, 240, 255, .22);
+        direction: rtl;
+        position: relative;
+        isolation: isolate;
+        min-height: 70vh;
+        padding: 18px 16px 36px;
+        color: #edfaff;
+        text-align: right;
+    }
+    .hoi-page::before, .hoi-page::after {
+        content: "";
+        position: fixed;
+        z-index: -1;
+        width: 340px;
+        height: 340px;
+        border-radius: 50%;
+        pointer-events: none;
+        filter: blur(105px);
+        opacity: .16;
+    }
+    .hoi-page::before { top: 9%; right: 12%; background: var(--hoi-cyan); }
+    .hoi-page::after { bottom: 5%; left: 8%; background: var(--hoi-violet); }
+    .hoi-hero, .hoi-card {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--hoi-line);
+        background: linear-gradient(145deg, rgba(20, 45, 64, .75), rgba(7, 17, 31, .66));
+        box-shadow: 0 18px 45px rgba(0, 0, 0, .26), inset 0 1px 0 rgba(255, 255, 255, .07);
+        backdrop-filter: blur(18px) saturate(145%);
+        -webkit-backdrop-filter: blur(18px) saturate(145%);
+    }
+    .hoi-hero {
+        padding: 25px 30px;
+        margin-bottom: 22px;
+        border-radius: 20px;
+        background: linear-gradient(120deg, rgba(13, 41, 66, .86), rgba(12, 75, 84, .62));
+    }
+    .hoi-hero::before {
+        content: "";
+        position: absolute;
+        top: -70px;
+        left: -40px;
+        width: 250px;
+        height: 180px;
+        border-radius: 50%;
+        background: rgba(64, 244, 255, .15);
+        filter: blur(48px);
+    }
+    .hoi-hero::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 38%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--hoi-cyan));
+        box-shadow: 0 0 18px var(--hoi-cyan);
+    }
+    .hoi-hero h3 { position: relative; margin: 0 0 9px; color: #fff; font-size: 25px; font-weight: 900; text-shadow: 0 0 20px rgba(64, 244, 255, .28); }
+    .hoi-hero h3 i { color: var(--hoi-cyan); filter: drop-shadow(0 0 7px rgba(64, 244, 255, .72)); }
+    .hoi-hero p { position: relative; max-width: 920px; margin: 0; color: rgba(232, 250, 255, .75); line-height: 2; }
+    .hoi-card { padding: 24px; margin-bottom: 22px; border-radius: 18px; transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease; }
+    .hoi-card:hover { border-color: rgba(64, 244, 255, .35); box-shadow: 0 20px 50px rgba(0, 0, 0, .3), 0 0 28px rgba(64, 244, 255, .05); }
+    .hoi-title { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: #f4fdff; font-size: 17px; font-weight: 900; }
+    .hoi-title::before { content: ""; width: 4px; height: 22px; border-radius: 8px; background: linear-gradient(var(--hoi-cyan), var(--hoi-violet)); box-shadow: 0 0 14px rgba(64, 244, 255, .65); }
+    .hoi-page label { margin-bottom: 8px; color: rgba(235, 250, 255, .83); font-weight: 700; }
+    .hoi-required { color: #ff6d93; text-shadow: 0 0 9px rgba(255, 109, 147, .7); }
+    .hoi-page .form-control {
+        min-height: 46px;
+        color: #f5fdff;
+        border: 1px solid rgba(139, 240, 255, .22);
+        border-radius: 11px;
+        background: rgba(3, 12, 23, .58);
+        box-shadow: inset 0 1px 6px rgba(0, 0, 0, .2);
+        transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .hoi-page .form-control::placeholder { color: rgba(220, 241, 246, .38); }
+    .hoi-page .form-control:focus { color: #fff; border-color: var(--hoi-cyan); background: rgba(5, 20, 32, .82); box-shadow: 0 0 0 3px rgba(64, 244, 255, .1), 0 0 18px rgba(64, 244, 255, .14); }
+    .hoi-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .hoi-page .btn { border-radius: 10px; font-weight: 800; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .hoi-page .btn:hover { transform: translateY(-1px); }
+    .hoi-page .btn-primary { color: #03161c; border: 0; background: linear-gradient(135deg, #36f0ff, #6bc4ff); box-shadow: 0 8px 22px rgba(54, 240, 255, .18), 0 0 15px rgba(54, 240, 255, .12); }
+    .hoi-page .btn-primary:hover { color: #03161c; box-shadow: 0 10px 28px rgba(54, 240, 255, .27), 0 0 24px rgba(54, 240, 255, .2); }
+    .hoi-page .btn-light, .hoi-page .btn-outline-primary, .hoi-page .btn-outline-danger { color: #e8faff; border-color: rgba(139, 240, 255, .27) !important; background: rgba(255, 255, 255, .045); }
+    .hoi-page .btn-outline-primary:hover { color: #06151b; border-color: var(--hoi-cyan) !important; background: var(--hoi-cyan); box-shadow: 0 0 17px rgba(64, 244, 255, .25); }
+    .hoi-page .btn-outline-danger { color: #ff91ae; border-color: rgba(255, 109, 147, .35) !important; }
+    .hoi-page .btn-outline-danger:hover { color: #fff; background: rgba(255, 70, 118, .78); box-shadow: 0 0 18px rgba(255, 70, 118, .24); }
+    .hoi-table { --bs-table-bg: transparent; --bs-table-color: #e8f7fb; --bs-table-hover-bg: rgba(64, 244, 255, .055); --bs-table-hover-color: #fff; color: #e8f7fb; }
+    .hoi-table th { padding: 13px 14px; white-space: nowrap; color: #97eaf1; border: 0; border-bottom: 1px solid rgba(139, 240, 255, .2); background: rgba(64, 244, 255, .065); }
+    .hoi-table td { padding: 14px; border-color: rgba(255, 255, 255, .065); }
+    .hoi-table td, .hoi-table th { vertical-align: middle !important; }
+    .hoi-empty { padding: 42px 10px !important; color: rgba(222, 243, 248, .48) !important; text-align: center; }
+    .hoi-unit { display: inline-block; min-width: 64px; padding: 6px 12px; color: var(--hoi-cyan); text-align: center; border: 1px solid rgba(64, 244, 255, .25); border-radius: 999px; background: var(--hoi-cyan-soft); font-weight: 800; box-shadow: inset 0 0 14px rgba(64, 244, 255, .04); }
+    .hoi-page .badge { padding: 7px 11px; color: var(--hoi-cyan); border: 1px solid rgba(64, 244, 255, .24); border-radius: 999px; background: rgba(64, 244, 255, .1) !important; }
+    .hoi-page .alert { color: #eefcff; border: 1px solid rgba(139, 240, 255, .18); border-radius: 12px; background: rgba(10, 24, 39, .74); backdrop-filter: blur(12px); }
+    .hoi-page .alert-success { border-color: rgba(73, 255, 175, .32); box-shadow: inset 3px 0 #49ffaf; }
+    .hoi-page .alert-danger { border-color: rgba(255, 109, 147, .35); box-shadow: inset 3px 0 #ff6d93; }
+    .hoi-validation ul { margin-bottom: 0; }
+    /* حالت فشرده: بیشترین اطلاعات با کمترین اسکرول */
+    .hoi-page { padding: 8px 8px 18px; font-size: 12.5px; }
+    .hoi-hero { padding: 13px 18px; margin-bottom: 10px; border-radius: 14px; }
+    .hoi-hero h3 { margin-bottom: 3px; font-size: 19px; }
+    .hoi-hero p { overflow: hidden; font-size: 11.5px; line-height: 1.65; text-overflow: ellipsis; white-space: nowrap; }
+    .hoi-card { padding: 13px 15px; margin-bottom: 10px; border-radius: 14px; }
+    .hoi-title { margin-bottom: 10px; font-size: 14px; }
+    .hoi-title::before { height: 17px; }
+    .hoi-page label { margin-bottom: 4px; font-size: 11.5px; }
+    .hoi-page .mb-3 { margin-bottom: .45rem !important; }
+    .hoi-page .form-control { min-height: 34px; height: 34px; padding: 5px 9px; border-radius: 8px; font-size: 12px; }
+    .hoi-page input.form-control, .hoi-page textarea.form-control { margin-bottom: 0 !important; border-width: 1px !important; }
+    .hoi-page .btn { min-height: 32px; padding: 5px 10px; border-radius: 8px; font-size: 11.5px; }
+    .hoi-page button.btn-primary[type=submit] { flex: 0 0 auto !important; min-width: 88px; min-height: 25px; padding: 3px 9px; font-size: 9.5px; line-height: 1.35; }
+    .hoi-table th, .hoi-table td { padding: 7px 10px; font-size: 11.5px; }
+    .hoi-table .hoi-filter-row th { padding: 4px 6px; background: rgba(3, 12, 23, .42); }
+    .hoi-column-filter { width: 100%; height: 27px; padding: 3px 7px; color: #eaffff; border: 1px solid rgba(64, 244, 255, .18); border-radius: 6px; outline: 0; background: rgba(2, 10, 19, .68); font-size: 10px; }
+    .hoi-page .hoi-column-filter { margin-bottom: 0 !important; border-width: 1px !important; }
+    .hoi-column-filter:focus { border-color: var(--hoi-cyan); box-shadow: 0 0 10px rgba(64, 244, 255, .14); }
+    .hoi-column-filter::placeholder { color: rgba(220, 241, 246, .34); }
+    .hoi-unit { min-width: 52px; padding: 3px 8px; font-size: 11px; }
+    .hoi-page .badge { padding: 4px 8px; font-size: 10px; }
+    .hoi-empty { padding: 18px 8px !important; }
+    @@media (max-width: 767px) { .hoi-page { padding: 6px 2px 16px; } .hoi-hero, .hoi-card { padding: 12px; border-radius: 11px; } .hoi-hero p { white-space: normal; } .hoi-table { min-width: 590px; } }
+    @@media (prefers-reduced-motion: reduce) { .hoi-card, .hoi-page .btn, .hoi-page .form-control { transition: none; } }
+</style>
+
+<div class="container-fluid hoi-page">
+    <div class="hoi-hero">
+        <h3><i class="bi bi-speedometer2 ms-2"></i>تعریف شاخص اصلی</h3>
+        <p>عنوان و واحد شاخص‌های ستادی ارجاع متمرکز را در این بخش تعریف کنید؛ مانند وصول (%)، تلفات (%) و نرخ خاموشی (تعداد).</p>
+    </div>
+
+    @if (TempData["HeadOfficeIndicatorSuccess"] != null)
+    {
+        <div class="alert alert-success">@TempData["HeadOfficeIndicatorSuccess"]</div>
+    }
+    @if (TempData["HeadOfficeIndicatorError"] != null)
+    {
+        <div class="alert alert-danger">@TempData["HeadOfficeIndicatorError"]</div>
+    }
+
+    <div class="hoi-card">
+        <div class="hoi-title" id="hoi-form-title">ثبت شاخص جدید</div>
+
+        @using (Html.BeginForm("Save", "HeadOfficeIndicators", new { area = "Setting" }, FormMethod.Post, new { id = "hoi-form", autocomplete = "off" }))
+        {
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(x => x.Form.IndicatorId, new { id = "hoi-id", Name = "IndicatorId" })
+
+            <div class="alert alert-danger hoi-validation" style="@(ViewData.ModelState.IsValid ? "display:none" : "")">
+                @Html.ValidationSummary(false, "لطفاً موارد زیر را اصلاح کنید:")
+            </div>
+
+            <div class="row">
+                <div class="col-lg-6 col-md-7 mb-3">
+                    <label for="hoi-title">عنوان شاخص اصلی <span class="hoi-required">*</span></label>
+                    @Html.TextBoxFor(x => x.Form.Title, new { @class = "form-control", id = "hoi-title", Name = "Title", maxlength = "150", placeholder = "مثال: وصول" })
+                    @Html.ValidationMessage("Title", new { @class = "text-danger small" })
+                </div>
+                <div class="col-lg-3 col-md-5 mb-3">
+                    <label for="hoi-unit">واحد <span class="hoi-required">*</span></label>
+                    @Html.TextBoxFor(x => x.Form.Unit, new { @class = "form-control", id = "hoi-unit", Name = "Unit", maxlength = "50", list = "hoi-unit-list", placeholder = "مثال: درصد" })
+                    <datalist id="hoi-unit-list">
+                        <option value="درصد"></option>
+                        <option value="تعداد"></option>
+                        <option value="ریال"></option>
+                        <option value="دقیقه"></option>
+                        <option value="ساعت"></option>
+                    </datalist>
+                    @Html.ValidationMessage("Unit", new { @class = "text-danger small" })
+                </div>
+                <div class="col-lg-3 col-md-12 mb-3 d-flex align-items-end">
+                    <div class="hoi-actions w-100">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="bi bi-check2-circle ms-1"></i><span id="hoi-submit-text">ثبت شاخص</span>
+                        </button>
+                        <button type="button" class="btn btn-light border" id="hoi-cancel" style="display:none">انصراف</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="hoi-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="hoi-title mb-0">شاخص‌های تعریف‌شده</div>
+            <span class="badge bg-secondary">@Model.Indicators.Count مورد</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover hoi-table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:70px">ردیف</th>
+                        <th>عنوان شاخص اصلی</th>
+                        <th style="width:160px">واحد</th>
+                        <th style="width:190px">عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Indicators.Count == 0)
+                    {
+                        <tr><td colspan="4" class="hoi-empty">هنوز شاخصی تعریف نشده است.</td></tr>
+                    }
+                    else
+                    {
+                        var row = 0;
+                        foreach (var item in Model.Indicators)
+                        {
+                            row++;
+                            <tr>
+                                <td>@row</td>
+                                <td><strong>@item.Title</strong></td>
+                                <td><span class="hoi-unit">@item.Unit</span></td>
+                                <td>
+                                    <div class="hoi-actions">
+                                        <button type="button" class="btn btn-sm btn-outline-primary hoi-edit"
+                                                data-id="@item.IndicatorId" data-title="@item.Title" data-unit="@item.Unit">
+                                            <i class="bi bi-pencil-square ms-1"></i>ویرایش
+                                        </button>
+                                        @using (Html.BeginForm("Delete", "HeadOfficeIndicators", new { area = "Setting" }, FormMethod.Post, new { @class = "d-inline hoi-delete-form" }))
+                                        {
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.IndicatorId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash ms-1"></i>حذف
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var id = document.getElementById('hoi-id');
+        var title = document.getElementById('hoi-title');
+        var unit = document.getElementById('hoi-unit');
+        var cancel = document.getElementById('hoi-cancel');
+        var formTitle = document.getElementById('hoi-form-title');
+        var submitText = document.getElementById('hoi-submit-text');
+
+        function addColumnFilters(table) {
+            if (!table || !table.tHead || !table.tBodies.length) return;
+            var headings = table.tHead.rows[0].cells;
+            var filterRow = document.createElement('tr');
+            var filters = [];
+            filterRow.className = 'hoi-filter-row';
+
+            Array.prototype.forEach.call(headings, function (heading, index) {
+                var th = document.createElement('th');
+                var titleText = (heading.textContent || '').trim();
+                if (titleText.indexOf('عملیات') < 0) {
+                    var input = document.createElement('input');
+                    input.type = 'search';
+                    input.className = 'hoi-column-filter';
+                    input.placeholder = 'جستجوی ' + titleText;
+                    input.setAttribute('aria-label', 'جستجوی ستون ' + titleText);
+                    th.appendChild(input);
+                    filters.push({ index: index, input: input });
+                }
+                filterRow.appendChild(th);
+            });
+
+            table.tHead.appendChild(filterRow);
+            function applyFilters() {
+                Array.prototype.forEach.call(table.tBodies[0].rows, function (row) {
+                    var visible = filters.every(function (filter) {
+                        var term = (filter.input.value || '').toLowerCase().trim();
+                        if (!term) return true;
+                        var cell = row.cells[filter.index];
+                        return cell && (cell.textContent || '').toLowerCase().indexOf(term) >= 0;
+                    });
+                    row.style.display = visible ? '' : 'none';
+                });
+            }
+            filters.forEach(function (filter) { filter.input.addEventListener('input', applyFilters); });
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.hoi-table'), addColumnFilters);
+
+        function resetForm() {
+            id.value = '0';
+            title.value = '';
+            unit.value = '';
+            formTitle.textContent = 'ثبت شاخص جدید';
+            submitText.textContent = 'ثبت شاخص';
+            cancel.style.display = 'none';
+            title.focus();
+        }
+
+        Array.prototype.forEach.call(document.querySelectorAll('.hoi-edit'), function (button) {
+            button.addEventListener('click', function () {
+                id.value = this.getAttribute('data-id');
+                title.value = this.getAttribute('data-title');
+                unit.value = this.getAttribute('data-unit');
+                formTitle.textContent = 'ویرایش شاخص اصلی';
+                submitText.textContent = 'ذخیره تغییرات';
+                cancel.style.display = 'inline-block';
+                document.getElementById('hoi-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                title.focus();
+            });
+        });
+
+        cancel.addEventListener('click', resetForm);
+
+        Array.prototype.forEach.call(document.querySelectorAll('.hoi-delete-form'), function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!window.confirm('آیا از حذف این شاخص اطمینان دارید؟')) event.preventDefault();
+            });
+        });
+    })();
+</script>

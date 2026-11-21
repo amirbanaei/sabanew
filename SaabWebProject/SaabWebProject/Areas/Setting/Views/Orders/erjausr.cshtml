@@ -1,0 +1,4972 @@
+﻿@using System
+@using System.Web.Mvc
+@using System.Linq
+@using System.Collections.Generic
+@using SaabWebProject.Models.DomainModels
+
+@{
+    ViewBag.Title = "مدیریت تخصیص نیرو";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    /* ========================= TAB 1 ========================= */
+
+    var users = ViewBag.Users as List<tbUsers> ?? new List<tbUsers>();
+    var activityTypes = ViewBag.ActivityTypes as List<tbOrderActivityType> ?? new List<tbOrderActivityType>();
+    var assignments = ViewBag.Assignments as List<tbOrderAssignment> ?? new List<tbOrderAssignment>();
+    var assignmentActivities = ViewBag.AssignmentActivities as List<tbOrderAssignmentActivity> ?? new List<tbOrderAssignmentActivity>();
+
+    var savedActivityPairKeys = new HashSet<string>(
+        assignmentActivities.Select(x => x.UserID.ToString() + "_" + x.ActivityTypeID.ToString()));
+
+    // جنوبی: وصول مذاکره‌ای / سیستان: همان وصول تلفنی قبلی
+    var isJonobi = ViewBag.IsJonobi != null && Convert.ToBoolean(ViewBag.IsJonobi);
+    var uploadPeriods = new List<SelectListItem>();
+    if (isJonobi)
+    {
+        using (var uploadDb = new SaabEntities())
+        {
+            uploadPeriods = uploadDb.dbergharel_4
+                .Where(x => x.del != true && x.FK_namegozarwsh != null)
+                .OrderByDescending(x => x.ID)
+                .Select(x => new { x.ID, Title = x.dbergharel_4_4.name })
+                .ToList()
+                .Select(x => new SelectListItem { Value = x.ID.ToString(), Text = x.Title })
+                .ToList();
+        }
+    }
+    var scopeRegionTitle = isJonobi ? "بخش" : "منطقه";
+    var scopeRegionsTitle = isJonobi ? "بخش‌ها" : "مناطق";
+    var scopeAreaTitle = isJonobi ? "منطقه" : "محدوده";
+    var scopeAreasTitle = isJonobi ? "مناطق" : "محدوده‌ها";
+    var exclusiveCollectionTitle = ViewBag.ExclusiveCollectionTitle as string;
+    if (string.IsNullOrWhiteSpace(exclusiveCollectionTitle))
+    {
+        exclusiveCollectionTitle = isJonobi ? "وصول مذاکره‌ای" : "وصول تلفنی";
+    }
+
+    var telephoneActivity = activityTypes.FirstOrDefault(x =>
+        !string.IsNullOrWhiteSpace(x.Title)
+        && (isJonobi
+            ? x.Title.IndexOf("مذاکره", StringComparison.OrdinalIgnoreCase) >= 0
+            : x.Title.IndexOf("تلفنی", StringComparison.OrdinalIgnoreCase) >= 0));
+
+    var telephoneActivityId = telephoneActivity == null ? 0 : telephoneActivity.ID;
+
+    // قانون: انتخاب «بالابری» بدون «عادی» یا «دیماند» مجاز نیست
+    var liftActivity = activityTypes.FirstOrDefault(x =>
+        !string.IsNullOrWhiteSpace(x.Title)
+        && x.Title.IndexOf("بالابری", StringComparison.OrdinalIgnoreCase) >= 0);
+
+    var liftActivityId = liftActivity == null ? 0 : liftActivity.ID;
+
+    var liftCompanionIds = activityTypes
+        .Where(x => !string.IsNullOrWhiteSpace(x.Title)
+                    && (x.Title.IndexOf("عادی", StringComparison.OrdinalIgnoreCase) >= 0
+                        || x.Title.IndexOf("دیماند", StringComparison.OrdinalIgnoreCase) >= 0))
+        .Select(x => x.ID)
+        .ToList();
+
+    /* ========================= TAB 2 ========================= */
+
+    var tab2Users = ViewBag.Tab2Users as List<tbUsers> ?? new List<tbUsers>();
+    var allowedRegions = ViewBag.AllowedRegions as List<int> ?? new List<int>();
+    var agentScopes = ViewBag.AgentScopes as List<tbOrderAgentScope> ?? new List<tbOrderAgentScope>();
+    var agentScopeRegions = ViewBag.AgentScopeRegions as List<tbOrderAgentScopeRegion> ?? new List<tbOrderAgentScopeRegion>();
+    var agentScopeWorkDays = ViewBag.AgentScopeWorkDays as List<tbOrderAgentScopeWorkDay> ?? new List<tbOrderAgentScopeWorkDay>();
+    var tariffTypes = ViewBag.TariffTypes as List<tbOrderTariffType> ?? new List<tbOrderTariffType>();
+    var agentScopeTariffs = ViewBag.AgentScopeTariffs as List<tbOrderAgentScopeTariff> ?? new List<tbOrderAgentScopeTariff>();
+    var agentScopeAreas = ViewBag.AgentScopeAreas as List<tbOrderAgentScopeArea> ?? new List<tbOrderAgentScopeArea>();
+
+    // جنوبی: 0 تا 60؛ سیستان: 0 تا 45
+    const int AreaMin = 0;
+    var AreaMax = isJonobi ? 60 : 45;
+    var AreaTotal = AreaMax - AreaMin + 1;
+
+    // ماموران ثبت‌شده در جدول پایین؛ در لیست بالا دیگر نمایش داده نمی‌شوند (فقط با «ویرایش»)
+    var savedScopeUserIds = new HashSet<int>(agentScopes.Select(x => x.UserID));
+
+    // نمایش فشرده روزها: 22, 23, 24, 25 → "22 تا 25"
+    Func<IEnumerable<int>, string> compressDays = list =>
+    {
+        var s = list.Distinct().OrderBy(x => x).ToList();
+        var parts = new List<string>();
+        int i = 0;
+        while (i < s.Count)
+        {
+            int j = i;
+            while (j + 1 < s.Count && s[j + 1] == s[j] + 1) j++;
+            parts.Add(j > i ? s[i] + " تا " + s[j] : s[i].ToString());
+            i = j + 1;
+        }
+        return string.Join("، ", parts);
+    };
+
+    // متن «همه» به‌صورت مقدارهای واقعی (برای نمایش در جدول)
+    var allDaysText = "1 تا 99";
+    var allAreasText = AreaMin + " تا " + AreaMax;
+    var allTariffsText = tariffTypes.Count > 0 ? string.Join("، ", tariffTypes.Select(x => x.Title)) : "همه";
+    var allRegionsText = allowedRegions.Count > 0 ? compressDays(allowedRegions) : "همه";
+
+    /* ========================= TAB 3 ========================= */
+
+    var excelImportBatches = ViewBag.ExcelImportBatches as List<tbOrderExcelImportBatch> ?? new List<tbOrderExcelImportBatch>();
+
+    var excelComponents = new Dictionary<int, string>
+{
+        { 1, "شناسه قبض" },
+        { 2, "پرونده" },
+        { 3, "روزکار" },
+        { 4, "محدوده" }
+    };
+
+    // مؤلفه‌هایی که فعلاً «در حال توسعه» هستند
+    var developingExcelComponents = new HashSet<int> { 3, 4 };
+
+    // نوع لیست: هر کدام یک تب جدا (ListType در دیتابیس)
+    var excelLists = new[]
+    {
+        new { Type = 1, TabId = "tabThree", Title = "لیست بالابری" },
+        new { Type = 2, TabId = "tabFour", Title = "لیست سخت وصول" }
+    };
+}
+
+
+<style>
+
+    /* ROOT */
+    .order-page {
+        --cyan: #22d3ee;
+        --blue: #2563eb;
+        --purple: #8b5cf6;
+        --green: #34d399;
+        --red: #fb7185;
+        --yellow: #fbbf24;
+        direction: rtl;
+        text-align: right;
+        min-height: 100vh;
+        padding: 22px;
+        color: #e2e8f0;
+        background: radial-gradient(circle at 5% 5%, rgba(14,165,233,.16), transparent 28%), radial-gradient(circle at 95% 10%, rgba(139,92,246,.14), transparent 28%), radial-gradient(circle at 50% 100%, rgba(16,185,129,.05), transparent 30%), #050914;
+    }
+
+        .order-page * {
+            box-sizing: border-box;
+        }
+
+    /* GUIDE HEADER */
+    .guide-header {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding: 16px 18px;
+        overflow: hidden;
+        background: linear-gradient(135deg, rgba(15,23,42,.88), rgba(2,6,23,.70));
+        border: 1px solid rgba(34,211,238,.14);
+        border-radius: 18px;
+        box-shadow: 0 22px 60px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+        .guide-header:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 30px;
+            left: 30px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #22d3ee, #8b5cf6, transparent);
+        }
+
+    .guide-main-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-width: 170px;
+        padding: 10px 20px;
+        color: #e0f2fe;
+        cursor: pointer;
+        background: linear-gradient(135deg, rgba(8,145,178,.22), rgba(79,70,229,.20));
+        border: 1px solid rgba(34,211,238,.30);
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 900;
+        transition: .18s;
+        box-shadow: 0 0 20px rgba(34,211,238,.06);
+    }
+
+        .guide-main-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(34,211,238,.60);
+            box-shadow: 0 0 22px rgba(34,211,238,.13);
+        }
+
+    .guide-main-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 25px;
+        height: 25px;
+        color: #67e8f9;
+        background: rgba(34,211,238,.08);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 50%;
+        font-size: 14px;
+        font-weight: 900;
+    }
+
+    .guide-header-description {
+        color: #64748b;
+        font-size: 10px;
+    }
+
+    /* NATIVE GUIDE DIALOG */
+    .oa-native-guide {
+        width: min(850px, calc(100% - 30px));
+        max-width: 850px;
+        max-height: 90vh;
+        margin: auto;
+        padding: 0;
+        direction: rtl;
+        text-align: right;
+        color: #e2e8f0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        border-radius: 18px;
+        overflow: visible;
+    }
+
+        .oa-native-guide[open] {
+            display: block;
+        }
+
+        .oa-native-guide::backdrop {
+            background: rgba(2,6,23,.90);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+    .oa-native-guide-card {
+        position: relative;
+        width: 100%;
+        max-height: 88vh;
+        overflow-y: auto;
+        padding: 24px;
+        color: #e2e8f0;
+        background: linear-gradient(145deg, #111c30, #050b18);
+        border: 1px solid rgba(34,211,238,.32);
+        border-radius: 18px;
+        box-shadow: 0 30px 100px rgba(0,0,0,.75);
+    }
+
+        .oa-native-guide-card:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 35px;
+            left: 35px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #22d3ee, #8b5cf6, transparent);
+        }
+
+    .oa-native-guide-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 15px;
+        padding-bottom: 14px;
+        margin-bottom: 17px;
+        border-bottom: 1px solid rgba(148,163,184,.13);
+    }
+
+    .oa-native-guide-title {
+        color: #f8fafc;
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.9;
+    }
+
+    .oa-native-guide-subtitle {
+        margin-top: 4px;
+        color: #67e8f9;
+        font-size: 10px;
+        line-height: 1.9;
+    }
+
+    .oa-native-guide-tab-badge {
+        display: inline-block;
+        margin-bottom: 6px;
+        padding: 3px 10px;
+        color: #67e8f9;
+        background: rgba(6,182,212,.10);
+        border: 1px solid rgba(34,211,238,.22);
+        border-radius: 20px;
+        font-size: 9px;
+        font-weight: 800;
+    }
+
+    .oa-native-guide-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        color: #e2e8f0;
+        cursor: pointer;
+        background: rgba(30,41,59,.85);
+        border: 1px solid rgba(148,163,184,.22);
+        border-radius: 9px;
+        font-size: 21px;
+        font-weight: bold;
+        transition: .15s;
+    }
+
+        .oa-native-guide-close:hover {
+            color: #fecaca;
+            background: rgba(127,29,29,.20);
+            border-color: rgba(244,63,94,.35);
+        }
+
+    .oa-native-guide-intro {
+        margin-bottom: 14px;
+        padding: 12px 14px;
+        color: #e0f2fe;
+        background: rgba(14,165,233,.08);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .oa-native-guide-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 14px 15px;
+        color: #e2e8f0;
+        background: rgba(15,23,42,.72);
+        border: 1px solid rgba(148,163,184,.12);
+        border-radius: 11px;
+    }
+
+    .oa-native-guide-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 30px;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        color: #67e8f9;
+        background: rgba(6,182,212,.12);
+        border: 1px solid rgba(34,211,238,.23);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .oa-native-guide-text {
+        flex: 1;
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 2.2;
+    }
+
+    .oa-native-guide-highlight {
+        color: #fbbf24;
+        font-weight: 900;
+    }
+
+    .oa-native-guide-footer {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 18px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(148,163,184,.10);
+    }
+
+    .oa-native-guide-ok {
+        min-width: 125px;
+        padding: 9px 18px;
+        color: #fff;
+        cursor: pointer;
+        background: linear-gradient(135deg, #0891b2, #4f46e5);
+        border: 1px solid rgba(34,211,238,.25);
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    /* IMPORTANT NOTICE (اجباری - تا تایید بسته نمی‌شود) */
+    .oa-notice-dialog {
+        width: min(720px, calc(100% - 30px));
+        max-height: 90vh;
+        margin: auto;
+        padding: 0;
+        direction: rtl;
+        text-align: right;
+        color: #e2e8f0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        overflow: visible;
+    }
+
+        .oa-notice-dialog::backdrop {
+            background: rgba(2,6,23,.93);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+    .oa-notice-card {
+        position: relative;
+        padding: 24px;
+        background: linear-gradient(145deg, #1c1410, #0b0805);
+        border: 1px solid rgba(251,191,36,.45);
+        border-radius: 18px;
+        box-shadow: 0 30px 100px rgba(0,0,0,.80), 0 0 40px rgba(251,191,36,.08);
+    }
+
+        .oa-notice-card:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 35px;
+            left: 35px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #fbbf24, #f97316, transparent);
+        }
+
+    .oa-notice-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+        color: #fde68a;
+        font-size: 17px;
+        font-weight: 900;
+    }
+
+    .oa-notice-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        color: #1c1410;
+        background: #fbbf24;
+        border-radius: 50%;
+        font-size: 17px;
+        font-weight: 900;
+    }
+
+    .oa-notice-text {
+        padding: 14px 16px;
+        color: #f1f5f9;
+        background: rgba(251,191,36,.07);
+        border: 1px solid rgba(251,191,36,.20);
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 2.3;
+    }
+
+    .oa-notice-confirm {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 16px;
+        color: #fde68a;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        user-select: none;
+    }
+
+        .oa-notice-confirm input {
+            width: 18px;
+            height: 18px;
+            accent-color: #fbbf24;
+            cursor: pointer;
+        }
+
+    .oa-notice-footer {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 16px;
+    }
+
+    .oa-notice-ok {
+        min-width: 130px;
+        padding: 10px 22px;
+        color: #1c1410;
+        cursor: pointer;
+        background: linear-gradient(135deg, #fbbf24, #f97316);
+        border: 0;
+        border-radius: 9px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+        .oa-notice-ok:disabled {
+            cursor: not-allowed;
+            opacity: .35;
+            filter: grayscale(.7);
+        }
+
+    /* TABS */
+    .order-tabs {
+        display: flex;
+        gap: 7px;
+        margin-bottom: 17px;
+        padding: 6px;
+        background: rgba(15,23,42,.62);
+        border: 1px solid rgba(255,255,255,.06);
+        border-radius: 13px;
+    }
+
+    .order-tab {
+        min-width: 190px;
+        padding: 10px 18px;
+        color: #94a3b8;
+        cursor: pointer;
+        background: transparent;
+        border: 0;
+        border-radius: 9px;
+        transition: .18s;
+    }
+
+        .order-tab:hover {
+            color: #e0f2fe;
+            background: rgba(14,165,233,.05);
+        }
+
+        .order-tab.active {
+            color: #e0f2fe;
+            background: linear-gradient(135deg, rgba(14,165,233,.20), rgba(99,102,241,.17));
+            box-shadow: inset 0 0 0 1px rgba(34,211,238,.25);
+        }
+
+    .allocation-embed-card {
+        padding: 12px;
+    }
+
+    .allocation-embed-frame {
+        display: block;
+        width: 100%;
+        min-height: 82vh;
+        border: 1px solid rgba(34,211,238,.22);
+        border-radius: 14px;
+        background: #050914;
+    }
+
+    /* GLASS CARD */
+    .glass-card {
+        position: relative;
+        margin-bottom: 17px;
+        padding: 19px;
+        background: linear-gradient(145deg, rgba(15,23,42,.77), rgba(2,6,23,.59));
+        border: 1px solid rgba(255,255,255,.075);
+        border-radius: 17px;
+        box-shadow: 0 22px 60px rgba(0,0,0,.28);
+    }
+
+    /* STATS */
+    .order-stats {
+        display: grid;
+        grid-template-columns: repeat(4,minmax(0,1fr));
+        gap: 11px;
+        margin-bottom: 17px;
+    }
+
+    .stat-card {
+        position: relative;
+        padding: 14px 15px;
+        background: rgba(15,23,42,.74);
+        border: 1px solid rgba(255,255,255,.07);
+        border-radius: 14px;
+    }
+
+        .stat-card:after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(#22d3ee, #6366f1);
+        }
+
+    .stat-title {
+        color: #94a3b8;
+        font-size: 10px;
+    }
+
+    .stat-value {
+        margin-top: 4px;
+        color: #f8fafc;
+        font-size: 24px;
+        font-weight: 900;
+    }
+
+    /* SECTION */
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+        .section-header h2 {
+            margin: 0;
+            color: #f8fafc;
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .section-header p {
+            margin: 5px 0 0;
+            color: #64748b;
+            font-size: 10px;
+        }
+
+    /* INPUT */
+    .order-input {
+        width: 100%;
+        padding: 9px 11px;
+        color: #e2e8f0;
+        outline: none;
+        background: rgba(2,6,23,.60);
+        border: 1px solid rgba(148,163,184,.16);
+        border-radius: 8px;
+    }
+
+        .order-input:focus {
+            border-color: rgba(34,211,238,.65);
+            box-shadow: 0 0 0 3px rgba(34,211,238,.04);
+        }
+
+    /* TAB 1 TOOLBAR */
+    .tab-one-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+        margin-bottom: 14px;
+        padding: 11px 12px;
+        background: rgba(2,6,23,.35);
+        border: 1px solid rgba(148,163,184,.09);
+        border-radius: 12px;
+    }
+
+    .tab-one-info-title {
+        color: #e2e8f0;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .tab-one-info-subtitle {
+        margin-top: 2px;
+        color: #64748b;
+        font-size: 8px;
+    }
+
+    /* MATRIX */
+    .matrix-area {
+        overflow: hidden;
+        background: rgba(2,6,23,.38);
+        border: 1px solid rgba(148,163,184,.09);
+        border-radius: 14px;
+    }
+
+    .matrix-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 11px 13px;
+        border-bottom: 1px solid rgba(148,163,184,.08);
+    }
+
+    .matrix-toolbar-title {
+        color: #e0f2fe;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .matrix-toolbar-info {
+        color: #64748b;
+        font-size: 9px;
+    }
+
+    .matrix-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .activity-matrix {
+        width: 100%;
+        min-width: 850px;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+        .activity-matrix th {
+            padding: 10px 8px;
+            text-align: center;
+            color: #94a3b8;
+            background: rgba(15,23,42,.99);
+            border-bottom: 1px solid rgba(34,211,238,.12);
+            font-size: 10px;
+        }
+
+        .activity-matrix td {
+            padding: 9px 8px;
+            text-align: center;
+            color: #cbd5e1;
+            border-bottom: 1px solid rgba(148,163,184,.065);
+            font-size: 10px;
+        }
+
+    /* MATRIX SCROLL */
+    .matrix-scroll-20 {
+        position: relative;
+        max-height: 966px;
+        overflow-x: auto;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(34,211,238,.55) rgba(2,6,23,.35);
+    }
+
+        .matrix-scroll-20::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .matrix-scroll-20::-webkit-scrollbar-thumb {
+            background: linear-gradient(#22d3ee, #6366f1);
+            border-radius: 20px;
+        }
+
+        .matrix-scroll-20 .activity-matrix thead th {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(15,23,42,.995);
+        }
+
+        .matrix-scroll-20 .select-all-row td {
+            position: sticky;
+            top: 76px;
+            z-index: 18;
+            background: rgba(8,47,73,.98);
+        }
+
+    /* SEARCH UNDER USER NAME */
+    .user-column-header-cell {
+        min-width: 240px !important;
+        width: 240px;
+        padding: 8px 10px !important;
+        text-align: right !important;
+        vertical-align: top;
+    }
+
+    .user-column-title {
+        margin-bottom: 7px;
+        color: #e2e8f0;
+        text-align: right;
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    .user-column-search {
+        position: relative;
+        width: 100%;
+    }
+
+    .user-column-search-icon {
+        position: absolute;
+        top: 50%;
+        right: 9px;
+        transform: translateY(-50%);
+        z-index: 2;
+        color: #22d3ee;
+        pointer-events: none;
+        font-size: 13px;
+    }
+
+    .user-column-search-input {
+        width: 100%;
+        height: 31px;
+        padding: 5px 29px 5px 8px;
+        color: #e0f2fe;
+        outline: none;
+        background: rgba(2,6,23,.82);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 7px;
+        font-size: 8px;
+    }
+
+        .user-column-search-input::placeholder {
+            color: #64748b;
+        }
+
+        .user-column-search-input:focus {
+            border-color: rgba(34,211,238,.70);
+            box-shadow: 0 0 10px rgba(34,211,238,.08);
+        }
+
+    /* TAB 1 - خطای قانون بالابری */
+    .user-activity-row.row-error td {
+        background: rgba(244,63,94,.14) !important;
+    }
+
+    .user-activity-row.row-error .person-name {
+        color: #fda4af;
+    }
+
+    /* PERSON */
+    .person-cell {
+        min-width: 240px;
+        text-align: right !important;
+    }
+
+    .person-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .person-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        color: #7dd3fc;
+        background: rgba(14,165,233,.15);
+        border: 1px solid rgba(34,211,238,.15);
+        border-radius: 8px;
+    }
+
+    .person-name {
+        display: block;
+        color: #e2e8f0;
+        font-size: 10px;
+        font-weight: 700;
+    }
+
+    .person-national {
+        display: block;
+        margin-top: 2px;
+        color: #64748b;
+        font-size: 8px;
+    }
+
+    /* CHECKBOX */
+    .neon-check {
+        position: relative;
+        display: inline-flex;
+        width: 22px;
+        height: 22px;
+        cursor: pointer;
+    }
+
+        .neon-check input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .neon-check span {
+            position: absolute;
+            inset: 0;
+            background: rgba(2,6,23,.78);
+            border: 1px solid rgba(148,163,184,.34);
+            border-radius: 6px;
+        }
+
+        .neon-check input:checked + span {
+            background: linear-gradient(135deg, #06b6d4, #4f46e5);
+            border-color: #22d3ee;
+            box-shadow: 0 0 10px rgba(34,211,238,.30);
+        }
+
+            .neon-check input:checked + span:after {
+                content: "✓";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%,-53%);
+                color: white;
+                font-size: 13px;
+                font-weight: 900;
+            }
+
+        .neon-check input:disabled + span {
+            cursor: not-allowed;
+            opacity: .28;
+            filter: grayscale(1);
+        }
+
+    /* BUTTONS */
+    .form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 14px;
+    }
+
+    .order-btn {
+        padding: 8px 15px;
+        color: #fff;
+        cursor: pointer;
+        border: 1px solid transparent;
+        border-radius: 8px;
+    }
+
+    .btn-main {
+        background: linear-gradient(135deg, #0891b2, #4f46e5);
+    }
+
+    .btn-secondary {
+        background: rgba(71,85,105,.40);
+        border-color: rgba(148,163,184,.14);
+    }
+
+    .btn-cancel {
+        color: #fde68a;
+        background: rgba(245,158,11,.09);
+        border-color: rgba(245,158,11,.18);
+    }
+
+    .action-edit {
+        padding: 6px 9px;
+        color: #c4b5fd;
+        cursor: pointer;
+        background: rgba(2,6,23,.35);
+        border: 1px solid rgba(139,92,246,.24);
+        border-radius: 6px;
+    }
+
+    /* TAB 1 SUMMARY */
+    .summary-cell-box {
+        min-width: 155px;
+        padding: 6px;
+        background: rgba(2,6,23,.20);
+        border: 1px solid rgba(148,163,184,.05);
+        border-radius: 9px;
+    }
+
+    .summary-count-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 5px;
+        margin-bottom: 5px;
+    }
+
+    .summary-person-count {
+        padding: 3px 7px;
+        color: #67e8f9;
+        background: rgba(6,182,212,.08);
+        border: 1px solid rgba(34,211,238,.14);
+        border-radius: 20px;
+        font-size: 8px;
+    }
+
+    .summary-search-result-count {
+        color: #64748b;
+        font-size: 7px;
+    }
+
+    .summary-search-box {
+        position: relative;
+        margin-bottom: 6px;
+    }
+
+    .summary-search-icon {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        color: #22d3ee;
+        pointer-events: none;
+    }
+
+    .summary-cell-search {
+        width: 100%;
+        height: 29px;
+        padding: 5px 26px 5px 7px;
+        color: #dbeafe;
+        outline: none;
+        background: rgba(2,6,23,.72);
+        border: 1px solid rgba(34,211,238,.13);
+        border-radius: 6px;
+        font-size: 8px;
+    }
+
+        .summary-cell-search:focus {
+            border-color: rgba(34,211,238,.55);
+        }
+
+    .summary-person-scroll {
+        max-height: 92px;
+        min-height: 30px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(34,211,238,.50) rgba(2,6,23,.20);
+    }
+
+    .summary-person-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .summary-person-item {
+        padding: 5px 7px;
+        text-align: right;
+        color: #bae6fd;
+        background: rgba(14,165,233,.07);
+        border: 1px solid rgba(34,211,238,.08);
+        border-radius: 6px;
+        font-size: 8px;
+    }
+
+    .summary-no-result {
+        display: none;
+        padding: 14px 6px;
+        text-align: center;
+        color: #64748b;
+        font-size: 8px;
+    }
+
+    /* TAB 2 GRID */
+    .scope-grid {
+        display: grid;
+        grid-template-columns: repeat(3,minmax(0,1fr)) 150px 170px;
+        gap: 10px;
+        align-items: stretch;
+    }
+
+    /* محدوده و نوع تعرفه: دو کارت کوچک در همان ردیف کارت‌های اصلی */
+    .scope-side-cards {
+        display: contents;
+    }
+
+        .scope-side-cards .scope-card {
+            align-self: start;
+            min-width: 0;
+            min-height: 0;
+        }
+
+        .scope-side-cards .scope-card-title {
+            padding: 8px 10px;
+            font-size: 10px;
+        }
+
+        .scope-side-cards .scope-disabled-body {
+            min-height: 0;
+            padding: 8px;
+        }
+
+        .scope-side-cards .scope-disabled-box {
+            padding: 10px 6px;
+        }
+
+        .scope-side-cards .scope-disabled-title {
+            margin-top: 8px;
+            font-size: 9px;
+        }
+
+    .scope-card {
+        min-height: 340px;
+        overflow: hidden;
+        background: rgba(2,6,23,.66);
+        border: 1px solid rgba(34,211,238,.17);
+        border-radius: 12px;
+    }
+
+    .scope-card-title {
+        padding: 11px 13px;
+        color: #e0f2fe;
+        border-bottom: 1px solid rgba(148,163,184,.08);
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .scope-selector-search {
+        padding: 8px 9px 0;
+    }
+
+    .scope-selector-search-input {
+        width: 100%;
+        height: 31px;
+        padding: 6px 9px;
+        color: #dbeafe;
+        outline: none;
+        background: rgba(2,6,23,.72);
+        border: 1px solid rgba(34,211,238,.13);
+        border-radius: 7px;
+        font-size: 9px;
+    }
+
+        .scope-selector-search-input:focus {
+            border-color: rgba(34,211,238,.55);
+        }
+
+    .scope-card-body {
+        max-height: 270px;
+        padding: 9px;
+        overflow-y: auto;
+    }
+
+    .scope-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 5px 8px;
+        cursor: pointer;
+    }
+
+        .scope-item input {
+            position: absolute;
+            opacity: 0;
+        }
+
+    .scope-check {
+        position: relative;
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
+        background: rgba(2,6,23,.90);
+        border: 1px solid rgba(148,163,184,.35);
+        border-radius: 4px;
+    }
+
+    .scope-item input:checked + .scope-check {
+        background: linear-gradient(135deg, #06b6d4, #2563eb);
+        border-color: #22d3ee;
+    }
+
+        .scope-item input:checked + .scope-check:after {
+            content: "✓";
+            position: absolute;
+            right: 3px;
+            top: -1px;
+            color: white;
+        }
+
+    /* حالت بینابین «انتخاب همه» (بعضی تیک‌خورده) */
+    .scope-item input:indeterminate + .scope-check {
+        background: rgba(34,211,238,.25);
+        border-color: #22d3ee;
+    }
+
+        .scope-item input:indeterminate + .scope-check:after {
+            content: "–";
+            position: absolute;
+            right: 4px;
+            top: -2px;
+            color: white;
+        }
+
+    .scope-item input:disabled + .scope-check {
+        opacity: .35;
+    }
+
+    .scope-text {
+        color: #cbd5e1;
+        font-size: 10px;
+    }
+
+    .workday-grid {
+        display: grid;
+        grid-template-columns: repeat(4,1fr);
+        gap: 2px;
+    }
+
+    /* محدوده (بازه مجاز قرارداد) */
+    .area-grid {
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 2px;
+    }
+
+    /* ماموران ثبت‌شده در لیست بالا نمایش داده نمی‌شوند */
+    .scope-user-hidden {
+        display: none !important;
+    }
+
+    .scope-empty-note {
+        display: none;
+        padding: 10px 8px;
+        color: #64748b;
+        font-size: 9px;
+        line-height: 1.9;
+    }
+
+    /* DISABLED CARDS */
+    .scope-card-disabled {
+        opacity: .70;
+        pointer-events: none;
+        border-style: dashed;
+    }
+
+    .scope-disabled-body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 285px;
+        padding: 15px;
+    }
+
+    .scope-disabled-box {
+        width: 100%;
+        padding: 18px 10px;
+        text-align: center;
+        background: rgba(2,6,23,.35);
+        border: 1px dashed rgba(148,163,184,.15);
+        border-radius: 10px;
+    }
+
+    .scope-disabled-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        color: #fbbf24;
+        background: rgba(245,158,11,.08);
+        border: 1px solid rgba(245,158,11,.16);
+        border-radius: 20px;
+        font-size: 9px;
+    }
+
+    .scope-disabled-title {
+        margin-top: 12px;
+        color: #cbd5e1;
+        font-size: 10px;
+    }
+
+    /* TAB 2 - RULES (منطقه ← روزکار) */
+    .workday-range-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+
+        .workday-range-row .scope-selector-search-input {
+            width: 60px;
+            flex: 1;
+        }
+
+    .rule-builder {
+        margin-top: 14px;
+    }
+
+    .rule-hint {
+        margin-right: 10px;
+        color: #64748b;
+        font-size: 10px;
+    }
+
+    .rule-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 10px;
+    }
+
+    .rule-row, .scope-rule-line {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 10px;
+        background: rgba(14,165,233,.06);
+        border: 1px solid rgba(34,211,238,.12);
+        border-radius: 8px;
+    }
+
+    .rule-days, .scope-rule-days {
+        flex: 1;
+        color: #cbd5e1;
+        font-size: 11px;
+        text-align: right;
+    }
+
+    .rule-empty {
+        color: #64748b;
+        font-size: 10px;
+        padding: 6px 2px;
+    }
+
+    .scope-rule-lines {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        max-height: 130px;
+        overflow-y: auto;
+    }
+
+    /* TAB 2 - TARIFF */
+    .scope-tariff-cell {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .delete-scope-tariffs {
+        color: #fda4af;
+        border-color: rgba(244,63,94,.20);
+    }
+
+    /* TAB 2 TABLE */
+    .scope-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+        max-height: 90px;
+        overflow-y: auto;
+    }
+
+    .scope-chip {
+        padding: 4px 7px;
+        color: #bae6fd;
+        background: rgba(14,165,233,.08);
+        border-radius: 15px;
+        font-size: 8px;
+        white-space: nowrap;
+    }
+
+    .scope-actions {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .scope-action {
+        padding: 6px 8px;
+        color: #bae6fd;
+        cursor: pointer;
+        background: rgba(2,6,23,.40);
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 6px;
+        font-size: 8px;
+    }
+
+    .delete-agent-scope, .delete-rule, .delete-scope-region {
+        color: #fda4af;
+        border-color: rgba(244,63,94,.20);
+    }
+
+    /* DETAILS MODAL */
+    .scope-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999998;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(2,6,23,.80);
+        backdrop-filter: blur(8px);
+    }
+
+        .scope-modal.show {
+            display: flex;
+        }
+
+    .scope-modal-card {
+        width: 600px;
+        max-width: 95%;
+        padding: 20px;
+        color: #e2e8f0;
+        background: #0f172a;
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 16px;
+    }
+
+    .detail-row {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 10px;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(148,163,184,.07);
+    }
+
+    /* MESSAGE */
+    #orderNotification {
+        display: none;
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        z-index: 999999999;
+        transform: translateX(-50%);
+        min-width: 330px;
+        padding: 13px 20px;
+        color: white;
+        text-align: center;
+        border-radius: 11px;
+        box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    }
+
+        #orderNotification.success {
+            background: #047857;
+        }
+
+        #orderNotification.error {
+            background: #b91c1c;
+        }
+
+    /* LOADING */
+    #pageLoadingOverlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 999999998;
+        align-items: center;
+        justify-content: center;
+        background: rgba(2,6,23,.76);
+    }
+
+        #pageLoadingOverlay.show {
+            display: flex;
+        }
+
+    .loading-card {
+        min-width: 260px;
+        padding: 25px;
+        color: white;
+        text-align: center;
+        background: #0f172a;
+        border: 1px solid rgba(34,211,238,.18);
+        border-radius: 15px;
+    }
+
+    /* TAB 3 - EXCEL IMPORT */
+    .excel-component-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .excel-component-card {
+        position: relative;
+        padding: 20px;
+        overflow: hidden;
+        background: linear-gradient(135deg, rgba(15,23,42,.94), rgba(2,6,23,.84));
+        border: 1px solid rgba(34,211,238,.16);
+        border-radius: 20px;
+        box-shadow: 0 18px 46px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+        .excel-component-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 120px;
+            height: 120px;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(34,211,238,.13), transparent 68%);
+        }
+
+    .excel-component-head {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .excel-component-title {
+        margin: 0;
+        color: #f8fafc;
+        font-size: 17px;
+        font-weight: 900;
+    }
+
+    .excel-component-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        color: #67e8f9;
+        font-weight: 900;
+        background: rgba(8,145,178,.13);
+        border: 1px solid rgba(34,211,238,.24);
+        border-radius: 11px;
+    }
+
+    .excel-component-description {
+        min-height: 42px;
+        margin-bottom: 14px;
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.9;
+    }
+
+    .excel-file-picker {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+        background: rgba(15,23,42,.72);
+        border: 1px dashed rgba(148,163,184,.26);
+        border-radius: 14px;
+    }
+
+        .excel-file-picker input[type="file"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+    .excel-file-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 6px 12px;
+        cursor: pointer;
+        color: #e0f2fe;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+        background: rgba(14,165,233,.15);
+        border: 1px solid rgba(56,189,248,.24);
+        border-radius: 10px;
+    }
+
+    .excel-selected-file {
+        min-width: 0;
+        overflow: hidden;
+        color: #94a3b8;
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .excel-component-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+    }
+
+    .excel-action-link, .excel-upload-button, .excel-disable-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 13px;
+        cursor: pointer;
+        text-decoration: none;
+        font-family: inherit;
+        font-size: 12px;
+        font-weight: 900;
+        border-radius: 11px;
+        transition: .18s ease;
+    }
+
+    .excel-action-link {
+        color: #bfdbfe;
+        background: rgba(37,99,235,.14);
+        border: 1px solid rgba(96,165,250,.24);
+    }
+
+    .excel-upload-button {
+        color: #052e16;
+        background: linear-gradient(135deg, #34d399, #22d3ee);
+        border: 0;
+    }
+
+    .excel-disable-button {
+        color: #fecdd3;
+        background: rgba(225,29,72,.12);
+        border: 1px solid rgba(251,113,133,.24);
+    }
+
+        .excel-upload-button:disabled, .excel-disable-button:disabled {
+            cursor: not-allowed;
+            opacity: .55;
+        }
+
+    .excel-active-batch {
+        margin-top: 14px;
+        padding: 12px;
+        color: #cbd5e1;
+        font-size: 12px;
+        line-height: 1.9;
+        background: rgba(16,185,129,.07);
+        border: 1px solid rgba(52,211,153,.16);
+        border-radius: 13px;
+    }
+
+        .excel-active-batch strong {
+            color: #6ee7b7;
+        }
+
+    .excel-result {
+        display: none;
+        margin-top: 12px;
+        padding: 10px 12px;
+        font-size: 12px;
+        line-height: 1.9;
+        border-radius: 12px;
+    }
+
+        .excel-result.success {
+            display: block;
+            color: #a7f3d0;
+            background: rgba(16,185,129,.09);
+            border: 1px solid rgba(52,211,153,.18);
+        }
+
+        .excel-result.error {
+            display: block;
+            color: #fecdd3;
+            background: rgba(225,29,72,.09);
+            border: 1px solid rgba(251,113,133,.18);
+        }
+
+    /* TAB 3 - در حال توسعه */
+    .excel-component-card.excel-card-disabled {
+        opacity: .70;
+        border-style: dashed;
+        border-color: rgba(148,163,184,.22);
+    }
+
+        .excel-component-card.excel-card-disabled::before {
+            background: radial-gradient(circle, rgba(245,158,11,.10), transparent 68%);
+        }
+
+        .excel-component-card.excel-card-disabled .excel-component-number {
+            color: #fbbf24;
+            background: rgba(245,158,11,.08);
+            border-color: rgba(245,158,11,.20);
+        }
+
+    .excel-disabled-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-height: 150px;
+        padding: 18px 12px;
+        text-align: center;
+        background: rgba(2,6,23,.35);
+        border: 1px dashed rgba(148,163,184,.15);
+        border-radius: 14px;
+    }
+
+    .excel-disabled-text {
+        color: #94a3b8;
+        font-size: 12px;
+        line-height: 1.9;
+    }
+
+    /* RESPONSIVE */
+    /* هر ۵ کارت تب ۲ تا عرض ۹۰۰ پیکسل در یک ردیف می‌مانند */
+    @@media(max-width:900px) {
+        .scope-grid {
+            grid-template-columns: repeat(2,1fr);
+        }
+
+        .order-stats {
+            grid-template-columns: repeat(2,1fr);
+        }
+
+        .excel-component-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media(max-width:650px) {
+        .order-page {
+            padding: 10px;
+        }
+
+        .scope-grid, .order-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .order-tabs {
+            flex-direction: column;
+        }
+
+        .order-tab {
+            width: 100%;
+        }
+
+        .guide-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .guide-main-btn {
+            width: 100%;
+        }
+
+        .section-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .oa-native-guide {
+            width: calc(100% - 16px);
+        }
+
+        .oa-native-guide-card {
+            padding: 15px;
+        }
+
+        .oa-native-guide-title {
+            font-size: 14px;
+        }
+
+        .oa-native-guide-item {
+            padding: 11px;
+        }
+
+        .oa-native-guide-text {
+            font-size: 10px;
+        }
+    }
+
+    /* Scoped upload tab: glass surface and cyan accents. */
+    #tabUpload .bu-glass {
+        position: relative;
+        overflow: hidden;
+        padding: 26px;
+        border-radius: 24px;
+        border: 1px solid rgba(74,231,255,.26);
+        background: radial-gradient(ellipse at 100% 0,rgba(36,216,238,.13),transparent 55%),linear-gradient(135deg,rgba(16,37,55,.88),rgba(8,19,35,.92));
+        box-shadow: 0 18px 55px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.09);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        color: #e7f7ff;
+    }
+
+    #tabUpload .bu-heading {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 22px
+    }
+
+    #tabUpload .bu-icon {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 15px;
+        color: #65f4ff;
+        background: rgba(49,224,246,.1);
+        border: 1px solid rgba(49,224,246,.3);
+        box-shadow: 0 0 22px rgba(49,224,246,.1);
+        font-size: 22px
+    }
+
+    #tabUpload .bu-heading h3 {
+        margin: 0 0 6px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #ecfbff
+    }
+
+    #tabUpload .bu-heading p {
+        margin: 0;
+        color: #9ab5c6;
+        font-size: 12px;
+        line-height: 1.8
+    }
+
+    #tabUpload .bu-toolbar {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        padding: 18px;
+        border: 1px solid rgba(168,220,244,.12);
+        border-radius: 18px;
+        background: rgba(255,255,255,.025);
+        margin-bottom: 18px
+    }
+
+    #tabUpload .bu-field {
+        flex: 1;
+        min-width: 0
+    }
+
+        #tabUpload .bu-field label {
+            display: block;
+            margin-bottom: 9px;
+            font-size: 12px;
+            color: #b9d2df
+        }
+
+    #tabUpload #birjandUploadPeriod {
+        width: 100%;
+        height: 49px;
+        padding: 10px 14px 10px 38px;
+        border-radius: 13px;
+        border: 1px solid rgba(98,202,226,.32);
+        background-color: rgba(3,16,29,.8);
+        color: #ecfaff;
+        outline: none;
+        box-shadow: inset 0 1px 4px rgba(0,0,0,.12);
+        color-scheme: dark;
+        transition: border-color .2s,box-shadow .2s
+    }
+
+        #tabUpload #birjandUploadPeriod:focus {
+            border-color: #58edff;
+            box-shadow: 0 0 0 3px rgba(44,225,248,.12)
+        }
+
+    #tabUpload #birjandUploadShow {
+        height: 49px;
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-width: 134px;
+        padding: 0 24px;
+        border-radius: 13px;
+        border: 1px solid rgba(153,255,255,.55);
+        background: linear-gradient(120deg,#2ce2ea,#35b8f4);
+        color: #042438;
+        font-weight: 700;
+        box-shadow: 0 5px 22px rgba(31,205,239,.22),inset 0 1px 0 rgba(255,255,255,.35);
+        transition: box-shadow .2s,transform .2s
+    }
+
+        #tabUpload #birjandUploadShow:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 30px rgba(31,205,239,.36)
+        }
+
+        #tabUpload #birjandUploadShow:focus-visible {
+            outline: 2px solid #bdfaff;
+            outline-offset: 4px
+        }
+
+        #tabUpload #birjandUploadShow:disabled {
+            opacity: .55;
+            transform: none;
+            cursor: wait
+        }
+
+    #tabUpload #birjandUploadStatus:not(:empty) {
+        padding: 12px 15px;
+        border-radius: 12px;
+        background: rgba(57,196,229,.08);
+        border: 1px solid rgba(57,196,229,.18);
+        color: #b6eaf4;
+        margin-bottom: 14px;
+        font-size: 13px
+    }
+
+    #tabUpload #birjandUploadResult:not(:empty) {
+        border-top: 1px solid rgba(130,213,239,.14);
+        padding-top: 20px
+    }
+
+    @@media(max-width:575px) {
+        #tabUpload .bu-glass {
+            padding: 15px;
+            border-radius: 18px
+        }
+
+        #tabUpload .bu-toolbar {
+            padding: 12px;
+            gap: 8px
+        }
+
+        #tabUpload #birjandUploadShow {
+            min-width: 94px;
+            padding: 0 12px
+        }
+
+        #tabUpload .bu-heading h3 {
+            font-size: 16px
+        }
+    }
+
+    @@media(prefers-reduced-motion:reduce) {
+        #tabUpload #birjandUploadShow, #tabUpload #birjandUploadPeriod {
+            transition: none
+        }
+    }
+
+
+    /* Compact controls; grid keeps the label above the select only. */
+    #tabUpload .bu-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0,320px) 108px;
+        align-items: start;
+        justify-content: start;
+        gap: 8px 10px;
+        padding: 12px 14px;
+        margin-bottom: 12px
+    }
+
+    #tabUpload .bu-field {
+        display: contents
+    }
+
+        #tabUpload .bu-field label {
+            grid-column: 1;
+            grid-row: 1;
+            margin: 0;
+            font-size: 11px;
+            line-height: 18px
+        }
+
+    #tabUpload #birjandUploadPeriod {
+        grid-column: 1;
+        grid-row: 2;
+        height: 40px;
+        min-height: 40px;
+        margin: 0;
+        border-radius: 10px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        font-size: 13px;
+        box-sizing: border-box
+    }
+
+    #tabUpload #birjandUploadShow {
+        grid-column: 2;
+        grid-row: 2;
+        height: 40px;
+        min-height: 40px;
+        min-width: 0;
+        width: 108px;
+        align-self: start;
+        margin: 0;
+        padding: 0 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        box-sizing: border-box
+    }
+
+    @@media(max-width:575px) {
+        #tabUpload .bu-toolbar {
+            grid-template-columns: minmax(0,1fr) 90px;
+            padding: 10px;
+            gap: 7px
+        }
+
+        #tabUpload #birjandUploadShow {
+            width: 90px;
+            min-width: 0;
+            padding: 0 8px
+        }
+    }
+
+
+    #tabProcessing .bu-glass {
+        padding: 24px;
+        border-radius: 22px;
+        border: 1px solid rgba(66,225,248,.28);
+        background: linear-gradient(135deg,rgba(16,43,62,.9),rgba(8,18,34,.94));
+        backdrop-filter: blur(16px);
+        box-shadow: 0 12px 40px #0003;
+        color: #ecfaff
+    }
+
+    #tabProcessing .bu-heading {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 20px
+    }
+
+        #tabProcessing .bu-heading h3 {
+            font-size: 18px;
+            color: #c9faff
+        }
+
+        #tabProcessing .bu-heading p {
+            color: #a9c6d6
+        }
+
+    #tabProcessing .processing-controls {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap
+    }
+
+        #tabProcessing .processing-controls label {
+            width: 280px;
+            max-width: 100%;
+            margin: 0;
+            color: #b9d2df;
+            font-size: 12px
+        }
+
+    #tabProcessing select {
+        height: 42px;
+        margin-top: 8px;
+        background-color: #091b2b;
+        color: #e5faff;
+        border: 1px solid #56d4eb66;
+        border-radius: 10px
+    }
+
+    #tabProcessing #runDataProcessing {
+        height: 42px;
+        border-radius: 10px;
+        background: linear-gradient(120deg,#2ce2ea,#35b8f4);
+        box-shadow: 0 0 20px #21d7ed33;
+        font-weight: 700;
+        color: #042438
+    }
+
+    #processingStatus:not(:empty) {
+        margin-top: 16px;
+        padding: 14px;
+        border: 1px solid #4fd6ec44;
+        border-radius: 12px;
+        white-space: pre-line
+    }
+</style>
+@*@if (Convert.ToString(ViewBag.CurrentPersonalId).Trim() != "4024")
+    {
+        <style>
+                #pageLockedOverlay {
+                    position: fixed;
+                    inset: 0;
+                    z-index: 2147483647;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                    direction: rtl;
+                    text-align: center;
+                    background: rgba(2,6,23,.94);
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                }
+
+                .page-locked-card {
+                    position: relative;
+                    width: min(460px, 100%);
+                    padding: 30px 26px;
+                    color: #e2e8f0;
+                    background: linear-gradient(145deg, #1c1017, #0b0509);
+                    border: 1px solid rgba(251,113,133,.45);
+                    border-radius: 18px;
+                    box-shadow: 0 30px 100px rgba(0,0,0,.8), 0 0 40px rgba(251,113,133,.10);
+                }
+
+                .page-locked-icon {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 62px;
+                    height: 62px;
+                    margin-bottom: 14px;
+                    font-size: 30px;
+                    background: rgba(251,113,133,.12);
+                    border: 1px solid rgba(251,113,133,.35);
+                    border-radius: 50%;
+                }
+
+                .page-locked-title {
+                    margin-bottom: 8px;
+                    color: #fecdd3;
+                    font-size: 19px;
+                    font-weight: 900;
+                }
+
+                .page-locked-text {
+                    color: #cbd5e1;
+                    font-size: 13px;
+                    line-height: 2.1;
+                }
+            </style>
+
+            <div id="pageLockedOverlay" role="alertdialog" aria-modal="true" aria-labelledby="pageLockedTitle">
+                <div class="page-locked-card">
+                    <div class="page-locked-icon">🔒</div>
+                    <div id="pageLockedTitle" class="page-locked-title">صفحه قفل است</div>
+                    <div class="page-locked-text">
+                        در حال حاضر امکان ایجاد یا تغییر اطلاعات در این صفحه وجود ندارد.
+                        لطفاً در زمان دیگری مراجعه فرمایید.
+                    </div>
+                </div>
+            </div>
+
+        <script>
+            // صفحه قفل است: تعامل با محتوای پشت پیام غیرفعال می‌شود
+            (function () {
+                var page = document.querySelector(".order-page");
+                if (page) { page.setAttribute("inert", ""); }
+
+                // پیغام «توجه (مهم)» وقتی صفحه قفل است نمایش داده نشود
+                window.showImportantNotice = function () { };
+            })();
+        </script>
+    }*@
+<!-- ===================== IMPORTANT NOTICE (هنگام ورود به صفحه) ===================== -->
+
+<dialog id="importantNoticeDialog" class="oa-notice-dialog">
+    <div class="oa-notice-card">
+
+        <div class="oa-notice-title">
+            <span class="oa-notice-icon">!</span>
+            توجه (مهم):
+        </div>
+
+        <div class="oa-notice-text">
+            درصورتیکه ماموری در سربرگ اول توسط کاربر تعیین نقش وصول گردد ولی در سربرگ دوم (تنظیمات ارجاع)،
+            محدودیتی برای این مامور اعمال و ذخیره نگردد، سیستم بصورت خودکار ارجاع وصول برای این مامور را
+            بدون محدودیت (تمام مناطق و روزکارها و تعرفه ها) و مانند روال قبلی (با اولویت مبلغ و پراکندگی)
+            انجام خواهد داد.
+        </div>
+
+        <label class="oa-notice-confirm">
+            <input type="checkbox" id="importantNoticeCheck" />
+            مطالعه کردم
+        </label>
+
+        <div class="oa-notice-footer">
+            <button type="button" id="importantNoticeOk" class="oa-notice-ok" disabled>تایید</button>
+        </div>
+
+    </div>
+</dialog>
+
+<script>
+
+    // پیغام مهم: فقط برای سربرگ اول و دوم؛ هنگام ورود به آن‌ها نمایش داده می‌شود
+    // و تا «مطالعه کردم + تایید» بسته نمی‌شود. (پس از تایید، تا ریلود بعدی تکرار نمی‌شود.)
+    (function () {
+
+        var dialog = document.getElementById("importantNoticeDialog");
+        var check = document.getElementById("importantNoticeCheck");
+        var ok = document.getElementById("importantNoticeOk");
+
+        if (!dialog || !check || !ok) { return; }
+
+        // بستن با کلید Esc ممنوع
+        dialog.addEventListener("cancel", function (e) { e.preventDefault(); });
+
+        check.addEventListener("change", function () { ok.disabled = !check.checked; });
+
+        var acknowledged = false;
+
+        ok.addEventListener("click", function () {
+
+            if (!check.checked) { return; }
+
+            acknowledged = true;
+
+            if (typeof dialog.close === "function") { dialog.close(); }
+            else { dialog.removeAttribute("open"); }
+        });
+
+        // از اسکریپت اصلی صفحه صدا زده می‌شود (ورود به تب 1 یا 2)
+        window.showImportantNotice = function () {
+
+            if (acknowledged || dialog.open) { return; }
+
+            check.checked = false;
+            ok.disabled = true;
+
+            if (typeof dialog.showModal === "function") { dialog.showModal(); }
+            else { dialog.setAttribute("open", "open"); }
+        };
+
+    })();
+
+</script>
+
+
+<!-- ===================== GUIDE TAB 1 ===================== -->
+
+<dialog id="pageGuideDialogTab1" class="oa-native-guide">
+    <div class="oa-native-guide-card">
+
+        <div class="oa-native-guide-header">
+            <div>
+                <div class="oa-native-guide-tab-badge">تب 1 - تعیین نقش وصول</div>
+                <div class="oa-native-guide-title">راهنمای تعیین نقش وصول مامورین</div>
+                <div class="oa-native-guide-subtitle">لطفاً قبل از اعمال تغییرات، راهنمای زیر را مطالعه فرمایید.</div>
+            </div>
+            <form method="dialog"><button type="submit" class="oa-native-guide-close" title="بستن">×</button></form>
+        </div>
+
+        <div class="oa-native-guide-intro">لطفا راهنمای زیر را مطالعه فرمایید:</div>
+
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">1</div>
+            <div class="oa-native-guide-text">این صفحه جهت تعیین نقش وصول مامورین (مشارکت کننده در وصول) می باشد.</div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">2</div>
+            <div class="oa-native-guide-text">
+                برای مامورینی که در این صفحه تعیین نقش شوند در پنل تنظیمات لیست وصول،
+                امکان تعیین روزکار وجود خواهد داشت و به ایشان لیست سیستمی ارجاع خواهد شد.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">3</div>
+            <div class="oa-native-guide-text">
+                نقش <span class="oa-native-guide-highlight">@exclusiveCollectionTitle</span>
+                فقط به تنهایی قابل انتخاب می باشد ولی سایر نقش ها قابلیت انتخاب همزمان دارد.
+                در صورت انتخاب نقش <span class="oa-native-guide-highlight">بالابری</span>،
+                انتخاب نقش <span class="oa-native-guide-highlight">عادی</span> یا
+                <span class="oa-native-guide-highlight">دیماند</span> نیز الزامی است.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">4</div>
+            <div class="oa-native-guide-text">
+                با هر بار زدن دکمه <span class="oa-native-guide-highlight">"ذخیره اطلاعات"</span>
+                آخرین تغییرات ذخیره و در جدول ذیل آن قابل مشاهده خواهد بود.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">5</div>
+            <div class="oa-native-guide-text">
+                کاربران می توانند جهت ارجاعات بعدی، قبل از زمان ارجاع، تغییرات موردنظر را در زمان خود اعمال نمایند.
+            </div>
+        </div>
+
+        <div class="oa-native-guide-footer">
+            <form method="dialog"><button type="submit" class="oa-native-guide-ok">متوجه شدم</button></form>
+        </div>
+
+    </div>
+</dialog>
+
+
+<!-- ===================== GUIDE TAB 2 ===================== -->
+
+<dialog id="pageGuideDialogTab2" class="oa-native-guide">
+    <div class="oa-native-guide-card">
+
+        <div class="oa-native-guide-header">
+            <div>
+                <div class="oa-native-guide-tab-badge">تب 2 - تنظیمات ارجاع</div>
+                <div class="oa-native-guide-title">راهنمای تنظیم نحوه ارجاع لیست وصول</div>
+                <div class="oa-native-guide-subtitle">لطفاً قبل از اعمال تغییرات، راهنمای زیر را مطالعه فرمایید.</div>
+            </div>
+            <form method="dialog"><button type="submit" class="oa-native-guide-close" title="بستن">×</button></form>
+        </div>
+
+        <div class="oa-native-guide-intro">لطفا راهنمای زیر را مطالعه فرمایید:</div>
+
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">1</div>
+            <div class="oa-native-guide-text">این صفحه جهت تعیین نحوه ارجاع لیست وصول مامورین می باشد.</div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">2</div>
+            <div class="oa-native-guide-text">
+                بصورت پیش فرض <span class="oa-native-guide-highlight">همه ماموران، @scopeRegionsTitle، روزکارها و تعرفه‌ها تیک‌خورده</span> هستند
+                و این یعنی هیچ محدودیتی برای ارجاع لحاظ نشده است.
+                درصورت عدم تغییر توسط کاربر، ارجاع برای تمام مامورین تعیین نقش شده بدون محدودیت انجام خواهد شد.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">3</div>
+            <div class="oa-native-guide-text">
+                برای محدود کردن ارجاع، تیک موارد غیرمجاز را بردارید (یا «انتخاب همه» را بردارید و فقط موارد موردنظر را تیک بزنید).
+                برای هر مامور می‌توانید <span class="oa-native-guide-highlight">برای هر @scopeRegionTitle، روزکارهای جداگانه</span> تعیین کنید.
+                مثلاً فقط @scopeRegionTitle 16 و روزکار 22 تا 25 را تیک بزنید و ذخیره کنید، سپس @scopeRegionTitle 17 و روزکار 27 تا 29 را تیک بزنید و دوباره ذخیره کنید.
+                برای انتخاب سریع روزکارها می‌توانید از کادر «از ... تا ...» استفاده کنید.
+                اگر برای همان مامور همان @scopeRegionTitle قبلاً ثبت شده باشد، فقط روزکارهای آن @scopeRegionTitle ویرایش می‌شود؛
+                در غیر این صورت @scopeRegionTitle جدید اضافه می‌شود و سایر @scopeRegionsTitle مامور تغییری نمی‌کنند.
+                برای ویرایش یا حذف یک @scopeRegionTitle از دکمه‌های کنار همان @scopeRegionTitle در جدول پایین استفاده کنید.
+                <br />
+                <span class="oa-native-guide-highlight">افزودن @scopeRegionTitle دیگر برای مامور ثبت‌شده:</span>
+                اگر مامور به بیش از یک @scopeRegionTitle دسترسی دارد و فقط برای بعضی از آن‌ها ثبت شده است،
+                در جدول پایین روی دکمه <span class="oa-native-guide-highlight">«+ افزودن @scopeRegionTitle دیگر»</span> کنار نام او بزنید.
+                نام مامور دوباره در لیست بالا نمایش داده می‌شود و فقط @scopeRegionsTitle ثبت‌نشده تیک‌خورده است.
+                روزکار، تعرفه و @scopeAreaTitle را تعیین و «ذخیره اطلاعات» را بزنید؛ @scopeRegionTitle جدید اضافه می‌شود و @scopeRegionsTitle قبلی تغییری نمی‌کنند.
+                این دکمه فقط وقتی نمایش داده می‌شود که هنوز @scopeRegionTitle ثبت‌نشده‌ای برای مامور باقی مانده باشد.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">4</div>
+            <div class="oa-native-guide-text">
+                درصورت نیاز می توانید برای یک یا چند مامور تغییرات را اعمال و دکمه
+                <span class="oa-native-guide-highlight">"ذخیره اطلاعات"</span>
+                را بزنید (برای سایر مامورین تغییری اعمال نخواهد شد).
+                نوع تعرفه (خانگی، کشاورزی، صنعتی و ...) و <span class="oa-native-guide-highlight">@scopeAreaTitle (کد ناحیه @allAreasText)</span>
+                هم مثل روزکار برای هر @scopeRegionTitle جداگانه تعیین می‌شود؛
+                اگر همه تعرفه‌ها یا همه @scopeAreasTitle تیک‌خورده باشند یعنی بدون محدودیت.
+                در قسمت‌های @scopeRegionTitle، روزکار، @scopeAreaTitle و نوع تعرفه باید <span class="oa-native-guide-highlight">حداقل یک مورد</span> تیک‌خورده باشد،
+                در غیر این صورت ثبت انجام نمی‌شود.
+                ماموران ثبت‌شده در جدول پایین دیگر در لیست بالا نمایش داده نمی‌شوند و فقط ماموران ثبت‌نشده را می‌بینید؛
+                برای تغییر تنظیمات یک مامور ثبت‌شده از دکمه «ویرایش» جدول پایین استفاده کنید.
+                <br />
+                <span class="oa-native-guide-highlight">گروه‌بندی داخل هر @scopeRegionTitle:</span>
+                در هر @scopeRegionTitle می‌توانید چند «گروه» جداگانه تعریف کنید و برای هر گروه، روزکار و @scopeAreaTitle و تعرفه‌ی مخصوص همان گروه را بدهید.
+                مثلاً @scopeRegionTitle 14: گروه 1 ← روزکار 1 تا 10 و @scopeAreaTitle 0 تا 5؛ گروه 2 ← روزکار 11 تا 20 و @scopeAreaTitle 6 تا @AreaMax.
+                برای این کار در جدول پایین روی دکمه <span class="oa-native-guide-highlight">«+ گروه»</span> کنار همان @scopeRegionTitle بزنید،
+                روزکار/@scopeAreaTitle/تعرفه‌ی گروه جدید را تیک بزنید (حداقل یک مورد باید محدود شده باشد) و «ذخیره اطلاعات» را بزنید.
+                ارجاع وقتی مجاز است که مامور <span class="oa-native-guide-highlight">یکی از گروه‌های</span> همان @scopeRegionTitle را کامل رعایت کند.
+                با «ویرایش» یا «حذف» هر ردیف فقط همان گروه تغییر می‌کند. اگر یک گروه را بدون هیچ محدودیتی (همه تیک‌خورده) ذخیره کنید،
+                کل آن @scopeRegionTitle بدون محدودیت می‌شود و گروه‌های قبلی آن پاک می‌شوند.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">5</div>
+            <div class="oa-native-guide-text">
+                آخرین تغییرات ذخیره شده در جدول ذیل صفحه نمایش داده می شود و ارجاع لیست برمبنای آخرین تغییرات (جدول مذکور) صورت خواهد گرفت.
+            </div>
+        </div>
+
+        <div class="oa-native-guide-footer">
+            <form method="dialog"><button type="submit" class="oa-native-guide-ok">متوجه شدم</button></form>
+        </div>
+
+    </div>
+</dialog>
+
+
+<!-- ===================== GUIDE TAB 3 ===================== -->
+
+<dialog id="pageGuideDialogTab3" class="oa-native-guide">
+    <div class="oa-native-guide-card">
+
+        <div class="oa-native-guide-header">
+            <div>
+                <div class="oa-native-guide-tab-badge">تب 3 - لیست بالابری</div>
+                <div class="oa-native-guide-title">راهنمای ورود مؤلفه‌ها از Excel</div>
+                <div class="oa-native-guide-subtitle">لطفاً قبل از بارگذاری فایل، راهنمای زیر را مطالعه فرمایید.</div>
+            </div>
+            <form method="dialog"><button type="submit" class="oa-native-guide-close" title="بستن">×</button></form>
+        </div>
+
+        <div class="oa-native-guide-intro">لطفا راهنمای زیر را مطالعه فرمایید:</div>
+
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">1</div>
+            <div class="oa-native-guide-text">
+                ابتدا با دکمه <span class="oa-native-guide-highlight">"دریافت نمونه Excel"</span> فایل نمونه مؤلفه موردنظر را دریافت نمایید.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">2</div>
+            <div class="oa-native-guide-text">
+                فایل باید فقط یک ستون با عنوان دقیق همان مؤلفه داشته باشد و مقادیر در ستون اول وارد شوند.
+                ردیف‌های خالی و مقادیر تکراری نادیده گرفته می‌شوند.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">3</div>
+            <div class="oa-native-guide-text">
+                پس از انتخاب فایل، دکمه <span class="oa-native-guide-highlight">"بارگذاری و ذخیره"</span> را بزنید.
+                نام فایل فعال و تعداد مقادیر آن در کارت همان مؤلفه نمایش داده می‌شود.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">4</div>
+            <div class="oa-native-guide-text">
+                در صورت نیاز می‌توانید با دکمه <span class="oa-native-guide-highlight">"غیرفعال‌سازی فایل فعلی"</span>
+                فایل فعال هر مؤلفه را غیرفعال نمایید.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">5</div>
+            <div class="oa-native-guide-text">
+                در حال حاضر فقط مؤلفه‌های <span class="oa-native-guide-highlight">شناسه قبض و پرونده</span>
+                قابل بارگذاری هستند. مؤلفه‌های روزکار و محدوده
+                <span class="oa-native-guide-highlight">در حال توسعه</span> می‌باشند.
+            </div>
+        </div>
+
+        <div class="oa-native-guide-footer">
+            <form method="dialog"><button type="submit" class="oa-native-guide-ok">متوجه شدم</button></form>
+        </div>
+
+    </div>
+</dialog>
+
+
+<!-- ===================== GUIDE TAB 4 ===================== -->
+
+<dialog id="pageGuideDialogTab4" class="oa-native-guide">
+    <div class="oa-native-guide-card">
+
+        <div class="oa-native-guide-header">
+            <div>
+                <div class="oa-native-guide-tab-badge">تب 4 - لیست سخت وصول</div>
+                <div class="oa-native-guide-title">راهنمای ورود مؤلفه‌ها از Excel (لیست سخت وصول)</div>
+                <div class="oa-native-guide-subtitle">لطفاً قبل از بارگذاری فایل، راهنمای زیر را مطالعه فرمایید.</div>
+            </div>
+            <form method="dialog"><button type="submit" class="oa-native-guide-close" title="بستن">×</button></form>
+        </div>
+
+        <div class="oa-native-guide-intro">لطفا راهنمای زیر را مطالعه فرمایید:</div>
+
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">1</div>
+            <div class="oa-native-guide-text">
+                ابتدا با دکمه <span class="oa-native-guide-highlight">"دریافت نمونه Excel"</span> فایل نمونه مؤلفه موردنظر را دریافت نمایید.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">2</div>
+            <div class="oa-native-guide-text">
+                فایل باید فقط یک ستون با عنوان دقیق همان مؤلفه داشته باشد و مقادیر در ستون اول وارد شوند.
+                ردیف‌های خالی و مقادیر تکراری نادیده گرفته می‌شوند.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">3</div>
+            <div class="oa-native-guide-text">
+                پس از انتخاب فایل، دکمه <span class="oa-native-guide-highlight">"بارگذاری و ذخیره"</span> را بزنید.
+                نام فایل فعال و تعداد مقادیر آن در کارت همان مؤلفه نمایش داده می‌شود.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">4</div>
+            <div class="oa-native-guide-text">
+                در صورت نیاز می‌توانید با دکمه <span class="oa-native-guide-highlight">"غیرفعال‌سازی فایل فعلی"</span>
+                فایل فعال هر مؤلفه را غیرفعال نمایید.
+            </div>
+        </div>
+        <div class="oa-native-guide-item">
+            <div class="oa-native-guide-number">5</div>
+            <div class="oa-native-guide-text">
+                در حال حاضر فقط مؤلفه‌های <span class="oa-native-guide-highlight">شناسه قبض و پرونده</span>
+                قابل بارگذاری هستند. مؤلفه‌های روزکار و محدوده
+                <span class="oa-native-guide-highlight">در حال توسعه</span> می‌باشند.
+            </div>
+        </div>
+
+        <div class="oa-native-guide-footer">
+            <form method="dialog"><button type="submit" class="oa-native-guide-ok">متوجه شدم</button></form>
+        </div>
+
+    </div>
+</dialog>
+
+
+<!-- GUIDE SCRIPT (مستقل از jQuery) -->
+
+<script>
+
+    function openPageGuide() {
+
+        var activeTabButton = document.querySelector(".main-tab-button.active");
+
+        var activeTab = activeTabButton ? activeTabButton.getAttribute("data-tab") : "tabOne";
+
+        var guideMap = {
+            tabOne: "pageGuideDialogTab1",
+            tabTwo: "pageGuideDialogTab2",
+            tabThree: "pageGuideDialogTab3",
+            tabFour: "pageGuideDialogTab4"
+        };
+
+        var dialog = document.getElementById(guideMap[activeTab] || guideMap.tabOne);
+
+        if (!dialog) { return; }
+
+        if (typeof dialog.showModal === "function") {
+            if (!dialog.open) { dialog.showModal(); }
+        }
+        else {
+            dialog.setAttribute("open", "open");
+        }
+    }
+
+    // بستن راهنما با کلیک روی فضای تیره پشت آن
+    document.addEventListener("click", function (e) {
+        var target = e.target;
+
+        if (target && target.classList
+            && target.classList.contains("oa-native-guide")
+            && typeof target.close === "function") {
+            target.close();
+        }
+    });
+
+</script>
+
+
+<div class="order-page">
+
+    <div id="orderNotification"></div>
+
+    <div id="pageLoadingOverlay">
+        <div class="loading-card">
+            <div id="loadingTitle">در حال پردازش...</div>
+            <div id="loadingText" style="margin-top:5px;color:#94a3b8;font-size:9px">لطفاً چند لحظه صبر کنید</div>
+        </div>
+    </div>
+
+    <!-- DETAILS MODAL TAB 2 -->
+    <div id="scopeDetailsModal" class="scope-modal">
+        <div class="scope-modal-card">
+            <h3 style="margin-top:0">جزئیات مامور</h3>
+            <div id="scopeDetailsContent"></div>
+            <div class="form-actions">
+                <button type="button" id="closeScopeDetails" class="order-btn btn-secondary">بستن</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GUIDE BUTTON -->
+    <div class="guide-header">
+        <button type="button" class="guide-main-btn" onclick="openPageGuide();">
+            <span class="guide-main-icon">?</span>
+            راهنمای صفحه
+        </button>
+        <div class="guide-header-description">
+            راهنمای هر تب جداگانه است؛ ابتدا تب موردنظر را انتخاب و سپس روی «راهنمای صفحه» کلیک کنید.
+        </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="order-tabs">
+        <button type="button" class="order-tab active main-tab-button" data-tab="tabOne">1- تعیین نقش وصول</button>
+        <button type="button" class="order-tab main-tab-button" data-tab="tabTwo">2- تنظیمات ارجاع</button>
+        <button type="button" class="order-tab main-tab-button" data-tab="tabThree">3- لیست بالابری</button>
+        <button type="button" class="order-tab main-tab-button" data-tab="tabFour">4- لیست سخت وصول</button>
+        @if (isJonobi)
+        {
+            <button type="button" class="order-tab main-tab-button" data-tab="tabUpload">5- بارگزاری</button>
+            <button type="button" class="order-tab main-tab-button" data-tab="tabAllocation">6- اجرای تخصیص</button>
+            <button type="button" class="order-tab main-tab-button" data-tab="tabProcessing">7- پردازش داده‌ها</button>
+        }
+    </div>
+
+    <!-- STATS -->
+    <div class="order-stats">
+        <div class="stat-card">
+            <div class="stat-title">تعیین نقش ثبت‌شده</div>
+            <div class="stat-value">@(ViewBag.AssignmentCount ?? assignments.Count)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">نیروهای قابل انتخاب</div>
+            <div class="stat-value">@(ViewBag.UserCount ?? users.Count)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">نیروهای تنظیمات ارجاع</div>
+            <div class="stat-value">@tab2Users.Count</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-title">مناطق</div>
+            <div class="stat-value">@allowedRegions.Count</div>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         TAB 1
+         ===================================================== -->
+
+    @if (isJonobi)
+    {
+        <div id="tabAllocation" class="main-tab-panel" style="display:none">
+            <div class="glass-card allocation-embed-card" dir="rtl">
+                <div class="section-header">
+                    <div>
+                        <h2>اجرای تخصیص و دریافت لیست</h2>
+                        <p>صفحه تخصیص در همین‌جا باز می‌شود و شهرستان بر اساس شهرستان لینک‌شده به کاربر محدود است.</p>
+                    </div>
+                </div>
+                <iframe title="اجرای تخصیص" class="allocation-embed-frame"
+                        src="@Url.Action("Index", "setting_order", new { area = "", embedded = true })"
+                        loading="lazy"></iframe>
+            </div>
+        </div>
+
+        <div id="tabUpload" class="main-tab-panel" style="display:none">
+            <div class="bu-glass" dir="rtl">
+                <div class="bu-heading">
+                    <span class="bu-icon" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i></span>
+                    <div><h3>بارگزاری گزارش ورودی</h3><p>دوره موردنظر را انتخاب کنید و اطلاعات آن را مشاهده کنید.</p></div>
+                </div>
+                <div class="bu-toolbar">
+                    <div class="bu-field">
+                        <label for="birjandUploadPeriod">نام دوره</label>
+                        <select id="birjandUploadPeriod" class="form-select">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var period in uploadPeriods)
+                            {
+                                <option value="@period.Value">@period.Text</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="button" id="birjandUploadShow" class="btn"><i class="bi bi-eye" aria-hidden="true"></i><span>مشاهده</span></button>
+                </div>
+                <div id="birjandUploadStatus" role="status" aria-live="polite"></div>
+                <div id="birjandUploadResult"></div>
+                <button type="button" id="openDataProcessing" class="btn btn-outline-info" style="margin-top:14px">پس از ثبت اکسل، رفتن به پردازش داده‌ها</button>
+            </div>
+        </div>
+    }
+
+    @if (isJonobi)
+    {
+        <div id="tabProcessing" class="main-tab-panel" style="display:none">
+            <div class="bu-glass" dir="rtl">
+                <div class="bu-heading"><span class="bu-icon"><i class="bi bi-cpu"></i></span><div><h3>پردازش داده‌ها</h3><p>پس از ثبت اکسل، شرط‌های ذخیره‌شده را روی آخرین بارگذاری همان دوره اجرا کنید.</p></div></div>
+                <div id="processingSecurity" style="display:none">@Html.AntiForgeryToken()</div>
+                <div class="processing-controls">
+                    <label>
+                        دوره<select id="processingPeriod" class="form-select">
+                            <option value="">انتخاب کنید</option>
+                            @foreach (var period in uploadPeriods)
+                            {
+                                <option value="@period.Value">@period.Text</option>
+}
+                        </select>
+                    </label>
+                    <label>لیست و شرط‌های ذخیره‌شده<select id="processingDesign" class="form-select"><option value="">ابتدا دوره را انتخاب کنید</option></select></label>
+                    <button type="button" id="runDataProcessing" class="btn btn-info" disabled>اجرای پردازش</button>
+                </div>
+                <p style="margin-top:16px;color:#a9c6d6">رکوردهای ردشده از خروجی قبول‌شده‌ها کنار گذاشته می‌شوند؛ اطلاعات اصلی اکسل پاک نمی‌شود. نتیجه روزانه در Result1218 و Result1218_Rejected ذخیره می‌شود.</p>
+                <div id="processingStatus" role="status" aria-live="polite"></div>
+            </div>
+        </div>
+    }
+
+    <div id="tabOne" class="main-tab-panel">
+
+        <div class="glass-card" id="assignmentFormCard">
+
+            <div class="section-header">
+                <div>
+                    <h2 id="assignmentFormTitle">تعیین نقش نیروها</h2>
+                    <p>نقش هر نیرو را انتخاب کنید.</p>
+                </div>
+            </div>
+
+            <form id="assignmentForm">
+
+                @Html.AntiForgeryToken()
+
+                <div class="tab-one-toolbar">
+                    <div>
+                        <div class="tab-one-info-title">تعیین نقش ماموران</div>
+                        <div class="tab-one-info-subtitle">
+                            هر نیرو می‌تواند یک یا چند فعالیت داشته باشد.
+                            برای جستجوی نیرو از کادر زیر نام نیرو استفاده کنید.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="matrix-area">
+
+                    <div class="matrix-toolbar">
+                        <div class="matrix-toolbar-title">ماتریس نقش‌ها</div>
+                        <div class="matrix-toolbar-info">
+                            انتخاب همه، کل ستون را انتخاب می‌کند. نقش @exclusiveCollectionTitle با سایر نقش‌ها هم‌زمان قابل انتخاب نیست.
+                        </div>
+                    </div>
+
+                    <div class="matrix-wrapper matrix-scroll-20">
+
+                        <table class="activity-matrix" id="assignmentMatrix">
+
+                            <thead>
+                                <tr>
+                                    <th class="user-column-header-cell">
+                                        <div class="user-column-title">نام نیرو</div>
+                                        <div class="user-column-search">
+                                            <span class="user-column-search-icon">⌕</span>
+                                            <input type="text" id="matrixUserSearch" class="user-column-search-input"
+                                                   autocomplete="off" placeholder="جستجوی نام یا کد ملی..." />
+                                        </div>
+                                    </th>
+
+                                    @foreach (var activity in activityTypes)
+                                    {
+                                        <th>@activity.Title</th>
+                                    }
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                <tr class="select-all-row">
+                                    <td class="person-cell"><strong style="color:#7dd3fc">انتخاب همه</strong></td>
+
+                                    @foreach (var activity in activityTypes)
+                                    {
+                                        <td>
+                                            <label class="neon-check">
+                                                <input type="checkbox" class="column-select-all" data-activity="@activity.ID" />
+                                                <span></span>
+                                            </label>
+                                        </td>
+                                    }
+                                </tr>
+
+                                @foreach (var user in users)
+                                {
+                                    var fullName = ((user.usr_Name ?? "") + " " + (user.usr_Family ?? "")).Trim();
+
+                                    <tr class="user-activity-row"
+                                        data-search="@((fullName + " " + (user.usr_NationalCode ?? "")).ToLower())">
+
+                                        <td class="person-cell">
+                                            <div class="person-info">
+                                                <span class="person-avatar">
+                                                    @(string.IsNullOrWhiteSpace(fullName) ? "؟" : fullName.Substring(0, 1))
+                                                </span>
+                                                <div>
+                                                    <span class="person-name">@fullName</span>
+                                                    <span class="person-national">@(user.usr_NationalCode ?? "")</span>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        @foreach (var activity in activityTypes)
+                                        {
+                                            var pairKey = user.usr_ID.ToString() + "_" + activity.ID.ToString();
+                                            var isSaved = savedActivityPairKeys.Contains(pairKey);
+
+                                            <td>
+                                                <label class="neon-check">
+                                                    <input type="checkbox"
+                                                           class="user-activity-check"
+                                                           data-user="@user.usr_ID"
+                                                           data-activity="@activity.ID"
+                                                           @(isSaved ? "checked" : null) />
+                                                    <span></span>
+                                                </label>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="order-btn btn-main">
+                        <span id="saveButtonText">ذخیره اطلاعات</span>
+                    </button>
+                    <button type="button" id="clearAssignment" class="order-btn btn-secondary">پاک کردن</button>
+                </div>
+
+            </form>
+
+        </div>
+
+
+        <!-- TAB 1 SAVED TABLE -->
+
+        <div class="glass-card">
+
+            <div class="section-header">
+                <div>
+                    <h2>آخرین تعیین نقش ثبت‌شده</h2>
+                    <p>در هر ستون می‌توانید نام یا کد ملی نیرو را جستجو کنید.</p>
+                </div>
+            </div>
+
+            <div class="matrix-wrapper">
+
+                <table class="activity-matrix">
+
+                    <thead>
+                        <tr>
+                            <th style="width:65px">ردیف</th>
+
+                            @foreach (var activity in activityTypes)
+                            {
+                                <th>@activity.Title</th>
+                            }
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @{ int row = 0; }
+
+                        @foreach (var assignment in assignments)
+                        {
+                            row++;
+
+                            <tr>
+                                <td>@row</td>
+
+                                @foreach (var activity in activityTypes)
+                                {
+                                    var ids = assignmentActivities
+                                        .Where(x => x.AssignmentID == assignment.ID && x.ActivityTypeID == activity.ID)
+                                        .Select(x => x.UserID)
+                                        .Distinct()
+                                        .ToList();
+
+                                    var activityUsers = users
+                                        .Where(x => ids.Contains(x.usr_ID))
+                                        .OrderBy(x => x.usr_Family)
+                                        .ThenBy(x => x.usr_Name)
+                                        .ToList();
+
+                                    <td>
+                                        <div class="summary-cell-box">
+
+                                            @if (activityUsers.Any())
+                                            {
+                                                <div class="summary-count-row">
+                                                    <span class="summary-person-count" data-total="@activityUsers.Count">
+                                                        @activityUsers.Count نفر
+                                                    </span>
+                                                    <span class="summary-search-result-count">همه</span>
+                                                </div>
+
+                                                <div class="summary-search-box">
+                                                    <span class="summary-search-icon">⌕</span>
+                                                    <input type="text" class="summary-cell-search"
+                                                           autocomplete="off" placeholder="نام یا کد ملی..." />
+                                                </div>
+
+                                                <div class="summary-person-scroll">
+                                                    <div class="summary-person-list">
+
+                                                        @foreach (var person in activityUsers)
+                                                        {
+                                                            var name = ((person.usr_Name ?? "") + " " + (person.usr_Family ?? "")).Trim();
+
+                                                            <div class="summary-person-item"
+                                                                 data-search="@((name + " " + (person.usr_NationalCode ?? "")).ToLower())">
+                                                                @name
+                                                            </div>
+                                                        }
+
+                                                        <div class="summary-no-result">موردی پیدا نشد</div>
+
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span style="color:#475569">-</span>
+                                            }
+
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+
+                        @if (row == 0)
+                        {
+                            <tr>
+                                <td colspan="@(activityTypes.Count + 1)" style="padding:30px;color:#64748b">
+                                    هنوز اطلاعاتی ثبت نشده است.
+                                </td>
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TAB 2  (هر منطقه ← روزکارهای مخصوص همان منطقه)
+         پیش‌فرض: همه ماموران، مناطق، روزکارها و تعرفه‌ها تیک‌خورده
+         ===================================================== -->
+
+    <div id="tabTwo" class="main-tab-panel" style="display:none">
+
+        <div class="glass-card" id="scopeFormCard">
+
+            <div class="section-header">
+                <div>
+                    <h2 id="scopeFormTitle">تنظیمات ارجاع ماموران</h2>
+                    <p>مامور را انتخاب کنید و برای هر @scopeRegionTitle، روزکارهای مخصوص همان @scopeRegionTitle را تعیین کنید. در حالت پیش‌فرض همه موارد تیک‌خورده است (بدون محدودیت).</p>
+                </div>
+            </div>
+
+            <form id="agentScopeForm">
+
+                @Html.AntiForgeryToken()
+
+                <div class="scope-grid">
+
+                    <!-- 1 USER -->
+                    <div class="scope-card">
+                        <div class="scope-card-title">نام مامور</div>
+
+                        <div class="scope-selector-search">
+                            <input type="text" id="scopeUserSearch" class="scope-selector-search-input"
+                                   autocomplete="off" placeholder="جستجوی نام یا کد ملی..." />
+                        </div>
+
+                        <div class="scope-card-body">
+
+                            <label class="scope-item">
+                                <input type="checkbox" id="scopeAllUsers" checked />
+                                <span class="scope-check"></span>
+                                <span class="scope-text">انتخاب همه</span>
+                            </label>
+
+                            @foreach (var user in tab2Users)
+                            {
+                                var name = ((user.usr_Name ?? "") + " " + (user.usr_Family ?? "")).Trim();
+                                var userAlreadySaved = savedScopeUserIds.Contains(user.usr_ID);
+
+                                <label class="scope-item scope-user-option @(userAlreadySaved ? "scope-user-hidden scope-user-saved" : "")"
+                                       data-search="@((name + " " + (user.usr_NationalCode ?? "")).ToLower())">
+                                    <input type="checkbox" class="scope-user-check" value="@user.usr_ID" @(userAlreadySaved ? null : "checked") />
+                                    <span class="scope-check"></span>
+                                    <span class="scope-text">@name</span>
+                                </label>
+                            }
+
+                            <div id="scopeNoNewUsers" class="scope-empty-note">
+                                همه ماموران قبلاً ثبت شده‌اند. برای تغییر، از دکمه «ویرایش» جدول پایین استفاده کنید.
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- 2 REGION -->
+                    <div class="scope-card">
+                        <div class="scope-card-title">کد @scopeRegionTitle</div>
+
+                        <div class="scope-selector-search">
+                            <input type="text" id="scopeRegionSearch" class="scope-selector-search-input"
+                                   autocomplete="off" placeholder="جستجوی @scopeRegionTitle..." />
+                        </div>
+
+                        <div class="scope-card-body">
+
+                            <label class="scope-item">
+                                <input type="checkbox" id="scopeAllRegions" checked />
+                                <span class="scope-check"></span>
+                                <span class="scope-text">انتخاب همه</span>
+                            </label>
+
+                            @foreach (var region in allowedRegions)
+                            {
+                                <label class="scope-item scope-region-option" data-search="@region">
+                                    <input type="checkbox" class="scope-region-check" value="@region" checked />
+                                    <span class="scope-check"></span>
+                                    <span class="scope-text">@scopeRegionTitle @region</span>
+                                </label>
+                            }
+
+                        </div>
+                    </div>
+
+                    <!-- 3 WORK DAY -->
+                    <div class="scope-card">
+                        <div class="scope-card-title">روزکار</div>
+
+                        <div class="scope-selector-search">
+                            <input type="text" id="scopeWorkDaySearch" class="scope-selector-search-input"
+                                   autocomplete="off" placeholder="جستجوی روزکار..." />
+                        </div>
+
+                        <div class="scope-selector-search workday-range-row">
+                            <input type="number" id="workDayFrom" min="1" max="99"
+                                   class="scope-selector-search-input" placeholder="از" />
+                            <input type="number" id="workDayTo" min="1" max="99"
+                                   class="scope-selector-search-input" placeholder="تا" />
+                            <button type="button" id="applyWorkDayRange" class="scope-action">انتخاب بازه</button>
+                        </div>
+
+                        <div class="scope-card-body">
+
+                            <label class="scope-item">
+                                <input type="checkbox" id="scopeAllWorkDays" checked />
+                                <span class="scope-check"></span>
+                                <span class="scope-text">انتخاب همه</span>
+                            </label>
+
+                            <div class="workday-grid">
+
+                                @for (int day = 1; day <= 99; day++)
+                                {
+                                    <label class="scope-item scope-workday-option" data-search="@day">
+                                        <input type="checkbox" class="scope-workday-check" value="@day" checked />
+                                        <span class="scope-check"></span>
+                                        <span class="scope-text">@day</span>
+                                    </label>
+                                }
+
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- 4 + 5 : MAHDOODEH / TARIFF (کوچک، کنار هم) -->
+                    <div class="scope-side-cards">
+
+                        <div class="scope-card">
+                            <div class="scope-card-title">@scopeAreaTitle (کد ناحیه)</div>
+
+                            <div class="scope-card-body">
+
+                                <label class="scope-item">
+                                    <input type="checkbox" id="scopeAllAreas" checked />
+                                    <span class="scope-check"></span>
+                                    <span class="scope-text">انتخاب همه</span>
+                                </label>
+
+                                <div class="area-grid">
+
+                                    @for (int area = AreaMin; area <= AreaMax; area++)
+                                    {
+                                        <label class="scope-item scope-area-option">
+                                            <input type="checkbox" class="scope-area-check" value="@area" checked />
+                                            <span class="scope-check"></span>
+                                            <span class="scope-text">@area</span>
+                                        </label>
+                                    }
+
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="scope-card">
+                            <div class="scope-card-title">نوع تعرفه</div>
+
+                            <div class="scope-card-body">
+
+                                <label class="scope-item">
+                                    <input type="checkbox" id="scopeAllTariffs" checked />
+                                    <span class="scope-check"></span>
+                                    <span class="scope-text">انتخاب همه</span>
+                                </label>
+
+                                @foreach (var tariff in tariffTypes)
+                                {
+                                    <label class="scope-item scope-tariff-option">
+                                        <input type="checkbox" class="scope-tariff-check" value="@tariff.ID" checked />
+                                        <span class="scope-check"></span>
+                                        <span class="scope-text">@tariff.Title</span>
+                                    </label>
+                                }
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                @* RULE BUILDER (فعلاً غیرفعال - برای فعال‌سازی مجدد این کامنت را بردارید)
+                    <div class="rule-builder">
+                        <button type="button" id="addScopeRule" class="order-btn btn-secondary">
+                            + افزودن منطقه و روزکارهای انتخاب‌شده به لیست
+                        </button>
+                        <span class="rule-hint">
+                            مثال: منطقه 16 و روزکار 22 تا 25 را انتخاب کنید ← افزودن ← سپس منطقه 17 و روزکار 27 تا 29 ← افزودن ← ذخیره.
+                            اگر همه روزکارها تیک‌خورده باشند یعنی همه روزها.
+                        </span>
+                        <div id="scopeRuleList" class="rule-list"></div>
+                    </div>
+                *@
+
+                <div class="form-actions">
+                    <button type="submit" id="saveAgentScope" class="order-btn btn-main">ذخیره اطلاعات</button>
+                    <button type="button" id="clearAgentScope" class="order-btn btn-secondary">پاک کردن</button>
+                </div>
+
+            </form>
+
+        </div>
+
+
+        <!-- TAB 2 SAVED -->
+
+        <div class="glass-card">
+
+            <div class="section-header">
+                <div>
+                    <h2>آخرین تنظیمات ذخیره‌شده ماموران</h2>
+                    <p>ارجاعات بر اساس آخرین تنظیمات ذخیره‌شده انجام خواهد شد.</p>
+                </div>
+
+                <div style="width:250px">
+                    <input type="text" id="scopeSearch" class="order-input"
+                           autocomplete="off" placeholder="جستجوی مامور..." />
+                </div>
+            </div>
+
+            <div class="matrix-wrapper">
+
+                <table class="activity-matrix">
+
+                    <thead>
+                        <tr>
+                            <th>مامور</th>
+                            <th>@scopeRegionsTitle و روزکار</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @foreach (var scope in agentScopes)
+                        {
+                            var person = tab2Users.FirstOrDefault(x => x.usr_ID == scope.UserID);
+
+                            if (person == null) { continue; }
+
+                            var name = ((person.usr_Name ?? "") + " " + (person.usr_Family ?? "")).Trim();
+
+                            var scopeRegionList = agentScopeRegions
+                                .Where(x => x.ScopeID == scope.ID)
+                                .Select(x => x.RegionCode)
+                                .Distinct()
+                                .OrderBy(x => x)
+                                .ToList();
+
+                            var scopeDayRows = agentScopeWorkDays.Where(x => x.ScopeID == scope.ID).ToList();
+
+                            var generalDays = scopeDayRows
+                                .Where(x => !x.RegionCode.HasValue)
+                                .Select(x => x.WorkDay)
+                                .ToList();
+
+                            var scopeTariffRows = agentScopeTariffs.Where(x => x.ScopeID == scope.ID).ToList();
+
+                            var scopeAreaRows = agentScopeAreas.Where(x => x.ScopeID == scope.ID).ToList();
+
+                            var generalAreas = scopeAreaRows
+                                .Where(x => !x.RegionCode.HasValue)
+                                .Select(x => x.AreaCode)
+                                .Distinct()
+                                .ToList();
+
+                            // همه محدوده‌های مجاز یا خالی = بدون محدودیت
+                            var generalAreasRestricted = generalAreas.Count > 0 && generalAreas.Count < AreaTotal;
+
+                            // مناطق مجازی که هنوز برای این مامور ثبت نشده‌اند (برای دکمه «افزودن منطقه دیگر»)
+                            var remainingRegions = allowedRegions.Except(scopeRegionList).ToList();
+
+                            var generalTariffIds = scopeTariffRows
+                                .Where(x => !x.RegionCode.HasValue)
+                                .Select(x => x.TariffTypeID)
+                                .Distinct()
+                                .ToList();
+
+                            var generalTariffTitles = tariffTypes
+                                .Where(x => generalTariffIds.Contains(x.ID))
+                                .Select(x => x.Title)
+                                .ToList();
+
+                            <tr class="scope-data-row"
+                                data-name="@((name + " " + (person.usr_NationalCode ?? "")).ToLower())">
+
+                                <td>
+                                    <div class="person-info">
+                                        <span class="person-avatar">
+                                            @(string.IsNullOrWhiteSpace(name) ? "؟" : name.Substring(0, 1))
+                                        </span>
+                                        <div>
+                                            <span class="person-name">@name</span>
+                                            <span class="person-national">@(person.usr_NationalCode ?? "")</span>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="scope-rule-lines">
+
+                                        @foreach (var r in scopeRegionList)
+                                        {
+                                            // هر منطقه چند «گروه» دارد؛ هر گروه روزکار + محدوده + تعرفه‌ی مستقل
+                                            var regionGroupNos = scopeDayRows.Where(x => x.RegionCode == r).Select(x => x.GroupNo)
+                                                .Concat(scopeTariffRows.Where(x => x.RegionCode == r).Select(x => x.GroupNo))
+                                                .Concat(scopeAreaRows.Where(x => x.RegionCode == r).Select(x => x.GroupNo))
+                                                .Distinct()
+                                                .OrderBy(x => x)
+                                                .ToList();
+
+                                            var regionRestricted = regionGroupNos.Count > 0;
+
+                                            if (regionGroupNos.Count == 0) { regionGroupNos.Add(1); }
+
+                                            foreach (var g in regionGroupNos)
+                                            {
+                                                var rd = scopeDayRows
+                                                    .Where(x => x.RegionCode == r && x.GroupNo == g)
+                                                    .Select(x => x.WorkDay)
+                                                    .Distinct()
+                                                    .ToList();
+
+                                                if (rd.Count == 0) { rd = generalDays; }
+
+                                                var rt = scopeTariffRows
+                                                    .Where(x => x.RegionCode == r && x.GroupNo == g)
+                                                    .Select(x => x.TariffTypeID)
+                                                    .Distinct()
+                                                    .ToList();
+
+                                                if (rt.Count == 0) { rt = generalTariffIds; }
+
+                                                var rtTitles = tariffTypes
+                                                    .Where(x => rt.Contains(x.ID))
+                                                    .Select(x => x.Title)
+                                                    .ToList();
+
+                                                var ra = scopeAreaRows
+                                                    .Where(x => x.RegionCode == r && x.GroupNo == g)
+                                                    .Select(x => x.AreaCode)
+                                                    .Distinct()
+                                                    .ToList();
+
+                                                if (ra.Count == 0) { ra = generalAreas; }
+
+                                                var raRestricted = ra.Count > 0 && ra.Count < AreaTotal;
+
+                                                var isLastGroup = g == regionGroupNos.Last();
+
+                                                <div class="scope-rule-line">
+                                                    <span class="scope-chip">@scopeRegionTitle @r</span>
+                                                    @if (regionGroupNos.Count > 1)
+                                                    {
+                                                        <span class="scope-chip">گروه @g</span>
+                                                    }
+                                                    <span class="scope-rule-days">
+                                                        @("روزکار: " + (rd.Count > 0 ? compressDays(rd) : allDaysText))
+                                                        &nbsp;|&nbsp;
+                                                        @("تعرفه: " + (rtTitles.Count > 0 ? string.Join("، ", rtTitles) : allTariffsText))
+                                                        &nbsp;|&nbsp;
+                                                        @(scopeAreaTitle + ": " + (raRestricted ? compressDays(ra) : allAreasText))
+                                                    </span>
+                                                    <button type="button" class="scope-action edit-scope-region"
+                                                            data-user="@scope.UserID"
+                                                            data-region="@r"
+                                                            data-group="@g"
+                                                            data-tariffs="@string.Join(",", rt)"
+                                                            data-areas="@(raRestricted ? string.Join(",", ra.OrderBy(a => a)) : "")"
+                                                            data-days="@string.Join(",", rd.OrderBy(d => d))">
+                                                        ویرایش
+                                                    </button>
+                                                    @if (isLastGroup && regionRestricted)
+                                                    {
+                                                        <button type="button" class="scope-action add-scope-group"
+                                                                data-user="@scope.UserID"
+                                                                data-region="@r"
+                                                                title="افزودن گروه جدید (روزکار و @scopeAreaTitle دیگر) برای @scopeRegionTitle @r">
+                                                            + گروه
+                                                        </button>
+                                                    }
+                                                    <button type="button" class="scope-action delete-scope-region"
+                                                            data-id="@scope.ID"
+                                                            data-region="@r"
+                                                            data-group="@g">
+                                                        حذف
+                                                    </button>
+                                                </div>
+                                            }
+                                        }
+
+                                        @if (scopeRegionList.Count == 0 && (generalDays.Count > 0 || generalTariffIds.Count > 0 || generalAreasRestricted))
+                                        {
+                                            <div class="scope-rule-line">
+                                                <span class="scope-chip">همه @scopeRegionsTitle</span>
+                                                <span class="scope-rule-days">
+                                                    @("روزکار: " + (generalDays.Count > 0 ? compressDays(generalDays) : allDaysText))
+                                                    &nbsp;|&nbsp;
+                                                    @("تعرفه: " + (generalTariffTitles.Count > 0 ? string.Join("، ", generalTariffTitles) : allTariffsText))
+                                                    &nbsp;|&nbsp;
+                                                    @(scopeAreaTitle + ": " + (generalAreasRestricted ? compressDays(generalAreas) : allAreasText))
+                                                </span>
+                                                <button type="button" class="scope-action edit-scope-region"
+                                                        data-user="@scope.UserID"
+                                                        data-region="0"
+                                                        data-tariffs="@string.Join(",", generalTariffIds)"
+                                                        data-areas="@(generalAreasRestricted ? string.Join(",", generalAreas.OrderBy(a => a)) : "")"
+                                                        data-days="@string.Join(",", generalDays.OrderBy(d => d))">
+                                                    ویرایش
+                                                </button>
+                                                <button type="button" class="scope-action delete-scope-region"
+                                                        data-id="@scope.ID"
+                                                        data-region="0"
+                                                        data-group="0">
+                                                    حذف
+                                                </button>
+                                            </div>
+                                        }
+
+                                        @* مامور بدون هیچ ردیف منطقه/قانون (داده قدیمی «بدون محدودیت»): ویرایش و حذف هم دارد *@
+                                        @if (scopeRegionList.Count == 0 && generalDays.Count == 0 && generalTariffIds.Count == 0 && !generalAreasRestricted)
+                                        {
+                                            <div class="scope-rule-line">
+                                                <span class="scope-chip">@scopeRegionTitle: @allRegionsText</span>
+                                                <span class="scope-rule-days">
+                                                    @("روزکار: " + allDaysText)
+                                                    &nbsp;|&nbsp;
+                                                    @("تعرفه: " + allTariffsText)
+                                                    &nbsp;|&nbsp;
+                                                    @(scopeAreaTitle + ": " + allAreasText)
+                                                </span>
+                                                <button type="button" class="scope-action edit-scope-region"
+                                                        data-user="@scope.UserID"
+                                                        data-region="0"
+                                                        data-tariffs=""
+                                                        data-areas=""
+                                                        data-days="">
+                                                    ویرایش
+                                                </button>
+                                                <button type="button" class="scope-action delete-scope-region"
+                                                        data-id="@scope.ID"
+                                                        data-region="0"
+                                                        data-group="0">
+                                                    حذف
+                                                </button>
+                                            </div>
+                                        }
+
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <div class="scope-actions">
+                                        @if (scopeRegionList.Count > 0 && remainingRegions.Count > 0)
+                                        {
+                                            <button type="button" class="scope-action add-scope-region"
+                                                    data-user="@scope.UserID"
+                                                    data-registered="@string.Join(",", scopeRegionList)"
+                                                    title="@scopeRegionsTitle ثبت‌نشده: @string.Join("، ", remainingRegions)">
+                                                + افزودن @scopeRegionTitle دیگر
+                                            </button>
+                                        }
+                                        <button type="button" class="scope-action details-agent-scope" data-id="@scope.ID">جزئیات</button>
+                                        <button type="button" class="scope-action delete-agent-scope" data-id="@scope.ID">حذف کل مامور</button>
+                                    </div>
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         TAB 3 و TAB 4 - EXCEL COMPONENT IMPORT
+         (بالابری = ListType 1 ، سخت وصول = ListType 2)
+         ===================================================== -->
+
+    @foreach (var list in excelLists)
+    {
+        <div id="@list.TabId" class="main-tab-panel" style="display:none">
+
+            <div class="glass-card">
+
+                <div class="section-header">
+                    <div>
+                        <h2>ورود مؤلفه‌ها از Excel - @list.Title</h2>
+                        <p>ابتدا نمونه فایل مؤلفه را دریافت کنید، مقادیر را در ستون اول قرار دهید و سپس همان فایل را بارگذاری نمایید.</p>
+                    </div>
+                </div>
+
+                <div class="excel-component-grid">
+
+                    @foreach (var component in excelComponents)
+                    {
+                        /* مؤلفه در حال توسعه (روزکار / محدوده) */
+
+                        if (developingExcelComponents.Contains(component.Key))
+                        {
+                            <div class="excel-component-card excel-card-disabled">
+
+                                <div class="excel-component-head">
+                                    <h3 class="excel-component-title">@component.Value</h3>
+                                    <span class="excel-component-number">@component.Key</span>
+                                </div>
+
+                                <div class="excel-disabled-box">
+                                    <div class="scope-disabled-badge">در حال توسعه</div>
+                                    <div class="excel-disabled-text">
+                                        بارگذاری فایل «@component.Value» به‌زودی فعال خواهد شد.
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            continue;
+                        }
+
+                        /* مؤلفه فعال (شناسه قبض / پرونده) برای همین نوع لیست */
+
+                        var activeBatch = excelImportBatches
+                            .Where(x => x.ComponentType == component.Key
+                                        && x.ListType == list.Type
+                                        && x.IsActive == true)
+                            .OrderByDescending(x => x.ID)
+                            .FirstOrDefault();
+
+                        <form class="excel-component-card component-upload-form"
+                              enctype="multipart/form-data"
+                              data-list-type="@list.Type"
+                              data-component-type="@component.Key"
+                              data-component-title="@component.Value">
+
+                            @Html.AntiForgeryToken()
+
+                            <div class="excel-component-head">
+                                <h3 class="excel-component-title">@component.Value</h3>
+                                <span class="excel-component-number">@component.Key</span>
+                            </div>
+
+                            <div class="excel-component-description">
+                                فایل باید فقط یک ستون با عنوان دقیق «@component.Value» داشته باشد. ردیف‌های خالی و مقادیر تکراری نادیده گرفته می‌شوند.
+                            </div>
+
+                            <div class="excel-file-picker">
+                                <input type="file" id="componentExcel_@(list.Type)_@component.Key" name="excelFile"
+                                       class="component-excel-file" accept=".xlsx,.xls" />
+                                <label class="excel-file-label" for="componentExcel_@(list.Type)_@component.Key">انتخاب فایل</label>
+                                <span class="excel-selected-file">فایلی انتخاب نشده است</span>
+                            </div>
+
+                            <div class="excel-component-actions">
+
+                                <a class="excel-action-link"
+                                   href="@Url.Action("DownloadOrderComponentTemplate", "Orders", new { area = "Setting", componentType = component.Key })">
+                                    دریافت نمونه Excel
+                                </a>
+
+                                <button type="submit" class="excel-upload-button">بارگذاری و ذخیره</button>
+
+                                @if (activeBatch != null)
+                                {
+                                    <button type="button" class="excel-disable-button disable-component-import"
+                                            data-id="@activeBatch.ID">
+                                        غیرفعال‌سازی فایل فعلی
+                                    </button>
+                                }
+
+                            </div>
+
+                            @if (activeBatch != null)
+                            {
+                                <div class="excel-active-batch">
+                                    <strong>فایل فعال:</strong>
+                                    @(activeBatch.OriginalFileName ?? "-")
+                                    <br />
+                                    <strong>تعداد مقادیر:</strong>
+                                    @activeBatch.RowCount
+                                </div>
+                            }
+
+                            <div class="excel-result"></div>
+
+                        </form>
+                    }
+
+                </div>
+
+            </div>
+
+        </div>
+    }
+
+</div>
+
+
+<!-- اگر در _Layout.cshtml از قبل jQuery لود شده است، این خط را حذف کنید. -->
+<script src="~/Scripts/jquery-3.3.1.js" type="text/javascript"></script>
+
+
+<script>
+
+$(document).ready(function () {
+
+    var DEFAULT_ASSIGNMENT_TITLE = "تعیین نقش";
+    var DEFAULT_ASSIGNMENT_DESCRIPTION = "";
+    var scopeRegionLabel = "@scopeRegionTitle";
+    var scopeRegionsLabel = "@scopeRegionsTitle";
+    var scopeAreaLabel = "@scopeAreaTitle";
+    var scopeAreasLabel = "@scopeAreasTitle";
+
+
+    /* =====================================================
+       COMMON
+       ===================================================== */
+
+    function token(formSelector) {
+        return $(formSelector + ' input[name="__RequestVerificationToken"]').val();
+    }
+
+    function message(text, type) {
+        var box = $("#orderNotification");
+
+        box.stop(true, true)
+            .removeClass("success error")
+            .addClass(type || "success")
+            .text(text || "")
+            .fadeIn(150);
+
+        clearTimeout(window.orderMessageTimer);
+
+        window.orderMessageTimer = setTimeout(function () {
+            box.fadeOut(200);
+        }, 3500);
+    }
+
+    function loading(show) {
+        $("#pageLoadingOverlay").toggleClass("show", !!show);
+    }
+
+    function htmlEncode(value) {
+        return $("<div>").text(value == null ? "" : value).html();
+    }
+
+
+    /* =====================================================
+       TABS
+       ===================================================== */
+
+    var processingBusy=false,processingVersion=0;
+    function processingMessage(text){$('#processingStatus').text(text)}
+    $('#openDataProcessing').on('click',function(){
+        var period=$('#birjandUploadPeriod').val();
+        if(period)$('#processingPeriod').val(period).trigger('change');
+        $('.main-tab-button[data-tab="tabProcessing"]').trigger('click');
+    });
+    $('#processingPeriod').on('change',function(){
+        var period=this.value,version=++processingVersion;
+        $('#processingDesign').empty().append($('<option>').val('').text('در حال دریافت...'));
+        $('#runDataProcessing').prop('disabled',true);
+        if(!period){$('#processingDesign').empty().append($('<option>').val('').text('ابتدا دوره را انتخاب کنید'));return}
+        $.getJSON('@Url.Action("ProcessingDesigns", "ProcedureDesigner", new { area="Setting" })',{periodId:period})
+        .done(function(r){if(version!==processingVersion)return;
+            $('#processingDesign').empty().append($('<option>').val('').text('لیست را انتخاب کنید'));
+            if(!r.success){processingMessage(r.message);return}
+            (r.items||[]).forEach(function(x){$('#processingDesign').append($('<option>').val(x.ID).text(x.ListTitle+' — '+x.Title))});
+            processingMessage(r.items.length?'لیست را انتخاب کنید و پردازش را بزنید.':'برای این گزارش طراحی فعال ثبت نشده است؛ ابتدا شرط‌ها را در طراح ذخیره کنید.');
+        }).fail(function(){if(version===processingVersion)processingMessage('دریافت لیست‌ها ناموفق بود؛ اتصال و نسخه کنترلر را بررسی کنید.')});
+    });
+    $('#processingDesign').on('change',function(){$('#runDataProcessing').prop('disabled',processingBusy||!this.value)});
+    $('#runDataProcessing').on('click',function(){
+        if(processingBusy)return;
+        var period=$('#processingPeriod').val(),design=$('#processingDesign').val();
+        if(!period||!design){processingMessage('دوره و لیست را انتخاب کنید.');return}
+        if(!confirm('شرط‌های ذخیره‌شده روی آخرین بارگذاری این دوره اجرا شوند؟ نتیجه قبلی همین لیست در امروز جایگزین می‌شود.'))return;
+        processingBusy=true;$('#runDataProcessing,#processingPeriod,#processingDesign').prop('disabled',true);
+        processingMessage('در حال پردازش؛ منتظر بمانید...');
+        $.ajax({url:'@Url.Action("ProcessUploadedData", "ProcedureDesigner", new { area="Setting" })',type:'POST',dataType:'json',
+            headers:{RequestVerificationToken:$('#processingSecurity input[name="__RequestVerificationToken"]').val()},data:{id:design,periodId:period},
+            success:function(r){if(!r.success){processingMessage(r.message);return}var summary=r.summary||{};
+                processingMessage(r.message+'\nبارگذاری: '+r.batchId+' | قبول‌شده: '+(summary.AcceptedCount||0)+' | ردشده: '+(summary.RejectedCount||0));},
+            error:function(){processingMessage('پاسخ پردازش دریافت نشد؛ پیش از اجرای دوباره، نتیجه دیتابیس را بررسی کنید.');},
+            complete:function(){processingBusy=false;$('#processingPeriod,#processingDesign').prop('disabled',false);$('#runDataProcessing').prop('disabled',!$('#processingDesign').val());}
+        });
+    });
+
+    var birjandUploadRequest = null;
+    $("#birjandUploadPeriod").on("change", function () {
+        if (birjandUploadRequest) { birjandUploadRequest.abort(); birjandUploadRequest = null; }
+        $("#birjandUploadShow").prop("disabled", false);
+        $("#birjandUploadResult").empty();
+        $("#birjandUploadStatus").empty();
+    });
+    $("#birjandUploadShow").on("click", function () {
+        var period = $("#birjandUploadPeriod").val();
+        if (!period) {
+            $("#birjandUploadStatus").text("ابتدا دوره را انتخاب کنید.");
+            return;
+        }
+        var button = $(this);
+        button.prop("disabled", true);
+        $("#birjandUploadStatus").text("در حال دریافت اطلاعات...");
+        $("#birjandUploadResult").empty();
+        birjandUploadRequest = $.ajax({
+            url: '@Url.Action("unicnzwrmagmoeh", "Orders", new { area = "Setting" })',
+            type: "GET",
+            data: { year: period },
+            dataType: "html",
+            success: function (html) {
+                if (String($("#birjandUploadPeriod").val()) !== String(period)) return;
+                $("#birjandUploadStatus").empty();
+                $("#birjandUploadResult").html(html);
+            },
+            error: function (xhr, status) {
+                if (status !== "abort") $("#birjandUploadStatus").text("خطا در دریافت اطلاعات (" + xhr.status + "). دوباره تلاش کنید.");
+            },
+            complete: function () {
+                button.prop("disabled", false);
+                birjandUploadRequest = null;
+            }
+        });
+    });
+
+    $(".main-tab-button").on("click", function () {
+
+        var target = $(this).data("tab");
+
+
+
+        $(".main-tab-button").removeClass("active");
+        $(this).addClass("active");
+
+        $(".main-tab-panel").hide();
+        $("#" + target).show();
+
+        sessionStorage.setItem("OrderAssignmentActiveTab", target);
+
+        // پیغام مهم فقط برای سربرگ اول و دوم
+        if ((target === "tabOne" || target === "tabTwo") && window.showImportantNotice) {
+            window.showImportantNotice();
+        }
+    });
+
+    var savedTab = sessionStorage.getItem("OrderAssignmentActiveTab");
+
+    if (savedTab
+        && $("#" + savedTab).length
+        && $('.main-tab-button[data-tab="' + savedTab + '"]').length) {
+
+        $('.main-tab-button[data-tab="' + savedTab + '"]').trigger("click");
+    }
+    else if (window.showImportantNotice) {
+        // ورود پیش‌فرض به تب اول
+        window.showImportantNotice();
+    }
+
+
+    /* =====================================================
+       TAB 1 TELEPHONE EXCLUSIVE RULE
+       ===================================================== */
+
+    var telephoneActivityId = @telephoneActivityId;
+    var liftActivityId = @liftActivityId;
+    var liftCompanionIds = [@string.Join(",", liftCompanionIds)];
+
+    function applyTelephoneRule(userId) {
+
+        if (!telephoneActivityId) { return; }
+
+        var $userChecks = $('.user-activity-check[data-user="' + userId + '"]');
+
+        var $telephone = $userChecks.filter('[data-activity="' + telephoneActivityId + '"]');
+
+        if ($telephone.length === 0) { return; }
+
+        var $otherActivities = $userChecks.not($telephone);
+
+        if ($telephone.is(":checked")) {
+            $otherActivities.prop("checked", false).prop("disabled", true);
+            $telephone.prop("disabled", false);
+        }
+        else {
+            $otherActivities.prop("disabled", false);
+            $telephone.prop("disabled", $otherActivities.filter(":checked").length > 0);
+        }
+    }
+
+    function applyTelephoneRulesForAll() {
+
+        var userMap = {};
+
+        $(".user-activity-check").each(function () {
+            userMap[$(this).data("user")] = true;
+        });
+
+        $.each(userMap, function (userId) {
+            applyTelephoneRule(userId);
+        });
+    }
+
+
+    /* =====================================================
+       TAB 1 MASTER CHECKBOX
+       ===================================================== */
+
+    function updateAssignmentMasters() {
+
+        $(".column-select-all").each(function () {
+
+            var master = $(this);
+            var activityId = master.data("activity");
+
+            var items = $('.user-activity-check[data-activity="' + activityId + '"]:not(:disabled)');
+            var checked = items.filter(":checked").length;
+
+            master.prop("disabled", items.length === 0);
+
+            if (items.length > 0 && checked === items.length) {
+                master.prop("checked", true).prop("indeterminate", false);
+            }
+            else if (checked > 0) {
+                master.prop("checked", false).prop("indeterminate", true);
+            }
+            else {
+                master.prop("checked", false).prop("indeterminate", false);
+            }
+        });
+    }
+
+    $(".column-select-all").on("change", function () {
+
+        var activity = $(this).data("activity");
+        var checked = $(this).is(":checked");
+
+        $('.user-activity-check[data-activity="' + activity + '"]:not(:disabled)').prop("checked", checked);
+
+        applyTelephoneRulesForAll();
+        updateAssignmentMasters();
+
+        // قانون بالابری برای همه ردیف‌ها دوباره بررسی شود
+        if (isLiftRelatedActivity(parseInt(activity, 10))) {
+
+            var violations = refreshLiftRowErrors();
+
+            if (violations > 0) {
+                message(
+                    "برای " + violations + " نفر، در صورت انتخاب «بالابری»، " +
+                    "باید «عادی» یا «دیماند» (یا هر دو) را هم انتخاب کنید.",
+                    "error"
+                );
+            }
+        }
+    });
+
+    $(document).on("change", ".user-activity-check", function () {
+        applyTelephoneRule($(this).data("user"));
+        updateAssignmentMasters();
+
+        var $row = $(this).closest(".user-activity-row");
+        var activityId = parseInt($(this).data("activity"), 10);
+
+        // فقط وقتی «بالابری» یا «عادی/دیماند» تغییر کرد، قانون بالابری بررسی می‌شود
+        if (isLiftRelatedActivity(activityId)) {
+
+            var violates = liftRowViolates($row);
+
+            $row.toggleClass("row-error", violates);
+
+            if (violates) {
+                message(
+                    "برای «" + $.trim($row.find(".person-name").text()) + "» " +
+                    "در صورت انتخاب «بالابری»، باید «عادی» یا «دیماند» (یا هر دو) را هم انتخاب کنید.",
+                    "error"
+                );
+            }
+        }
+    });
+
+    /* =====================================================
+       TAB 1 LIFT RULE
+       اگر «بالابری» انتخاب شد، «عادی» یا «دیماند» هم الزامی است
+       ===================================================== */
+
+    function isLiftRelatedActivity(activityId) {
+        return !!liftActivityId
+            && liftCompanionIds.length > 0
+            && (activityId === liftActivityId || liftCompanionIds.indexOf(activityId) >= 0);
+    }
+
+    // آیا این ردیف «بالابری» دارد ولی «عادی» و «دیماند» ندارد؟
+    function liftRowViolates($row) {
+
+        if (!liftActivityId || !liftCompanionIds.length) { return false; }
+
+        var hasLift = $row
+            .find('.user-activity-check[data-activity="' + liftActivityId + '"]')
+            .is(":checked");
+
+        if (!hasLift) { return false; }
+
+        var hasCompanion = false;
+
+        $.each(liftCompanionIds, function (_, id) {
+            if ($row.find('.user-activity-check[data-activity="' + id + '"]').is(":checked")) {
+                hasCompanion = true;
+                return false;
+            }
+        });
+
+        return !hasCompanion;
+    }
+
+    function findLiftRuleViolations() {
+
+        var bad = [];
+
+        $("#assignmentMatrix .user-activity-row").each(function () {
+            if (liftRowViolates($(this))) { bad.push($(this)); }
+        });
+
+        return bad;
+    }
+
+    // علامت خطا را برای همه ردیف‌ها به‌روز می‌کند و تعداد ردیف‌های دارای خطا را برمی‌گرداند
+    function refreshLiftRowErrors() {
+
+        var count = 0;
+
+        $("#assignmentMatrix .user-activity-row").each(function () {
+
+            var violates = liftRowViolates($(this));
+
+            $(this).toggleClass("row-error", violates);
+
+            if (violates) { count++; }
+        });
+
+        return count;
+    }
+
+
+    /* =====================================================
+       TAB 1 USER SEARCH
+       ===================================================== */
+
+    $("#matrixUserSearch").on("input", function () {
+
+        var q = $.trim($(this).val()).toLowerCase();
+
+        $("#assignmentMatrix .user-activity-row").each(function () {
+
+            var text = ($(this).attr("data-search") || "").toLowerCase();
+
+            $(this).toggle(!q || text.indexOf(q) >= 0);
+        });
+    });
+
+
+    /* =====================================================
+       TAB 1 SUMMARY SEARCH
+       ===================================================== */
+
+    $(document).on("input", ".summary-cell-search", function () {
+
+        var cell = $(this).closest(".summary-cell-box");
+        var query = $.trim($(this).val()).toLowerCase();
+        var visibleCount = 0;
+
+        cell.find(".summary-person-item").each(function () {
+
+            var item = $(this);
+            var text = (item.attr("data-search") || "").toLowerCase();
+            var visible = !query || text.indexOf(query) >= 0;
+
+            item.toggle(visible);
+
+            if (visible) { visibleCount++; }
+        });
+
+        var total = parseInt(cell.find(".summary-person-count").attr("data-total") || "0");
+
+        cell.find(".summary-search-result-count")
+            .text(query ? visibleCount + " از " + total : "همه");
+
+        cell.find(".summary-no-result").toggle(!!query && visibleCount === 0);
+
+        cell.find(".summary-person-scroll").scrollTop(0);
+    });
+
+
+    /* =====================================================
+       TAB 1 SAVE
+       ===================================================== */
+
+    var assignmentUrls = {
+        save: '@Url.Action("CreateOrderAssignment", "Orders", new { area = "Setting" })'
+    };
+
+    function selectedPairs() {
+        var result = [];
+
+        $(".user-activity-check:checked").each(function () {
+            result.push($(this).data("user") + "_" + $(this).data("activity"));
+        });
+
+        return result;
+    }
+
+    // همه کاربران ارسال می‌شوند؛ حتی کاربری که هیچ تیکی ندارد
+    function allMatrixUsers() {
+        var map = {};
+
+        $(".user-activity-check").each(function () {
+            map[$(this).data("user")] = true;
+        });
+
+        return Object.keys(map);
+    }
+
+    var assignmentSaving = false;
+
+    $("#assignmentForm").on("submit", function (e) {
+
+        e.preventDefault();
+
+        if (assignmentSaving) { return; }
+
+        var allUserIds = allMatrixUsers();
+        var pairs = selectedPairs();
+
+        if (allUserIds.length === 0) {
+            message("هیچ نیرویی برای ثبت وجود ندارد.", "error");
+            return;
+        }
+
+        // قانون بالابری: همراه با «عادی» یا «دیماند»
+        $("#assignmentMatrix .user-activity-row").removeClass("row-error");
+
+        var liftViolations = findLiftRuleViolations();
+
+        if (liftViolations.length) {
+
+            var names = $.map(liftViolations.slice(0, 3), function ($row) {
+                $row.addClass("row-error");
+                return $.trim($row.find(".person-name").text());
+            });
+
+            $.each(liftViolations.slice(3), function (_, $row) { $row.addClass("row-error"); });
+
+            message(
+                "در صورت انتخاب «بالابری»، انتخاب «عادی» یا «دیماند» نیز الزامی است. " +
+                "نیروهای دارای مشکل: " + names.join("، ") +
+                (liftViolations.length > 3 ? " و " + (liftViolations.length - 3) + " نفر دیگر" : ""),
+                "error"
+            );
+
+            // رفتن به اولین ردیف دارای خطا
+            var $first = liftViolations[0];
+            var $scroller = $first.closest(".matrix-scroll-20");
+
+            if ($scroller.length) {
+                $scroller.animate({
+                    scrollTop: $scroller.scrollTop() + $first.position().top - 120
+                }, 250);
+            }
+
+            return;
+        }
+
+        assignmentSaving = true;
+
+        var $submitButton = $(this).find(":submit");
+
+        $submitButton.prop("disabled", true);
+        loading(true);
+
+        $.ajax({
+            url: assignmentUrls.save,
+            type: "POST",
+            traditional: true,
+            data: {
+                __RequestVerificationToken: token("#assignmentForm"),
+                Title: DEFAULT_ASSIGNMENT_TITLE,
+                Description: DEFAULT_ASSIGNMENT_DESCRIPTION,
+                UserIds: allUserIds,
+                UserActivityPairs: pairs
+            },
+            success: function (r) {
+                if (r && r.success) {
+                    message(r.message, "success");
+                    sessionStorage.setItem("OrderAssignmentActiveTab", "tabOne");
+                    window.location.reload();
+                }
+                else {
+                    message(r && r.message ? r.message : "عملیات انجام نشد.", "error");
+                }
+            },
+            error: function () {
+                message("خطا در ارتباط با سرور.", "error");
+            },
+            complete: function () {
+                assignmentSaving = false;
+                $submitButton.prop("disabled", false);
+                loading(false);
+            }
+        });
+    });
+
+
+    /* =====================================================
+       TAB 1 CLEAR
+       ===================================================== */
+
+    $("#clearAssignment").on("click", function () {
+
+        $(".user-activity-check").prop("checked", false).prop("disabled", false);
+
+        $("#assignmentMatrix .user-activity-row").removeClass("row-error");
+
+        $(".column-select-all").prop("checked", false).prop("indeterminate", false);
+    });
+
+
+    /* =====================================================
+       TAB 2 SEARCH (کاربر / منطقه / روزکار)
+       ===================================================== */
+
+    function bindScopeSearch(inputSelector, itemSelector, lower) {
+        $(inputSelector).on("input", function () {
+
+            var q = $.trim($(this).val());
+            if (lower) { q = q.toLowerCase(); }
+
+            $(itemSelector).each(function () {
+
+                var text = ($(this).attr("data-search") || "").toString();
+                if (lower) { text = text.toLowerCase(); }
+
+                $(this).toggle(!q || text.indexOf(q) >= 0);
+            });
+        });
+    }
+
+    bindScopeSearch("#scopeUserSearch", ".scope-user-option", true);
+    bindScopeSearch("#scopeRegionSearch", ".scope-region-option", false);
+    bindScopeSearch("#scopeWorkDaySearch", ".scope-workday-option", false);
+
+
+    /* =====================================================
+       TAB 2 SELECT ALL  (+ هماهنگی «انتخاب همه» با تیک‌های جزئی)
+       ===================================================== */
+
+    function syncMaster(masterSel, itemSel) {
+
+        var $items = $(itemSel);
+        var checked = $items.filter(":checked").length;
+
+        $(masterSel)
+            .prop("checked", $items.length > 0 && checked === $items.length)
+            .prop("indeterminate", checked > 0 && checked < $items.length);
+    }
+
+    function syncScopeMasters() {
+        // فقط ماموران قابل‌نمایش (ثبت‌نشده یا در حال ویرایش)
+        syncMaster("#scopeAllUsers",    ".scope-user-option:not(.scope-user-hidden) .scope-user-check");
+        syncMaster("#scopeAllRegions",  ".scope-region-check");
+        syncMaster("#scopeAllWorkDays", ".scope-workday-check");
+        syncMaster("#scopeAllAreas",    ".scope-area-check");
+        syncMaster("#scopeAllTariffs",  ".scope-tariff-check");
+
+        $("#scopeNoNewUsers").toggle($(".scope-user-option:not(.scope-user-hidden)").length === 0);
+    }
+
+    // ماموران ثبت‌شده دوباره پنهان و بدون تیک می‌شوند؛ بقیه تیک‌خورده
+    function restoreScopeUsers() {
+
+        $(".scope-user-editing")
+            .removeClass("scope-user-editing")
+            .addClass("scope-user-hidden")
+            .find(".scope-user-check").prop("checked", false);
+
+        $(".scope-user-option:not(.scope-user-hidden)")
+            .find(".scope-user-check").prop("disabled", false).prop("checked", true);
+    }
+
+    $("#scopeAllUsers").on("change", function () {
+        $(".scope-user-option:visible")
+            .find(".scope-user-check:not(:disabled)")
+            .prop("checked", $(this).is(":checked"));
+        syncScopeMasters();
+    });
+
+    $("#scopeAllRegions").on("change", function () {
+        $(".scope-region-option:visible")
+            .find(".scope-region-check")
+            .prop("checked", $(this).is(":checked"));
+        syncScopeMasters();
+    });
+
+    $("#scopeAllWorkDays").on("change", function () {
+        $(".scope-workday-option:visible")
+            .find(".scope-workday-check")
+            .prop("checked", $(this).is(":checked"));
+        syncScopeMasters();
+    });
+
+    $("#scopeAllAreas").on("change", function () {
+        $(".scope-area-check").prop("checked", $(this).is(":checked"));
+        syncScopeMasters();
+    });
+
+    $("#scopeAllTariffs").on("change", function () {
+        $(".scope-tariff-check").prop("checked", $(this).is(":checked"));
+        syncScopeMasters();
+    });
+
+    $(document).on("change",
+        ".scope-user-check, .scope-region-check, .scope-workday-check, .scope-area-check, .scope-tariff-check",
+        syncScopeMasters);
+
+
+    /* =====================================================
+       TAB 2 URLS
+       ===================================================== */
+
+    var scopeUrls = {
+        save:    '@Url.Action("SaveAgentScope", "Orders", new { area = "Setting" })',
+        get:     '@Url.Action("GetAgentScope", "Orders", new { area = "Setting" })',
+        details: '@Url.Action("GetAgentScopeDetails", "Orders", new { area = "Setting" })',
+        remove:  '@Url.Action("DeleteAgentScope", "Orders", new { area = "Setting" })',
+        removeRegion: '@Url.Action("DeleteAgentScopeRegion", "Orders", new { area = "Setting" })'
+    };
+
+
+    /* =====================================================
+       TAB 2 HELPERS
+       ===================================================== */
+
+    function scopeValues(selector) {
+        var result = [];
+
+        $(selector + ":checked").each(function () {
+            result.push(parseInt($(this).val(), 10));
+        });
+
+        return result;
+    }
+
+    // اگر همه موارد تیک‌خورده باشند یعنی «بدون محدودیت» → آرایه خالی
+    function selectedOrAll(selector) {
+
+        var total = $(selector).length;
+        var values = scopeValues(selector);
+
+        return values.length === total ? [] : values;
+    }
+
+    // [22,23,24,25,27,28,29] → "22 تا 25، 27 تا 29"
+    function compressDays(list) {
+
+        var s = $.map(list, function (x) { return parseInt(x, 10); })
+                 .sort(function (a, b) { return a - b; });
+
+        var parts = [], i = 0;
+
+        while (i < s.length) {
+            var j = i;
+            while (j + 1 < s.length && s[j + 1] === s[j] + 1) { j++; }
+            parts.push(j > i ? s[i] + " تا " + s[j] : "" + s[i]);
+            i = j + 1;
+        }
+
+        return parts.join("، ");
+    }
+
+
+    /* =====================================================
+       TAB 2 RULES  { regionCode (0 = همه مناطق) : [days] }
+       ===================================================== */
+
+    var scopeRules = {};
+
+    // حالت ویرایش: { region, group } برای ویرایش همان گروه؛ null = گروه جدید
+    var scopeEdit = null;
+
+    // حالت «+ گروه»: گروه جدید باید حداقل یک محدودیت داشته باشد
+    var scopeAddGroup = false;
+
+    function tariffTitle(id) {
+        return $.trim(
+            $('.scope-tariff-check[value="' + id + '"]').closest("label").find(".scope-text").text());
+    }
+
+    function ruleText(rule) {
+
+        var tariffText = (rule.Tariffs && rule.Tariffs.length)
+            ? $.map(rule.Tariffs, tariffTitle).join("، ")
+            : "همه";
+
+        return "روزکار: " + ((rule.Days && rule.Days.length) ? compressDays(rule.Days) : "همه") +
+               " | تعرفه: " + tariffText +
+               " | " + scopeAreaLabel + ": " + ((rule.Areas && rule.Areas.length) ? compressDays(rule.Areas) : "همه");
+    }
+
+    function renderScopeRules() {
+
+        var $box = $("#scopeRuleList").empty();
+
+        if (!$box.length) { return; }
+
+        var keys = Object.keys(scopeRules)
+            .map(Number)
+            .sort(function (a, b) { return a - b; });
+
+        if (!keys.length) {
+            $box.html("<div class='rule-empty'>هنوز موردی به لیست اضافه نشده است (بدون محدودیت).</div>");
+            return;
+        }
+
+        $.each(keys, function (_, r) {
+
+            $box.append(
+                "<div class='rule-row'>" +
+                    "<span class='scope-chip'>" + (r ? scopeRegionLabel + " " + r : "همه " + scopeRegionsLabel) + "</span>" +
+                    "<span class='rule-days'>" + htmlEncode(ruleText(scopeRules[r])) + "</span>" +
+                    "<button type='button' class='scope-action delete-rule' data-region='" + r + "'>حذف</button>" +
+                "</div>"
+            );
+        });
+    }
+
+    // حالت پیش‌فرض: همه مناطق، روزکارها و تعرفه‌ها تیک‌خورده
+    function resetScopeSelection() {
+        $(".scope-region-check, .scope-workday-check, .scope-area-check, .scope-tariff-check").prop("checked", true);
+        $("#workDayFrom, #workDayTo").val("");
+        syncScopeMasters();
+    }
+
+    function numAsc(a, b) { return a - b; }
+
+    // انتخاب فعلی فرم → برای هر منطقه‌ی تیک‌خورده یک قانون (گروه)
+    // روزکار/تعرفه/محدوده‌ی خالی یعنی همه (بدون محدودیت)
+    function currentSelectionRules() {
+
+        var days = selectedOrAll(".scope-workday-check").sort(numAsc);
+        var tariffs = selectedOrAll(".scope-tariff-check").sort(numAsc);
+        var areas = selectedOrAll(".scope-area-check").sort(numAsc);
+
+        var result = {};
+
+        $.each(scopeValues(".scope-region-check"), function (_, r) {
+            result[r] = {
+                GroupNo: (scopeEdit && scopeEdit.region === r) ? scopeEdit.group : 0,
+                Days: days.slice(),
+                Tariffs: tariffs.slice(),
+                Areas: areas.slice()
+            };
+        });
+
+        return result;
+    }
+
+    function addSelectionAsRule(showError) {
+
+        var selection = currentSelectionRules();
+
+        if (!Object.keys(selection).length) {
+            if (showError) { message("حداقل یک " + scopeRegionLabel + " انتخاب کنید.", "error"); }
+            return false;
+        }
+
+        $.extend(scopeRules, selection);
+
+        resetScopeSelection();
+        renderScopeRules();
+
+        return true;
+    }
+
+    $("#addScopeRule").on("click", function () {
+        addSelectionAsRule(true);
+    });
+
+    $(document).on("click", ".delete-rule", function () {
+        delete scopeRules[$(this).data("region")];
+        renderScopeRules();
+    });
+
+    $("#applyWorkDayRange").on("click", function () {
+
+        var from = parseInt($("#workDayFrom").val(), 10);
+        var to = parseInt($("#workDayTo").val(), 10);
+
+        if (isNaN(from) || isNaN(to) || from < 1 || to > 99 || from > to) {
+            message("بازه روزکار معتبر نیست (بین 1 تا 99).", "error");
+            return;
+        }
+
+        // بازه، انتخاب فعلی را جایگزین می‌کند (چون پیش‌فرض همه تیک‌خورده است)
+        $(".scope-workday-check").each(function () {
+            var v = parseInt($(this).val(), 10);
+            $(this).prop("checked", v >= from && v <= to);
+        });
+
+        syncScopeMasters();
+    });
+
+    renderScopeRules();
+
+
+    /* =====================================================
+       TAB 2 SAVE
+       ===================================================== */
+
+    $("#agentScopeForm").on("submit", function (e) {
+
+        e.preventDefault();
+
+        var selectedUserIds = scopeValues(".scope-user-check");
+
+        if (selectedUserIds.length === 0) {
+            message("حداقل یک مامور انتخاب کنید.", "error");
+            return;
+        }
+
+        // هر چهار بخش باید حداقل یک مورد تیک‌خورده داشته باشند
+        var missing = [];
+
+        if (scopeValues(".scope-region-check").length === 0)  { missing.push(scopeRegionLabel); }
+        if (scopeValues(".scope-workday-check").length === 0) { missing.push("روزکار"); }
+        if (scopeValues(".scope-area-check").length === 0)    { missing.push(scopeAreaLabel); }
+        if (scopeValues(".scope-tariff-check").length === 0)  { missing.push("نوع تعرفه"); }
+
+        if (missing.length) {
+            message("برای ثبت باید حداقل یک مورد از این بخش‌ها انتخاب شود: " + missing.join("، "), "error");
+            return;
+        }
+
+        // گروه جدید بدون هیچ محدودیتی، کل منطقه را بدون محدودیت می‌کند و گروه‌های قبلی را پاک می‌کند
+        if (scopeAddGroup
+            && selectedOrAll(".scope-workday-check").length === 0
+            && selectedOrAll(".scope-area-check").length === 0
+            && selectedOrAll(".scope-tariff-check").length === 0) {
+            message("برای گروه جدید، حداقل یکی از روزکار، " + scopeAreaLabel + " یا نوع تعرفه باید محدود شود (همه تیک‌خورده نباشد).", "error");
+            return;
+        }
+
+        // هر منطقه‌ی تیک‌خورده یک قانون (گروه) می‌سازد؛ فرم بعد از خطا دست‌نخورده می‌ماند
+        var allRules = $.extend({}, scopeRules, currentSelectionRules());
+
+        var rulesArray = $.map(Object.keys(allRules), function (k) {
+            return {
+                Region: parseInt(k, 10),
+                GroupNo: allRules[k].GroupNo || 0,
+                Days: allRules[k].Days,
+                Tariffs: allRules[k].Tariffs,
+                Areas: allRules[k].Areas
+            };
+        });
+
+        loading(true);
+
+        $.ajax({
+            url: scopeUrls.save,
+            type: "POST",
+            traditional: true,
+            data: {
+                __RequestVerificationToken: token("#agentScopeForm"),
+                UserIds: selectedUserIds,
+                RulesJson: JSON.stringify(rulesArray)
+            },
+            success: function (r) {
+                if (r && r.success) {
+                    message(r.message, "success");
+                    sessionStorage.setItem("OrderAssignmentActiveTab", "tabTwo");
+                    setTimeout(function () { location.reload(); }, 450);
+                }
+                else {
+                    message(r && r.message ? r.message : "ثبت انجام نشد.", "error");
+                }
+            },
+            error: function () {
+                message("خطا در ارتباط با سرور.", "error");
+            },
+            complete: function () {
+                loading(false);
+            }
+        });
+    });
+
+
+    /* =====================================================
+       TAB 2 EDIT ONE REGION
+       روزکار/تعرفه همان منطقه داخل فرم می‌آید؛ با ذخیره،
+       فقط همان (مامور + منطقه) ویرایش می‌شود.
+       (region = 0 یعنی مامور بدون ردیف منطقه: همه چیز تیک‌خورده می‌آید)
+       ===================================================== */
+
+    $(document).on("click", ".edit-scope-region", function () {
+
+        var userId = $(this).data("user");
+        var region = parseInt($(this).data("region"), 10);
+
+        function parseList(el, attr) {
+            return ("" + ($(el).attr(attr) || ""))
+                .split(",")
+                .filter(function (x) { return x !== ""; })
+                .map(function (x) { return parseInt(x, 10); });
+        }
+
+        var days = parseList(this, "data-days");
+        var tariffIds = parseList(this, "data-tariffs");
+        var areaIds = parseList(this, "data-areas");
+
+        scopeRules = {};
+        scopeAddGroup = false;
+        scopeEdit = region > 0
+            ? { region: region, group: parseInt($(this).attr("data-group"), 10) || 0 }
+            : null;
+        renderScopeRules();
+
+        // فقط همین مامور (ثبت‌شده‌ها پنهان‌اند؛ مامور در حال ویرایش موقتاً نمایش داده می‌شود)
+        restoreScopeUsers();
+        $(".scope-user-check").prop("checked", false);
+
+        $('.scope-user-check[value="' + userId + '"]')
+            .prop("checked", true)
+            .closest(".scope-user-option")
+            .removeClass("scope-user-hidden")
+            .addClass("scope-user-editing");
+
+        // منطقه: region = 0 یعنی همه مناطق
+        $(".scope-region-check").prop("checked", region <= 0);
+        if (region > 0) {
+            $('.scope-region-check[value="' + region + '"]').prop("checked", true);
+        }
+
+        // روزکار: لیست خالی یعنی همه روزها
+        $(".scope-workday-check").prop("checked", days.length === 0);
+        $.each(days, function (_, d) {
+            $('.scope-workday-check[value="' + d + '"]').prop("checked", true);
+        });
+
+        // محدوده: لیست خالی یعنی همه مقادیر مجاز قرارداد
+        $(".scope-area-check").prop("checked", areaIds.length === 0);
+        $.each(areaIds, function (_, a) {
+            $('.scope-area-check[value="' + a + '"]').prop("checked", true);
+        });
+
+        // تعرفه: لیست خالی یعنی همه تعرفه‌ها
+        $(".scope-tariff-check").prop("checked", tariffIds.length === 0);
+        $.each(tariffIds, function (_, t) {
+            $('.scope-tariff-check[value="' + t + '"]').prop("checked", true);
+        });
+
+        $("#workDayFrom, #workDayTo").val("");
+
+        syncScopeMasters();
+
+        $(".main-tab-button").removeClass("active");
+        $('.main-tab-button[data-tab="tabTwo"]').addClass("active");
+        $(".main-tab-panel").hide();
+        $("#tabTwo").show();
+
+        $("html,body").animate({ scrollTop: $("#scopeFormCard").offset().top - 30 }, 250);
+
+        message("روزکار، " + scopeAreaLabel + " و تعرفه را تغییر دهید و «ذخیره اطلاعات» را بزنید (فقط همین گروه ویرایش می‌شود).", "success");
+    });
+
+
+    /* =====================================================
+       TAB 2 ADD ANOTHER REGION FOR A SAVED AGENT
+       مامور دوباره بالا می‌آید؛ فقط مناطقی که هنوز برایش ثبت نشده
+       تیک‌خورده است و روزکار، تعرفه و محدوده همه تیک‌خورده‌اند.
+       با ذخیره، منطقه(های) جدید اضافه می‌شود و مناطق قبلی دست نمی‌خورند.
+       ===================================================== */
+
+    $(document).on("click", ".add-scope-region", function () {
+
+        var userId = $(this).data("user");
+
+        var registered = ("" + ($(this).attr("data-registered") || ""))
+            .split(",")
+            .filter(function (x) { return x !== ""; })
+            .map(function (x) { return parseInt(x, 10); });
+
+        scopeRules = {};
+        scopeEdit = null;
+        scopeAddGroup = false;
+        renderScopeRules();
+
+        // فقط همین مامور (موقتاً بالا نمایش داده می‌شود)
+        restoreScopeUsers();
+        $(".scope-user-check").prop("checked", false);
+
+        $('.scope-user-check[value="' + userId + '"]')
+            .prop("checked", true)
+            .closest(".scope-user-option")
+            .removeClass("scope-user-hidden")
+            .addClass("scope-user-editing");
+
+        // فقط مناطق ثبت‌نشده تیک‌خورده
+        $(".scope-region-check").each(function () {
+            $(this).prop("checked", registered.indexOf(parseInt($(this).val(), 10)) < 0);
+        });
+
+        // بقیه پیش‌فرض: همه تیک‌خورده
+        $(".scope-workday-check, .scope-area-check, .scope-tariff-check").prop("checked", true);
+        $("#workDayFrom, #workDayTo").val("");
+
+        syncScopeMasters();
+
+        $(".main-tab-button").removeClass("active");
+        $('.main-tab-button[data-tab="tabTwo"]').addClass("active");
+        $(".main-tab-panel").hide();
+        $("#tabTwo").show();
+
+        $("html,body").animate({ scrollTop: $("#scopeFormCard").offset().top - 30 }, 250);
+
+        message(scopeRegionLabel + " جدید مامور انتخاب شده است. روزکار، تعرفه و " + scopeAreaLabel + " را (در صورت نیاز) تغییر دهید و «ذخیره اطلاعات» را بزنید.", "success");
+    });
+
+
+    /* =====================================================
+       TAB 2 ADD ANOTHER GROUP FOR A REGION
+       فقط همان مامور و همان منطقه انتخاب می‌شود؛ روزکار/محدوده/تعرفه
+       را برای گروه جدید تیک بزنید. با ذخیره، گروه جدید با شماره‌ی بعدی
+       اضافه می‌شود و گروه‌های قبلی آن منطقه دست نمی‌خورند.
+       ===================================================== */
+
+    $(document).on("click", ".add-scope-group", function () {
+
+        var userId = $(this).data("user");
+        var region = parseInt($(this).data("region"), 10);
+
+        scopeRules = {};
+        renderScopeRules();
+
+        scopeEdit = null;
+        scopeAddGroup = true;
+
+        restoreScopeUsers();
+        $(".scope-user-check").prop("checked", false);
+
+        $('.scope-user-check[value="' + userId + '"]')
+            .prop("checked", true)
+            .closest(".scope-user-option")
+            .removeClass("scope-user-hidden")
+            .addClass("scope-user-editing");
+
+        $(".scope-region-check").prop("checked", false);
+        $('.scope-region-check[value="' + region + '"]').prop("checked", true);
+
+        $(".scope-workday-check, .scope-area-check, .scope-tariff-check").prop("checked", true);
+        $("#workDayFrom, #workDayTo").val("");
+
+        syncScopeMasters();
+
+        $(".main-tab-button").removeClass("active");
+        $('.main-tab-button[data-tab="tabTwo"]').addClass("active");
+        $(".main-tab-panel").hide();
+        $("#tabTwo").show();
+
+        $("html,body").animate({ scrollTop: $("#scopeFormCard").offset().top - 30 }, 250);
+
+        message("گروه جدید برای " + scopeRegionLabel + " " + region + ": روزکار، " + scopeAreaLabel + " و تعرفه‌ی این گروه را تیک بزنید و «ذخیره اطلاعات» را بزنید.", "success");
+    });
+
+
+    /* =====================================================
+       TAB 2 CLEAR (برگشت به حالت پیش‌فرض: همه چیز تیک‌خورده)
+       ===================================================== */
+
+    $("#clearAgentScope").on("click", function () {
+
+        scopeRules = {};
+        scopeEdit = null;
+        scopeAddGroup = false;
+        renderScopeRules();
+
+        resetScopeSelection();
+
+        // مامور در حال ویرایش دوباره پنهان می‌شود؛ ثبت‌نشده‌ها تیک‌خورده
+        restoreScopeUsers();
+
+        syncScopeMasters();
+    });
+
+
+    /* =====================================================
+       TAB 2 DELETE ONE REGION
+       ===================================================== */
+
+    $(document).on("click", ".delete-scope-region", function () {
+
+        var id = $(this).data("id");
+        var region = $(this).data("region");
+        var group = $(this).data("group") || 0;
+
+        if (!confirm(group > 0
+            ? "این گروه (روزکار، " + scopeAreaLabel + " و تعرفه‌اش) از تنظیمات مامور حذف شود؟"
+            : "این " + scopeRegionLabel + " (و روزکارهایش) از تنظیمات مامور حذف شود؟")) { return; }
+
+        loading(true);
+
+        $.ajax({
+            url: scopeUrls.removeRegion,
+            type: "POST",
+            data: {
+                __RequestVerificationToken: token("#agentScopeForm"),
+                id: id,
+                region: region,
+                group: group
+            },
+            success: function (r) {
+                if (r && r.success) {
+                    message(r.message, "success");
+                    sessionStorage.setItem("OrderAssignmentActiveTab", "tabTwo");
+                    setTimeout(function () { location.reload(); }, 400);
+                }
+                else {
+                    message(r && r.message ? r.message : "حذف انجام نشد.", "error");
+                }
+            },
+            error: function () {
+                message("خطا در حذف اطلاعات.", "error");
+            },
+            complete: function () {
+                loading(false);
+            }
+        });
+    });
+
+
+    /* =====================================================
+       TAB 2 DELETE
+       ===================================================== */
+
+    $(document).on("click", ".delete-agent-scope", function () {
+
+        var id = $(this).data("id");
+
+        if (!confirm("آیا اطلاعات این مامور حذف شود؟")) { return; }
+
+        loading(true);
+
+        $.ajax({
+            url: scopeUrls.remove,
+            type: "POST",
+            data: {
+                __RequestVerificationToken: token("#agentScopeForm"),
+                id: id
+            },
+            success: function (r) {
+                if (r && r.success) {
+                    message(r.message, "success");
+                    sessionStorage.setItem("OrderAssignmentActiveTab", "tabTwo");
+                    setTimeout(function () { location.reload(); }, 400);
+                }
+                else {
+                    message(r && r.message ? r.message : "حذف انجام نشد.", "error");
+                }
+            },
+            error: function () {
+                message("خطا در حذف اطلاعات.", "error");
+            },
+            complete: function () {
+                loading(false);
+            }
+        });
+    });
+
+
+    /* =====================================================
+       TAB 2 DETAILS
+       ===================================================== */
+
+    $(document).on("click", ".details-agent-scope", function () {
+
+        var id = $(this).data("id");
+
+        loading(true);
+
+        $.ajax({
+            url: scopeUrls.details,
+            type: "GET",
+            data: { id: id },
+            success: function (r) {
+
+                if (!r || !r.success) {
+                    message(r && r.message ? r.message : "اطلاعات دریافت نشد.", "error");
+                    return;
+                }
+
+                var d = r.data;
+
+                var rulesHtml = "";
+
+                var tariffMap = {};
+
+                $.each(d.TariffTypes || [], function (_, t) {
+                    tariffMap[t.ID] = t.Title;
+                });
+
+                // «همه» به‌صورت مقدارهای واقعی نمایش داده می‌شود
+                var allTariffsText = $.map($(".scope-tariff-check"), function (el) {
+                    return tariffTitle($(el).val());
+                }).join("، ") || "همه";
+
+                var allRegionsText = compressDays($.map($(".scope-region-check"), function (el) {
+                    return parseInt($(el).val(), 10);
+                })) || "همه";
+
+                function ruleLine(regionText, x) {
+
+                    var tariffText = (x.Tariffs && x.Tariffs.length)
+                        ? $.map(x.Tariffs, function (id) { return tariffMap[id] || id; }).join("، ")
+                        : allTariffsText;
+
+                    return "<div>" + regionText + ": " +
+                        "روزکار " + ((x.Days && x.Days.length) ? compressDays(x.Days) : "1 تا 99") +
+                        " | تعرفه " + htmlEncode(tariffText) +
+                        " | " + scopeAreaLabel + " " + ((x.Areas && x.Areas.length && x.Areas.length < @AreaTotal) ? compressDays(x.Areas) : "@allAreasText") +
+                        "</div>";
+                }
+
+                var groupCount = {};
+
+                $.each(d.Rules || [], function (_, x) {
+                    groupCount[x.Region] = (groupCount[x.Region] || 0) + 1;
+                });
+
+                $.each(d.Rules || [], function (_, x) {
+                    var label = x.Region ? scopeRegionLabel + " " + x.Region : "همه " + scopeRegionsLabel;
+
+                    if (groupCount[x.Region] > 1) { label += " - گروه " + x.GroupNo; }
+
+                    rulesHtml += ruleLine(label, x);
+                });
+
+                // مامور بدون قاعده: همه مناطق، روزکارها، تعرفه‌ها و محدوده‌ها
+                if (!rulesHtml) {
+                    rulesHtml = ruleLine(scopeRegionLabel + " " + allRegionsText, {});
+                }
+
+                var html = "";
+
+                html += "<div class='detail-row'><div>نام مامور</div><div>" + htmlEncode(d.FullName) + "</div></div>";
+                html += "<div class='detail-row'><div>کد ملی</div><div>" + htmlEncode(d.NationalCode) + "</div></div>";
+                html += "<div class='detail-row'><div>" + scopeRegionsLabel + "، روزکار، تعرفه و " + scopeAreaLabel + "</div><div>" + rulesHtml + "</div></div>";
+
+
+                $("#scopeDetailsContent").html(html);
+                $("#scopeDetailsModal").addClass("show");
+            },
+            error: function () {
+                message("خطا در دریافت جزئیات.", "error");
+            },
+            complete: function () {
+                loading(false);
+            }
+        });
+    });
+
+
+    /* =====================================================
+       CLOSE DETAILS
+       ===================================================== */
+
+    $("#closeScopeDetails").on("click", function () {
+        $("#scopeDetailsModal").removeClass("show");
+    });
+
+    $("#scopeDetailsModal").on("click", function (e) {
+        if (e.target === this) { $(this).removeClass("show"); }
+    });
+
+
+    /* =====================================================
+       TAB 2 SAVED TABLE SEARCH
+       ===================================================== */
+
+    $("#scopeSearch").on("input", function () {
+
+        var q = $.trim($(this).val()).toLowerCase();
+
+        $(".scope-data-row").each(function () {
+
+            var text = ($(this).attr("data-name") || "").toLowerCase();
+
+            $(this).toggle(!q || text.indexOf(q) >= 0);
+        });
+    });
+
+
+    /* =====================================================
+       TAB 3 URLS
+       ===================================================== */
+
+    var componentImportUrls = {
+        upload:  '@Url.Action("UploadOrderComponentExcel", "Orders", new { area = "Setting" })',
+        disable: '@Url.Action("DisableOrderComponentImport", "Orders", new { area = "Setting" })'
+    };
+
+
+    /* =====================================================
+       TAB 3 FILE NAME
+       ===================================================== */
+
+    $(document).on("change", ".component-excel-file", function () {
+
+        var fileName = this.files && this.files.length
+            ? this.files[0].name
+            : "فایلی انتخاب نشده است";
+
+        $(this).closest(".excel-file-picker").find(".excel-selected-file").text(fileName);
+    });
+
+
+    /* =====================================================
+       TAB 3 UPLOAD
+       ===================================================== */
+
+    $(document).on("submit", ".component-upload-form", function (e) {
+
+        e.preventDefault();
+
+        var form = this;
+        var $form = $(form);
+        var fileInput = $form.find(".component-excel-file")[0];
+        var $result = $form.find(".excel-result");
+
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            $result.removeClass("success").addClass("error").text("ابتدا فایل Excel را انتخاب کنید.");
+            return;
+        }
+
+        var formData = new FormData(form);
+
+        formData.append("componentType", $form.data("component-type"));
+        formData.append("listType", $form.data("list-type"));
+
+        var $button = $form.find(".excel-upload-button");
+
+        $button.prop("disabled", true);
+        loading(true);
+
+        $.ajax({
+            url: componentImportUrls.upload,
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (r) {
+
+                if (r && r.success) {
+
+                    $result.removeClass("error").addClass("success").text(r.message);
+
+                    message(r.message, "success");
+
+                    sessionStorage.setItem("OrderAssignmentActiveTab", $form.closest(".main-tab-panel").attr("id"));
+
+                    window.location.reload();
+                }
+                else {
+
+                    var errorText = r && r.message ? r.message : "بارگذاری فایل انجام نشد.";
+
+                    if (r && r.errors && r.errors.length) {
+                        errorText += " | " + r.errors.join(" | ");
+                    }
+
+                    $result.removeClass("success").addClass("error").text(errorText);
+
+                    message(errorText, "error");
+                }
+            },
+            error: function () {
+
+                var errorText = "خطا در ارتباط با سرور هنگام بارگذاری فایل.";
+
+                $result.removeClass("success").addClass("error").text(errorText);
+
+                message(errorText, "error");
+            },
+            complete: function () {
+                $button.prop("disabled", false);
+                loading(false);
+            }
+        });
+    });
+
+
+    /* =====================================================
+       TAB 3 DISABLE ACTIVE FILE
+       ===================================================== */
+
+    $(document).on("click", ".disable-component-import", function () {
+
+        var $button = $(this);
+
+        if (!confirm("آیا فایل فعال این مؤلفه غیرفعال شود؟")) { return; }
+
+        $button.prop("disabled", true);
+        loading(true);
+
+        $.ajax({
+            url: componentImportUrls.disable,
+            type: "POST",
+            data: {
+                __RequestVerificationToken: $button
+                    .closest(".component-upload-form")
+                    .find('input[name="__RequestVerificationToken"]')
+                    .val(),
+                id: $button.data("id")
+            },
+            success: function (r) {
+
+                if (r && r.success) {
+
+                    message(r.message, "success");
+
+                    sessionStorage.setItem("OrderAssignmentActiveTab", $button.closest(".main-tab-panel").attr("id"));
+
+                    window.location.reload();
+                }
+                else {
+
+                    message(r && r.message ? r.message : "غیرفعال‌سازی انجام نشد.", "error");
+
+                    $button.prop("disabled", false);
+                }
+            },
+            error: function () {
+                message("خطا در ارتباط با سرور.", "error");
+                $button.prop("disabled", false);
+            },
+            complete: function () {
+                loading(false);
+            }
+        });
+    });
+
+
+    /* =====================================================
+       INITIAL
+       ===================================================== */
+
+    applyTelephoneRulesForAll();
+    updateAssignmentMasters();
+    syncScopeMasters();
+
+});
+
+</script>
