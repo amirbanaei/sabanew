@@ -1,0 +1,62 @@
+﻿@model SaabWebProject.Areas.DocumentControl.Models.DocumentControlIndexVm
+@{
+    ViewBag.Title = "تعریف نوع مدرک";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .dt-page{direction:rtl;font-family:Tahoma;min-height:100vh;padding:22px;color:#e8f7ff;background:radial-gradient(circle at 10% 12%,rgba(34,211,238,.16),transparent 28%),radial-gradient(circle at 90% 20%,rgba(167,139,250,.17),transparent 28%),linear-gradient(145deg,#040b16,#07192d 52%,#06101f)}
+    .dt-head,.dt-card{background:rgba(10,29,52,.74);border:1px solid rgba(103,232,249,.23);box-shadow:0 18px 48px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.07);backdrop-filter:blur(18px)}
+    .dt-head{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px 24px;border-radius:21px;margin-bottom:16px}.dt-head h1{font-size:22px;margin:0 0 7px;text-shadow:0 0 17px rgba(34,211,238,.38)}.dt-head p{margin:0;color:#9fc7da}.dt-back{padding:10px 15px;border:1px solid rgba(103,232,249,.32);border-radius:11px;color:#a5f3fc;text-decoration:none;background:rgba(34,211,238,.08)}
+    .dt-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(300px,.8fr);gap:15px}.dt-card{border-radius:19px;padding:20px}.dt-card h2{font-size:17px;margin:0 0 17px}.dt-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.dt-field.full{grid-column:1/-1}.dt-field label{display:block;font-size:12px;font-weight:bold;color:#9fc7da;margin-bottom:7px}.dt-field input,.dt-field select{box-sizing:border-box;width:100%;padding:10px 11px;border:1px solid rgba(147,197,220,.24);border-radius:11px;outline:none;background:rgba(3,14,28,.56);color:#e8f7ff}.dt-field input:focus,.dt-field select:focus{border-color:#22d3ee;box-shadow:0 0 0 3px rgba(34,211,238,.1)}.dt-checks{display:flex;gap:18px;align-items:center;min-height:39px}.dt-checks label{margin:0}.dt-checks input{width:auto;margin-left:6px}.dt-actions{display:flex;justify-content:flex-end;margin-top:17px}.dt-btn{border:0;border-radius:11px;padding:11px 18px;cursor:pointer;font-weight:bold;color:#fff;background:linear-gradient(135deg,#0ea5e9,#6366f1);box-shadow:0 0 22px rgba(56,189,248,.22)}
+    .dt-item{padding:13px;margin-bottom:10px;border:1px solid rgba(103,232,249,.16);border-radius:14px;background:rgba(4,20,37,.5)}.dt-item b{display:block;color:#e8fbff}.dt-meta{font-size:11px;color:#86adc1;margin-top:6px;direction:ltr;text-align:right}.dt-empty{color:#fcd34d;line-height:2}.dt-alert{display:none;position:fixed;left:20px;bottom:20px;z-index:10000;padding:14px 18px;border-radius:13px;color:#eafff7;background:rgba(6,95,70,.94);box-shadow:0 0 30px rgba(52,211,153,.28)}.dt-alert.err{background:rgba(136,19,55,.94)}
+    @@media(max-width:900px){.dt-grid{grid-template-columns:1fr}.dt-form{grid-template-columns:1fr}.dt-field.full{grid-column:auto}.dt-head{align-items:flex-start;flex-direction:column}}
+</style>
+
+<div class="dt-page">
+    @Html.AntiForgeryToken()
+    <div class="dt-head">
+        <div><h1>تعریف نوع مدرک</h1><p>نوع فایل، محدودیت حجم، دوره و قراردادهای مرتبط را مشخص کنید.</p></div>
+        <a class="dt-back" href="@Url.Action("Index")">بازگشت به کنترل مدارک</a>
+    </div>
+    <div class="dt-grid">
+        <div class="dt-card">
+            <h2>ثبت نوع مدرک جدید</h2>
+            <form id="documentTypeForm">
+                <input type="hidden" id="docId" />
+                <div class="dt-form">
+                    <div class="dt-field"><label>نام نوع مدرک</label><input id="docTitle" required placeholder="مثلاً لیست بیمه تأمین اجتماعی" /></div>
+                    <div class="dt-field"><label>نام مستعار</label><input id="docAlias" placeholder="مثلاً بیمه" /></div>
+                    <div class="dt-field full"><label>قراردادهای مرتبط</label><select id="docContracts" class="glass-select-search" data-search="true" multiple required>@foreach(var x in Model.Contracts){<option value="@x.Id">@x.Title</option>}</select></div>
+                    <div class="dt-field"><label>پسوندهای مجاز</label><input id="docExt" value=".pdf" required placeholder=".pdf,.xlsx" /></div>
+                    <div class="dt-field"><label>حداکثر حجم فایل (MB)</label><input id="docMax" type="number" value="20" min="1" max="500" required /></div>
+                    <div class="dt-field"><label>ارتباط با ماه صورت‌وضعیت</label><select id="docOffset" class="glass-select-search" data-search="true"><option value="0">همان ماه مدرک</option><option value="-1">یک ماه قبل</option><option value="1">یک ماه بعد</option></select></div>
+                    <div class="dt-field"><label>تنظیمات</label><div class="dt-checks"><label><input id="docPeriodic" type="checkbox" checked />دوره‌ای</label><label><input id="docActive" type="checkbox" checked />فعال</label></div></div>
+                </div>
+                <div class="dt-actions"><button class="dt-btn" type="submit">ثبت نوع مدرک</button></div>
+            </form>
+        </div>
+        <div class="dt-card">
+            <h2>انواع مدارک فعال</h2>
+            @if(Model.Documents.Count == 0){<div class="dt-empty">هنوز نوع مدرکی ثبت نشده است.</div>}
+            @foreach(var item in Model.Documents){<div class="dt-item"><b>@item.Title</b><div class="dt-meta">@item.Meta</div></div>}
+        </div>
+    </div>
+</div>
+<div id="dtAlert" class="dt-alert"></div>
+
+@section Scripts {
+<script>
+$(function(){
+    var token=$('input[name="__RequestVerificationToken"]').val();
+    function notify(text,error){$('#dtAlert').toggleClass('err',!!error).text(text||'').fadeIn(120);setTimeout(function(){$('#dtAlert').fadeOut(150)},4500)}
+    $('#documentTypeForm').submit(function(e){
+        e.preventDefault();if(!this.checkValidity()){this.reportValidity();return}
+        var contracts=($('#docContracts').val()||[]).map(Number);
+        if(!contracts.length){notify('حداقل یک قرارداد انتخاب کنید.',true);return}
+        var payload={Id:+$('#docId').val()||null,Title:$('#docTitle').val(),Alias:$('#docAlias').val(),AllowedExtensions:$('#docExt').val(),MaxFileSizeMb:+$('#docMax').val(),StatementMonthOffset:+$('#docOffset').val(),IsPeriodic:$('#docPeriodic').is(':checked'),IsActive:$('#docActive').is(':checked'),ContractIds:contracts};
+        $.ajax({url:'@Url.Action("SaveDocumentDefinition")',type:'POST',data:{__RequestVerificationToken:token,payload:JSON.stringify(payload)}}).done(function(r){if(r&&r.success){notify(r.message);setTimeout(function(){location.reload()},650)}else notify(r&&r.message||'ثبت انجام نشد.',true)}).fail(function(x){notify(x.responseJSON&&x.responseJSON.message?x.responseJSON.message:'خطای ارتباط با سرور: '+x.status,true)})
+    });
+});
+</script>
+}

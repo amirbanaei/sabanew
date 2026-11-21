@@ -1,0 +1,781 @@
+﻿@{
+    ViewBag.Title = "پیام‌ها و پیوست‌ها";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<style>
+    #msg-app {
+        --ink: #edf4ff;
+        --muted: #a9b9d4;
+        --line: rgba(169,196,255,.18);
+        --cyan: #63f4ed;
+        --violet: #aa8cff;
+        direction: rtl;
+        isolation: isolate;
+        position: relative;
+        max-width: 1240px;
+        margin: 28px auto;
+        padding: 30px;
+        border: 1px solid var(--line);
+        border-radius: 30px;
+        color: var(--ink);
+        background: radial-gradient(ellipse at 95% 0%,rgba(82,62,173,.36),transparent 45%),radial-gradient(ellipse at 0% 70%,rgba(21,137,155,.19),transparent 42%),#0b1225;
+        box-shadow: 0 24px 70px rgba(6,12,30,.28);
+        font-family: inherit;
+        line-height: 1.8;
+        color-scheme: dark;
+    }
+
+        #msg-app *, #msg-app *::before, #msg-app *::after {
+            box-sizing: border-box;
+        }
+
+        #msg-app [hidden] {
+            display: none !important;
+        }
+
+        #msg-app h1, #msg-app h2, #msg-app h3, #msg-app p {
+            color: inherit;
+            margin: 0;
+        }
+
+        #msg-app h1 {
+            font-size: clamp(24px,3vw,34px);
+            font-weight: 800;
+            letter-spacing: -.8px;
+        }
+
+        #msg-app h2 {
+            font-size: 19px;
+            font-weight: 750;
+        }
+
+        #msg-app h3 {
+            font-size: 17px;
+        }
+
+        #msg-app .eyebrow {
+            color: var(--cyan);
+            font-size: 12px;
+            letter-spacing: 2px;
+            direction: ltr;
+            text-align: right;
+            margin-bottom: 6px;
+        }
+
+        #msg-app .hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        #msg-app .intro {
+            max-width: 680px;
+            color: var(--muted);
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        #msg-app .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: var(--cyan);
+            font-size: 12px;
+            padding: 5px 11px;
+            border: 1px solid rgba(99,244,237,.25);
+            border-radius: 30px;
+            background: rgba(99,244,237,.07);
+        }
+
+            #msg-app .badge::before {
+                content: '';
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: var(--cyan);
+                box-shadow: 0 0 12px var(--cyan);
+            }
+
+        #msg-app .box {
+            min-width: 0;
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            background: rgba(255,255,255,.045);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            box-shadow: inset 0 1px rgba(255,255,255,.05),0 12px 30px rgba(0,0,0,.1);
+        }
+
+        #msg-app .workspace {
+            display: grid;
+            grid-template-columns: minmax(0,1.05fr) minmax(0,1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        #msg-app .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        #msg-app .section-no {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            margin-left: 9px;
+            border-radius: 11px;
+            color: var(--cyan);
+            background: rgba(99,244,237,.08);
+            border: 1px solid rgba(99,244,237,.2);
+            font-size: 13px;
+            vertical-align: middle;
+        }
+
+        #msg-app label, #msg-app .field-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 7px;
+        }
+
+        #msg-app .field {
+            margin-bottom: 18px;
+        }
+
+        #msg-app input:not([type=checkbox]), #msg-app textarea {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            margin: 0;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(5,12,30,.58);
+            color: var(--ink);
+            font: inherit;
+            font-size: 13px;
+            transition: border-color .18s,box-shadow .18s;
+        }
+
+            #msg-app input::placeholder, #msg-app textarea::placeholder {
+                color: #7d90af;
+                opacity: 1;
+            }
+
+        #msg-app textarea {
+            resize: vertical;
+            min-height: 125px;
+        }
+
+            #msg-app input:focus, #msg-app textarea:focus {
+                outline: none;
+                border-color: var(--cyan);
+                box-shadow: 0 0 0 3px rgba(99,244,237,.1);
+            }
+
+        #msg-app button, #msg-app .download {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 16px;
+            min-height: 42px;
+            margin: 0;
+            border: 1px solid transparent;
+            border-radius: 12px;
+            background: linear-gradient(110deg,#73f5ed,#99b8ff);
+            color: #09172e;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 750;
+            cursor: pointer;
+            text-decoration: none;
+            transition: box-shadow .18s,background .18s;
+        }
+
+            #msg-app button:hover, #msg-app .download:hover {
+                box-shadow: 0 0 22px rgba(99,244,237,.22);
+            }
+
+            #msg-app button:focus-visible, #msg-app a:focus-visible, #msg-app summary:focus-visible {
+                outline: 2px solid var(--cyan);
+                outline-offset: 4px;
+            }
+
+            #msg-app button:disabled {
+                opacity: .45;
+                cursor: default;
+                box-shadow: none;
+            }
+
+        #msg-app .secondary {
+            background: rgba(155,177,230,.07);
+            border-color: var(--line);
+            color: #d9e4ff;
+        }
+
+        #msg-app .submit {
+            width: 100%;
+            box-shadow: 0 5px 24px rgba(99,244,237,.12);
+        }
+
+        #msg-app .muted {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        #msg-app .upload {
+            padding: 14px;
+            border: 1px dashed rgba(170,140,255,.4);
+            border-radius: 14px;
+            background: rgba(170,140,255,.05);
+        }
+
+            #msg-app .upload input {
+                margin-top: 10px;
+                padding: 8px;
+                background: transparent;
+                border: 0;
+            }
+
+        #msg-app input::file-selector-button {
+            font: inherit;
+            color: #dfd5ff;
+            border: 1px solid rgba(170,140,255,.3);
+            border-radius: 8px;
+            padding: 6px 10px;
+            margin-left: 12px;
+            background: rgba(170,140,255,.15);
+            cursor: pointer;
+        }
+
+        #msg-app .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 0;
+        }
+
+        #msg-app .entry {
+            position: relative;
+            padding: 18px;
+            border: 1px solid var(--line);
+            background: rgba(9,18,38,.45);
+            border-radius: 16px;
+            margin-bottom: 12px;
+            overflow-wrap: anywhere;
+        }
+
+            #msg-app .entry strong {
+                display: block;
+                font-size: 15px;
+                margin-bottom: 7px;
+            }
+
+            #msg-app .entry button {
+                margin-top: 13px;
+                background: rgba(99,244,237,.08);
+                border-color: rgba(99,244,237,.24);
+                color: var(--cyan);
+            }
+
+        #msg-app .pagination {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        #msg-app #notice, #msg-app #readonly {
+            padding: 14px 18px;
+            border: 1px solid rgba(170,140,255,.4);
+            border-radius: 14px;
+            background: rgba(170,140,255,.12);
+            white-space: pre-wrap;
+            margin-bottom: 18px;
+        }
+
+        #msg-app #detail {
+            width: calc(100% - 32px);
+            max-width: 920px;
+            max-height: calc(100dvh - 40px);
+            margin: auto;
+            padding: 24px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            color: var(--ink);
+            background: linear-gradient(140deg,rgba(36,35,73,.97),rgba(10,23,43,.98));
+            border: 1px solid rgba(99,244,237,.32);
+            box-shadow: 0 0 50px rgba(99,244,237,.12),0 30px 100px rgba(0,0,0,.55);
+        }
+
+            #msg-app #detail::backdrop {
+                background: rgba(3,8,21,.76);
+                -webkit-backdrop-filter: blur(9px);
+                backdrop-filter: blur(9px);
+            }
+
+        #msg-app .modal-head {
+            position: sticky;
+            top: -24px;
+            z-index: 2;
+            padding: 14px 0;
+            background: #171e38;
+            border-bottom: 1px solid var(--line);
+        }
+
+        #msg-app #modal-notice {
+            padding: 12px 15px;
+            margin-top: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(170,140,255,.4);
+            background: rgba(170,140,255,.12);
+            white-space: pre-wrap;
+        }
+
+        #msg-app #subject {
+            overflow-wrap: anywhere;
+        }
+
+        #msg-app #thread-meta, #msg-app #to {
+            color: var(--muted);
+            font-size: 13px;
+            margin: 10px 0;
+            overflow-wrap: anywhere;
+        }
+
+        #msg-app .post {
+            padding: 20px;
+            margin: 16px 0;
+            border: 1px solid var(--line);
+            border-right: 3px solid var(--cyan);
+            border-radius: 16px;
+            background: rgba(7,15,34,.5);
+        }
+
+            #msg-app .post strong {
+                font-size: 13px;
+            }
+
+            #msg-app .post p {
+                margin: 10px 0;
+            }
+
+        #msg-app .body {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        #msg-app .download {
+            background: rgba(170,140,255,.12);
+            border-color: rgba(170,140,255,.3);
+            color: #e2d6ff;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
+
+        #msg-app #reply {
+            margin-top: 24px;
+            padding-top: 22px;
+            border-top: 1px solid var(--line);
+        }
+
+        #msg-app #reply-to {
+            color: var(--cyan);
+            font-size: 13px;
+            margin: 8px 0;
+        }
+
+        #msg-app #clear-parent {
+            margin-bottom: 16px;
+        }
+
+        #msg-app .recipient-picker {
+            position: relative;
+        }
+
+            #msg-app .recipient-picker summary {
+                display: flex;
+                justify-content: space-between;
+                gap: 10px;
+                align-items: center;
+                padding: 12px 14px;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                background: rgba(5,12,30,.58);
+                cursor: pointer;
+                list-style: none;
+                font-size: 13px;
+            }
+
+                #msg-app .recipient-picker summary::-webkit-details-marker {
+                    display: none;
+                }
+
+                #msg-app .recipient-picker summary::after {
+                    content: '⌄';
+                    color: var(--cyan);
+                }
+
+            #msg-app .recipient-picker[open] summary {
+                border-color: var(--cyan);
+                box-shadow: 0 0 0 3px rgba(99,244,237,.08);
+            }
+
+        #msg-app .picker-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            inset-inline: 0;
+            z-index: 20;
+            padding: 12px;
+            background: #121d35;
+            border: 1px solid rgba(99,244,237,.3);
+            border-radius: 15px;
+            box-shadow: 0 16px 45px rgba(0,0,0,.45);
+        }
+
+        #msg-app .recipient-options {
+            max-height: 245px;
+            overflow: auto;
+            overscroll-behavior: contain;
+            margin-top: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: #526388 transparent;
+        }
+
+        #msg-app .recipient-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 3px 0;
+            padding: 10px;
+            border-radius: 9px;
+            cursor: pointer;
+            font-weight: 400;
+            overflow-wrap: anywhere;
+        }
+
+            #msg-app .recipient-option:hover {
+                background: rgba(99,244,237,.07);
+            }
+
+            #msg-app .recipient-option input {
+                accent-color: var(--cyan);
+                width: 17px;
+                height: 17px;
+                margin: 0;
+                flex-shrink: 0;
+            }
+
+        #msg-app .selected-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 10px;
+        }
+
+        #msg-app .user-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 4px 9px;
+            border-radius: 9px;
+            color: #d9ceff;
+            background: rgba(170,140,255,.12);
+            border: 1px solid rgba(170,140,255,.25);
+            font-size: 12px;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+        }
+
+            #msg-app .user-chip button {
+                padding: 0 3px;
+                min-height: 26px;
+                min-width: 26px;
+                color: #e4dbff;
+                background: transparent;
+                font-size: 18px;
+            }
+
+        #msg-app .picker-footer {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+        }
+
+            #msg-app .picker-footer button {
+                min-height: 32px;
+                padding: 4px 9px;
+                font-size: 12px;
+            }
+
+        #msg-app .empty {
+            padding: 30px 12px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+    @@media(max-width:900px) {
+        #msg-app .workspace {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media(max-width:540px) {
+        #msg-app {
+            margin: 12px 0;
+            padding: 16px;
+            border-radius: 20px;
+        }
+
+            #msg-app .box {
+                padding: 17px;
+            }
+
+            #msg-app .hero {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+
+            #msg-app .pagination {
+                gap: 7px;
+            }
+
+                #msg-app .pagination button {
+                    padding: 8px 10px;
+                }
+    }
+
+    @@media(prefers-reduced-motion:reduce) {
+        #msg-app * {
+            transition: none !important;
+        }
+    }
+</style>
+<div id="msg-app" lang="fa" dir="rtl" data-base="@Url.Action("Messages", "DocumentFlow", new { area = "DocumentControl" })">
+    <header class="hero">
+        <div><div class="eyebrow">COMMUNICATION CENTER</div><h1>پیام‌ها و پیوست‌ها</h1><p class="intro">یک فضای مشترک برای گفتگو، ارسال مستندات و پیگیری پاسخ‌ها. هر گفتگو فقط برای ثبت‌کننده و گیرندگان آن نمایش داده می‌شود.</p></div>
+        <div class="row"><span class="badge">مرکز مکاتبات</span><button id="reload" class="secondary" type="button">↻ تازه‌سازی</button></div>
+    </header>
+    <p id="notice" role="status" aria-live="polite" hidden></p>
+    <p id="readonly" hidden>شروع گفتگو فقط برای سمت‌های ۹، ۲۱۹۰، ۲۱۷۵ و ۱۱۳۰ فعال است. شما می‌توانید به پیام‌های گفتگوهایی که گیرندهٔ آن‌ها هستید پاسخ دهید؛ پاسخ‌ها برای همهٔ اعضای همان گفتگو نمایش داده می‌شود.</p>
+    <div class="workspace">
+        <form id="compose" class="box" hidden>
+            @Html.AntiForgeryToken()
+            <div class="section-head"><h2><span class="section-no">۰۱</span>پیام جدید</h2><span class="muted">شروع یک گفتگو</span></div>
+            <div class="field"><label for="message-title">عنوان پیام</label><input id="message-title" name="subject" required maxlength="200" placeholder="موضوع گفتگو را بنویسید…" /></div>
+            <div class="field">
+                <span class="field-label" id="recipient-label">گیرندگان</span>
+                <details id="recipient-picker" class="recipient-picker">
+                    <summary aria-labelledby="recipient-label recipient-summary"><span id="recipient-summary">انتخاب گیرندگان…</span></summary>
+                    <div class="picker-panel">
+                        <label class="muted" for="user-search">جستجوی نام یا شناسه</label>
+                        <input id="user-search" type="search" placeholder="نام یا شناسه کاربر…" autocomplete="off" />
+                        <div id="recipient-options" class="recipient-options" role="group" aria-labelledby="recipient-label"></div>
+                        <div class="row picker-footer"><span class="muted">حداکثر ۱۰۰ گیرنده</span><button id="clear-users" class="secondary" type="button">پاک کردن انتخاب‌ها</button><button id="picker-done" type="button">تأیید</button></div>
+                    </div>
+                </details>
+                <div id="selected-users" class="selected-users" aria-live="polite"></div>
+                <p id="recipient-error" class="muted" role="alert" hidden></p>
+            </div>
+            <div class="field"><label for="message-body">متن پیام</label><textarea id="message-body" name="body" required maxlength="4000" rows="4" placeholder="متن پیام خود را اینجا بنویسید…"></textarea></div>
+            <div class="field upload"><label for="message-file">پیوست پیام <span class="muted">• الزامی</span></label><p class="muted">فایل موردنظر را انتخاب کنید؛ حداکثر ۱ مگابایت.</p><input id="message-file" name="attachment" type="file" required /></div>
+            <button class="submit" type="submit">ثبت و ارسال پیام ←</button>
+        </form>
+        <section class="box" aria-labelledby="threads-title"><div class="section-head"><h2 id="threads-title"><span class="section-no">۰۲</span>گفتگوهای من</h2><span class="muted">آخرین فعالیت‌ها</span></div><div id="threads"><p class="empty">در حال دریافت گفتگوها…</p></div><div class="row pagination"><button id="prev" class="secondary" type="button" disabled>صفحه قبل</button><span id="page" aria-live="polite"></span><button id="next" class="secondary" type="button" disabled>صفحه بعد</button></div></section>
+    </div>
+    <dialog id="detail" class="box" aria-labelledby="subject" tabindex="-1">
+        <div class="row modal-head"><h2 id="subject"></h2><button id="close" type="button" class="secondary" aria-label="بستن گفتگو" autofocus>بستن ×</button></div>
+        <p id="modal-notice" role="status" aria-live="polite" hidden></p>
+        <p id="thread-meta"></p>
+        <p id="to"></p>
+        <div id="posts"></div>
+        <div class="row pagination"><button id="post-prev" class="secondary" type="button">پیام‌های قبل</button><span id="post-page"></span><button id="post-next" class="secondary" type="button">پیام‌های بعد</button></div>
+        <form id="reply" hidden>
+            <h3>ثبت پاسخ</h3><p id="reply-to">پاسخ به گفتگو</p><button type="button" id="clear-parent" class="secondary" hidden>لغو پاسخ به پیام خاص</button>
+            <div class="field"><label for="reply-body">متن پاسخ</label><textarea id="reply-body" name="body" required maxlength="4000" rows="4" placeholder="پاسخ خود را بنویسید…"></textarea></div>
+            <div class="field upload"><label for="reply-file">پیوست پاسخ <span class="muted">• اختیاری، حداکثر ۱ مگابایت</span></label><input id="reply-file" name="attachment" type="file" /></div>
+            <button type="submit">ارسال پاسخ ←</button>
+        </form>
+    </dialog>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            'use strict';
+            var root = document.getElementById('msg-app');
+            var base = root.dataset.base.replace(/Messages\/?$/i, '');
+            var page = 1, postPage = 1, threadId = null, parentId = null, canWrite = false, users = [], selected = new Set(), detailVersion = 0, modalReturnFocus = null, savedBodyOverflow = null;
+            function el(id) { return document.getElementById(id); }
+            function text(tag, value, cls) { var n = document.createElement(tag); n.textContent = value == null ? '' : value; if (cls) n.className = cls; return n; }
+            function notice(message) {
+                ['notice', 'modal-notice'].forEach(function (id) { el(id).textContent = message; el(id).hidden = !message; });
+            }
+            function showDetail() {
+                var dialog = el('detail');
+                if (dialog.open) return;
+                modalReturnFocus = document.activeElement;
+                savedBodyOverflow = document.body.style.overflow;
+                dialog.showModal();
+                document.body.style.overflow = 'hidden';
+            }
+            function closeDetail() {
+                detailVersion++; threadId = null;
+                if (el('detail').open) el('detail').close();
+            }
+            el('detail').addEventListener('close', function () {
+                detailVersion++; threadId = null; parentId = null;
+                if (savedBodyOverflow !== null) document.body.style.overflow = savedBodyOverflow;
+                savedBodyOverflow = null;
+                el('reply').reset();
+                if (modalReturnFocus && modalReturnFocus.isConnected) modalReturnFocus.focus();
+                else el('reload').focus();
+                modalReturnFocus = null;
+            });
+            el('detail').addEventListener('cancel', function (e) { e.preventDefault(); closeDetail(); });
+            el('detail').addEventListener('click', function (e) {
+                if (e.target !== this) return;
+                var bounds = this.getBoundingClientRect();
+                if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) closeDetail();
+            });
+            function date(value) {
+                var match = /\/Date\((-?\d+)/.exec(value || '');
+                var d = match ? new Date(Number(match[1])) : new Date(value);
+                return isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Tehran' }).format(d);
+            }
+            async function api(action, data) {
+                var response = await fetch(base + action, { method: data ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store', body: data || undefined });
+                var result;
+                try { result = await response.json(); } catch (_) { throw new Error('پاسخ سرور معتبر نیست؛ وضعیت ورود و اتصال را بررسی کنید.'); }
+                if (!response.ok || !result.success) throw new Error(result.message || 'عملیات انجام نشد.');
+                return result.data;
+            }
+            function run(fn) { return fn().catch(function (e) { notice(e.message); }); }
+            function normalize(value) {
+                return String(value == null ? '' : value).toLocaleLowerCase().replace(/ي/g, 'ی').replace(/ك/g, 'ک')
+                    .replace(/[۰-۹]/g, function (c) { return String(c.charCodeAt(0) - 1776); })
+                    .replace(/[٠-٩]/g, function (c) { return String(c.charCodeAt(0) - 1632); }).trim();
+            }
+            function recipientError(message) { el('recipient-error').textContent = message; el('recipient-error').hidden = !message; }
+            function renderSelected() {
+                el('selected-users').replaceChildren();
+                el('recipient-summary').textContent = selected.size ? selected.size.toLocaleString('fa-IR') + ' گیرنده انتخاب شده' : 'انتخاب گیرندگان…';
+                users.filter(function (u) { return selected.has(String(u.Id)); }).forEach(function (u) {
+                    var chip = text('span', '', 'user-chip'); chip.appendChild(text('span', u.Title));
+                    var remove = text('button', '×'); remove.type = 'button'; remove.setAttribute('aria-label', 'حذف ' + u.Title);
+                    remove.onclick = function () { selected.delete(String(u.Id)); recipientError(''); renderUsers(); el('recipient-picker').querySelector('summary').focus(); };
+                    chip.appendChild(remove); el('selected-users').appendChild(chip);
+                });
+                el('clear-users').disabled = selected.size === 0;
+            }
+            function renderUsers() {
+                var term = normalize(el('user-search').value);
+                el('recipient-options').replaceChildren();
+                var matches = users.filter(function (u) { return normalize(u.Title + ' ' + u.Id).includes(term); });
+                if (!matches.length) el('recipient-options').appendChild(text('p', 'گیرنده‌ای پیدا نشد.', 'empty'));
+                matches.forEach(function (u) {
+                    var label = text('label', '', 'recipient-option'), checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox'; checkbox.value = String(u.Id); checkbox.checked = selected.has(checkbox.value);
+                    checkbox.onchange = function () {
+                        if (this.checked && selected.size >= 100) { this.checked = false; recipientError('حداکثر ۱۰۰ گیرنده انتخاب کنید.'); return; }
+                        if (this.checked) selected.add(this.value); else selected.delete(this.value);
+                        recipientError(''); renderSelected();
+                    };
+                    label.appendChild(checkbox); label.appendChild(text('span', u.Title)); el('recipient-options').appendChild(label);
+                });
+                renderSelected();
+            }
+            async function list() {
+                var rows = await api('MessageList?page=' + page); el('threads').replaceChildren();
+                if (!rows.length) el('threads').appendChild(text('p', 'هنوز گفتگویی در این صفحه ندارید.', 'empty'));
+                rows.forEach(function (t) {
+                    var div = text('div', '', 'entry'); div.appendChild(text('strong', t.Subject));
+                    div.appendChild(text('p', 'ثبت‌کننده: ' + t.CreatorName + ' | ثبت: ' + date(t.CreatedUtc) + ' | آخرین فعالیت: ' + date(t.UpdatedUtc) + ' | تعداد پیام: ' + t.PostCount, 'muted'));
+                    var btn = text('button', 'مشاهده و پاسخ'); btn.type = 'button'; btn.onclick = function () { run(function () { return open(t.Id, 1); }); }; div.appendChild(btn); el('threads').appendChild(div);
+                });
+                el('page').textContent = 'صفحه ' + page; el('prev').disabled = page === 1; el('next').disabled = rows.length < 30;
+            }
+            async function open(id, p) {
+                var version = ++detailVersion;
+                var data = await api('MessageDetail?id=' + id + '&page=' + p);
+                if (version !== detailVersion) return;
+                if (threadId !== id) { el('reply').reset(); notice(''); }
+                threadId = id; postPage = p; parentId = null; el('reply-to').textContent = 'پاسخ به گفتگو'; el('clear-parent').hidden = true;
+                el('subject').textContent = data.thread.Subject;
+                el('thread-meta').textContent = 'ثبت‌کننده: ' + data.thread.CreatorName + ' | تاریخ ثبت: ' + date(data.thread.CreatedUtc);
+                el('to').textContent = 'گیرندگان: ' + data.recipients.map(function (u) { return u.FullName + ' (' + u.UserId + ')'; }).join('، ');
+                el('posts').replaceChildren();
+                data.posts.forEach(function (m) {
+                    var div = text('article', '', 'post');
+                    div.appendChild(text('strong', m.SenderName + ' | ' + date(m.CreatedUtc)));
+                    div.appendChild(text('p', 'پیام شماره ' + m.Id + (m.ParentPostId ? '؛ پاسخ به پیام ' + m.ParentPostId : ''), 'muted'));
+                    div.appendChild(text('p', m.Body, 'body'));
+                    if (m.FileName) {
+                        var a = text('a', 'دانلود ' + m.FileName + ' (' + Math.ceil(m.FileSize / 1024) + ' کیلوبایت)', 'download');
+                        a.href = base + 'MessageDownload?id=' + m.Id; div.appendChild(a);
+                        div.appendChild(text('p', 'بارگذار: ' + m.SenderName + ' | تاریخ بارگذاری: ' + date(m.CreatedUtc), 'muted'));
+                    }
+                    if (data.canReply) { var b = text('button', 'پاسخ به این پیام'); b.type = 'button'; b.className = 'secondary'; b.onclick = function () { parentId = m.Id; el('clear-parent').hidden = false; el('reply-to').textContent = 'پاسخ به پیام ' + m.Id + ' از ' + m.SenderName; el('reply').elements.body.focus(); }; div.appendChild(b); }
+                    el('posts').appendChild(div);
+                });
+                el('post-page').textContent = 'صفحه ' + p; el('post-prev').disabled = p === 1; el('post-next').disabled = data.posts.length < 50;
+                el('reply').hidden = !data.canReply; showDetail();
+            }
+            async function submit(form, action, extra) {
+                var file = form.elements.attachment.files[0]; if (file && (file.size === 0 || file.size > 1048576)) throw new Error('فایل باید بین ۱ بایت و ۱ مگابایت باشد.');
+                var fd = new FormData(form);
+                if (action === 'MessageCreate') {
+                    if (selected.size === 0 || selected.size > 100) {
+                        recipientError('بین ۱ تا ۱۰۰ گیرنده انتخاب کنید.');
+                        el('recipient-picker').open = true; el('user-search').focus();
+                        throw new Error('گیرندگان پیام را انتخاب کنید.');
+                    }
+                    selected.forEach(function (id) { fd.append('recipientIds', id); });
+                }
+                fd.set('__RequestVerificationToken', root.querySelector('[name="__RequestVerificationToken"]').value);
+                if (extra) Object.keys(extra).forEach(function (k) { if (extra[k] != null) fd.set(k, extra[k]); });
+                form.dataset.busy = '1'; form.setAttribute('aria-busy', 'true'); var buttons = form.querySelectorAll('button'); buttons.forEach(function (b) { b.disabled = true; });
+                try { return await api(action, fd); } finally { delete form.dataset.busy; form.removeAttribute('aria-busy'); buttons.forEach(function (b) { b.disabled = false; }); if (form.id === 'compose') el('clear-users').disabled = selected.size === 0; }
+            }
+            el('compose').onsubmit = function (e) {
+                e.preventDefault(); if (this.dataset.busy) return; run(async function () {
+                    var result = await submit(el('compose'), 'MessageCreate'); el('compose').reset(); selected.clear(); recipientError(''); el('recipient-picker').open = false; renderUsers(); page = 1; notice('پیام ثبت شد.'); await list(); await open(result.id, 1);
+                });
+            };
+            el('reply').onsubmit = function (e) {
+                e.preventDefault(); if (this.dataset.busy) return; run(async function () {
+                    var id = threadId; await submit(el('reply'), 'MessageReply', { id: id, parentPostId: parentId }); if (threadId !== id) { await list(); return; } el('reply').reset(); notice('پاسخ ثبت شد.');
+                    var rows = await api('MessageList?page=1'); var t = rows.find(function (x) { return x.Id === id; }); await list(); if (threadId === id && el('detail').open) await open(id, t ? Math.ceil(t.PostCount / 50) : postPage);
+                });
+            };
+            el('clear-users').onclick = function () { selected.clear(); recipientError(''); renderUsers(); };
+            el('picker-done').onclick = function () { el('recipient-picker').open = false; el('recipient-picker').querySelector('summary').focus(); };
+            el('recipient-picker').addEventListener('toggle', function () { if (this.open) el('user-search').focus(); });
+            document.addEventListener('click', function (e) { if (!el('recipient-picker').contains(e.target)) el('recipient-picker').open = false; });
+            el('recipient-picker').addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') { this.open = false; this.querySelector('summary').focus(); e.preventDefault(); }
+                if (e.key === 'Enter' && e.target === el('user-search')) e.preventDefault();
+            });
+            el('user-search').oninput = renderUsers;
+            el('clear-parent').onclick = function () { parentId = null; el('reply-to').textContent = 'پاسخ به گفتگو'; el('clear-parent').hidden = true; };
+            el('prev').onclick = function () { if (page > 1) { page--; run(list); } }; el('next').onclick = function () { page++; run(list); };
+            el('post-prev').onclick = function () { run(function () { return open(threadId, postPage - 1); }); };
+            el('post-next').onclick = function () { run(function () { return open(threadId, postPage + 1); }); };
+            el('close').onclick = closeDetail;
+            el('reload').onclick = function () { run(async function () { await list(); if (threadId) await open(threadId, postPage); }); };
+            run(async function () { var data = await api('MessageBootstrap'); canWrite = data.canWrite; users = data.users || []; renderUsers(); el('compose').hidden = !canWrite; el('readonly').hidden = canWrite; if (!canWrite) root.querySelector('.workspace').style.gridTemplateColumns = '1fr'; await list(); });
+        })();
+    </script>
+}

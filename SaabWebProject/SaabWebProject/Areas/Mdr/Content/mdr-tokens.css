@@ -1,0 +1,28 @@
+﻿/* MDR | Design Tokens: Light / Dark (فقط برای صفحات Area «Mdr») */
+@import url("mdr-components.css");
+:root, :root[data-theme="dark"] {
+    --mdr-bg: #0f1424;
+    --mdr-surface: rgba(255, 255, 255, .06);
+    --mdr-border: rgba(255, 255, 255, .14);
+    --mdr-text: #e8ecf8;
+    --mdr-muted: #9aa4c4;
+    --mdr-accent: #5ef0d0;
+    --mdr-accent-text: #04201a;
+}
+:root[data-theme="light"] {
+    --mdr-bg: #f2f5fb;
+    --mdr-surface: rgba(255, 255, 255, .85);
+    --mdr-border: rgba(15, 20, 36, .14);
+    --mdr-text: #151a2e;
+    --mdr-muted: #5a6486;
+    --mdr-accent: #0b7a66;
+    --mdr-accent-text: #ffffff;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--mdr-bg); color: var(--mdr-text); font-family: Tahoma, "Segoe UI", sans-serif; }
+.mdr-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--mdr-border); }
+.mdr-title { margin: 0; font-size: 1.4rem; }
+.mdr-subtitle { margin: 4px 0 0; color: var(--mdr-muted); font-size: .9rem; }
+.mdr-main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+@media (max-width: 600px) { .mdr-header, .mdr-main { padding: 16px; } }

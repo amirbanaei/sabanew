@@ -1,0 +1,171 @@
+/* MDR | کمک‌استایل صفحه‌هایی که با «AG STYLE» لایه‌ی سامانه ساخته می‌شوند.
+   فقط مقادیر خود AG (glass: rgba(255,255,255,.035)، border .14، blur 12px، aqua #00ffff/--aqua-btn، radius .55rem) و
+   همان الگوی صفحه‌های AG/AuditLogs (هدر آیکن‌دار، کارت‌های آمار). مؤلفه‌های اصلی (glass-*-ag) از خود Layout می‌آیند.
+   همه‌چیز زیر .mdr-ag است تا به صفحه‌های دیگر نشت نکند. */
+
+.mdr-ag { width: 100%; max-width: 100%; direction: rtl; color: rgba(255, 255, 255, .92); }
+.mdr-ag *, .mdr-ag *::before, .mdr-ag *::after { box-sizing: border-box; }
+
+/* ---- هدر (هم‌سبک AuditLogs) ---- */
+.mdr-ag-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.mdr-ag-header-icon { width: 48px; height: 48px; min-width: 48px; display: flex; align-items: center; justify-content: center; border-radius: 14px; color: #00ffff; font-size: 22px;
+    background: rgba(0, 255, 255, .08); border: 1px solid rgba(0, 255, 255, .25); box-shadow: 0 0 18px rgba(0, 255, 255, .08), inset 0 0 12px rgba(0, 255, 255, .03); }
+.mdr-ag-header-text h4 { margin: 0 0 4px; color: #fff; font-size: 18px; font-weight: 700; }
+.mdr-ag-header-text p { margin: 0; color: rgba(255, 255, 255, .52); font-size: 11px; }
+
+/* ---- کارت‌های آمار ---- */
+.mdr-ag-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .6rem; margin-bottom: 1rem; }
+.mdr-ag-stat { display: flex; align-items: center; gap: .65rem; padding: .7rem .8rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background: rgba(255, 255, 255, .035);
+    backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12); }
+.mdr-ag-stat-icon { width: 2.2rem; height: 2.2rem; flex: 0 0 2.2rem; display: flex; align-items: center; justify-content: center; border-radius: .6rem; font-size: 1rem; border: 1px solid currentColor; background: rgba(255, 255, 255, .03); }
+.mdr-ag-stat-value { font-size: 1.1rem; font-weight: 800; color: #fff; line-height: 1.2; }
+.mdr-ag-stat-label { font-size: .62rem; color: rgba(255, 255, 255, .55); }
+.mdr-ag-stat-info .mdr-ag-stat-icon { color: #00ffff; }
+.mdr-ag-stat-success .mdr-ag-stat-icon { color: #32d583; }
+.mdr-ag-stat-warning .mdr-ag-stat-icon { color: #ffc857; }
+.mdr-ag-stat-danger .mdr-ag-stat-icon { color: #ff5a4f; }
+@media (max-width: 992px) { .mdr-ag-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- پنل‌ها (glass-field-ag از Layout) ---- */
+.mdr-ag .glass-field-ag { margin-bottom: 1rem; }
+.mdr-ag .glass-field-body { padding: .7rem; }
+.mdr-ag .row > div { margin-bottom: .45rem; }
+.mdr-ag .glass-btn-ag { text-decoration: none; color: rgba(255, 255, 255, .92); }
+.mdr-ag .glass-btn-ag.is-on { border-color: rgba(0, 255, 255, .65) !important; box-shadow: inset 0 0 .7rem rgba(0, 255, 255, .10), 0 0 .8rem rgba(0, 255, 255, .08); }
+.mdr-ag .glass-label-ag { display: block; }
+
+/* ---- برد ---- */
+.mdr-ag-col-body { display: flex; flex-direction: column; gap: .5rem; max-height: 34rem; overflow-y: auto; padding: .6rem; }
+.mdr-ag-card { display: flex; flex-direction: column; gap: .35rem; padding: .6rem .7rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background: rgba(255, 255, 255, .035);
+    backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12); cursor: pointer; transition: border-color .3s ease, background .3s ease, transform .2s ease; }
+.mdr-ag-card:hover { border-color: rgba(0, 255, 255, .55); background: rgba(0, 255, 255, .055); transform: translateY(-1px); }
+.mdr-ag-card.is-overdue { border-color: rgba(255, 90, 79, .55); }
+.mdr-ag-card b { font-size: .72rem; font-weight: 600; color: #fff; }
+.mdr-ag-card small { font-size: .62rem; color: rgba(255, 255, 255, .55); }
+.mdr-ag-badge { display: inline-flex; align-items: center; height: 1.3rem; padding: 0 .55rem; border-radius: .45rem; font-size: .6rem; white-space: nowrap; margin-inline-end: .25rem; background: transparent; backdrop-filter: blur(10px) saturate(150%); }
+.mdr-ag-empty { padding: 1.2rem .5rem; text-align: center; font-size: .65rem; color: rgba(255, 255, 255, .35); }
+.mdr-ag-state { padding: 2rem; text-align: center; font-size: .7rem; color: rgba(255, 255, 255, .55); }
+
+/* ---- جدول (glass-table-ag از Layout) ---- */
+.mdr-ag .glass-table-ag tbody tr[data-id] { cursor: pointer; }
+.mdr-ag .glass-table-ag tr.is-overdue td:first-child { border-inline-start: 3px solid #ff5a4f; }
+
+/* ---- مودال (ModalAG از Layout؛ به body منتقل می‌شود) ---- */
+/* دکمه‌ی بستن ۳۷px بالاتر از کادر است؛ کادر باید زیر نوار بالایی سامانه (~۶۴px) شروع شود */
+/* مودال دقیقاً با ساختار و اندازه‌ی مودال «ساختار سازمانی» (ModalAG/ContentModalAG/#BodyModalAG از Layout)؛ فقط بخش‌های تو در توی داخل dbody تخت می‌شوند تا کارت داخل کارت نشود */
+#drawer #dbody .glass-field-ag { border: 0 !important; border-radius: 0 !important; box-shadow: none !important; backdrop-filter: none; -webkit-backdrop-filter: none; background: none !important; margin: 0; }
+#drawer #dbody .glass-field-ag + .glass-field-ag { margin-top: 1rem; }
+#drawer #dbody .glass-field-ag .glass-field-header { background: none; padding: .35rem 0; margin-bottom: .35rem; }
+#drawer #dbody .glass-field-ag .glass-field-body { padding: .25rem 0; }
+#drawer #dbody > .glass-field-ag:only-child > .glass-field-header { display: none; }
+.mdr-ag-modal { display: flex; flex-direction: column; border: 1px solid rgba(255, 255, 255, .14); border-radius: 0 0 1rem 1rem; background: rgba(18, 24, 38, .96); backdrop-filter: blur(14px) saturate(150%); box-shadow: 0 1rem 3rem rgba(0, 0, 0, .45); }
+.mdr-ag-modal .meeting-panel-header { border-radius: 0; }
+.mdr-ag-modal-body { padding: .8rem; display: flex; flex-direction: column; gap: .8rem; }
+.mdr-ag-dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; margin: 0; font-size: .7rem; }
+.mdr-ag-dl dt { color: rgba(255, 255, 255, .45); font-weight: 400; }
+.mdr-ag-dl dd { margin: 0; color: rgba(255, 255, 255, .9); }
+.mdr-ag-text { font-size: .72rem; line-height: 1.9; color: rgba(255, 255, 255, .85); white-space: pre-wrap; }
+.mdr-ag-list { list-style: none; margin: 0; padding: 0; font-size: .68rem; }
+.mdr-ag-list li { padding: .35rem 0; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.mdr-ag-list a { color: #00ffff; text-decoration: none; }
+.mdr-ag-list small { color: rgba(255, 255, 255, .45); }
+.mdr-ag-msg { padding: .55rem .8rem; border: 1px solid rgba(0, 255, 255, .35); border-radius: .55rem; background: rgba(0, 255, 255, .06); font-size: .68rem; }
+.mdr-ag-msg.is-bad { border-color: rgba(255, 90, 79, .6); background: rgba(255, 90, 79, .07); color: #ff9c94; }
+.mdr-ag-msg[hidden] { display: none; }
+.mdr-ag-picks { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; }
+.mdr-ag-picks .glass-btn-ag { width: auto; padding: 0 .8rem; }
+
+/* ---- ظاهر خروجی مشترک (پیوست و ...) داخل صفحه‌های AG: همان AG به‌جای mdr-btn/mdr-input ---- */
+.mdr-ag .mdr-btn { height: 2rem; padding: 0 .9rem; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; font-size: .7rem; color: rgba(255, 255, 255, .92);
+    border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background: transparent; backdrop-filter: blur(12px) saturate(150%); cursor: pointer; text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -1px 0 rgba(255, 255, 255, .025); transition: .35s cubic-bezier(.22, .61, .36, 1); }
+.mdr-ag .mdr-btn:hover { transform: translateY(-1px); background: linear-gradient(135deg, rgba(0, 255, 255, .12), rgba(255, 255, 255, .035)); border-color: rgba(0, 255, 255, .65); color: #00ffff; outline: none; }
+.mdr-ag .mdr-input { font-size: 12px; padding: .375rem .75rem; width: 100%; color: rgba(255, 255, 255, .92); border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background-color: rgba(255, 255, 255, .035); }
+.mdr-ag .mdr-files { font-size: .68rem; line-height: 2; }
+.mdr-ag .mdr-files a { color: #00ffff; }
+.mdr-ag .mdr-files small, .mdr-ag .mdr-filemsg { color: rgba(255, 255, 255, .5); }
+.mdr-ag .mdr-fileform { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .4rem; }
+.mdr-ag .mdr-fileform .mdr-input { width: auto; }
+.mdr-ag h4 { margin: 0 0 .35rem; font-size: .75rem; font-weight: 600; color: rgba(255, 255, 255, .82); }
+
+/* برچسب AG با margin-top:-1rem بالا می‌رود؛ ردیف‌های ورودی باید همان‌قدر فاصله‌ی بالایی داشته باشند */
+.mdr-ag .row-input-AG { margin-top: 1.1rem; }
+.mdr-ag .row-input-AG:first-child { margin-top: .9rem; }
+.mdr-ag .row-btn-AG { margin-top: .8rem !important; }
+.mdr-ag .box-glass-checkbox-ag { align-items: center; padding-bottom: 0; gap: .5rem; min-height: 2rem; }
+
+
+/* انتخاب فایل با سبک AG (دکمه‌ی پیش‌فرض مرورگر سفید است) */
+.mdr-ag input[type="file"] { font-size: .68rem; color: rgba(255, 255, 255, .6); }
+.mdr-ag input[type="file"]::file-selector-button { height: 2rem; padding: 0 .9rem; margin-inline-end: .6rem; cursor: pointer; font-size: .7rem; color: rgba(255, 255, 255, .92);
+    border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background: rgba(255, 255, 255, .035); transition: .3s ease; }
+.mdr-ag input[type="file"]::file-selector-button:hover { border-color: rgba(0, 255, 255, .65); color: #00ffff; background: rgba(0, 255, 255, .08); }
+
+/* وقتی ستون‌ها در عرض کم زیر هم می‌افتند، برچسب AG (margin-top منفی) نباید روی ورودی قبلی بیفتد */
+.mdr-ag .row-input-AG { row-gap: 1.1rem; }
+
+/* ---- گزارش‌ها (پنل ۱۱): کارت قابل‌کلیک، میله‌های تفکیک، نمودار روند ---- */
+.mdr-ag .mdr-clickable { cursor: pointer; transition: border-color .3s ease, transform .3s ease; }
+.mdr-ag .mdr-clickable:hover { border-color: rgba(0, 255, 255, .55); transform: translateY(-1px); }
+.mdr-ag-bars { list-style: none; margin: 0; padding: 0; font-size: .68rem; }
+.mdr-ag-bars li { display: grid; grid-template-columns: minmax(6rem, 34%) 1fr auto; gap: .6rem; align-items: center; padding: .28rem 0; border-bottom: 1px solid rgba(255, 255, 255, .06); }
+.mdr-ag-bars-name { color: rgba(255, 255, 255, .85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdr-ag-bars-track { height: .5rem; border-radius: .3rem; background: rgba(255, 255, 255, .07); overflow: hidden; }
+.mdr-ag-bars-track i { display: block; height: 100%; border-radius: .3rem; background: linear-gradient(90deg, rgba(0, 255, 255, .35), #00ffff); }
+.mdr-ag-bars b { font-weight: 700; color: #fff; }
+.mdr-ag-trend { display: flex; align-items: flex-end; gap: 3px; height: 7rem; padding: .4rem .2rem 0; border-bottom: 1px solid rgba(255, 255, 255, .14); direction: ltr; }
+.mdr-ag-trend-col { flex: 1 1 0; min-width: 4px; height: 100%; display: flex; align-items: flex-end; gap: 1px; }
+.mdr-ag-trend-col span { flex: 1 1 0; min-height: 1px; border-radius: 2px 2px 0 0; }
+.mdr-ag-trend .is-c, .mdr-ag-trend-legend .is-c { background: #00ffff; }
+.mdr-ag-trend .is-d, .mdr-ag-trend-legend .is-d { background: #32d583; }
+.mdr-ag-trend-legend { margin-top: .4rem; font-size: .62rem; color: rgba(255, 255, 255, .55); }
+.mdr-ag-trend-legend i { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-inline-start: .5rem; vertical-align: middle; }
+
+/* ---- چت داخلی (پنل ۱۲) ---- */
+.mdr-chat-threads { max-height: 32rem; overflow-y: auto; margin-top: .6rem; }
+.mdr-chat-thread { display: flex; align-items: center; gap: .6rem; padding: .55rem .5rem; border-bottom: 1px solid rgba(255, 255, 255, .06); cursor: pointer; border-radius: .45rem; transition: background .25s ease; }
+.mdr-chat-thread:hover { background: rgba(0, 255, 255, .05); }
+.mdr-chat-thread.is-on { background: rgba(0, 255, 255, .1); box-shadow: inset 0 0 0 1px rgba(0, 255, 255, .35); }
+.mdr-chat-thread > i { font-size: 1.1rem; color: #00ffff; }
+.mdr-chat-thread-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.mdr-chat-thread-body b { font-size: .72rem; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdr-chat-thread-body small, .mdr-chat-thread-meta small { font-size: .6rem; color: rgba(255, 255, 255, .5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdr-chat-thread-meta { display: flex; flex-direction: column; align-items: flex-end; gap: .25rem; }
+.mdr-chat-unread { min-width: 1.2rem; height: 1.2rem; padding: 0 .35rem; border-radius: .7rem; background: #00ffff; color: #06222a; font-size: .6rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.mdr-chat-bar { margin-bottom: .6rem; display: flex; flex-wrap: wrap; gap: .4rem; }
+.mdr-chat-msgs { height: 26rem; overflow-y: auto; padding: .4rem; display: flex; flex-direction: column; gap: .5rem; border: 1px solid rgba(255, 255, 255, .08); border-radius: .55rem; background: rgba(0, 0, 0, .12); }
+.mdr-chat-msg { max-width: 82%; padding: .45rem .65rem; border-radius: .7rem; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .045); font-size: .72rem; }
+.mdr-chat-msg.mine { align-self: flex-start; background: rgba(0, 255, 255, .08); border-color: rgba(0, 255, 255, .28); }
+.mdr-chat-msg.theirs { align-self: flex-end; }
+.mdr-chat-msg.is-deleted { color: rgba(255, 255, 255, .4); font-size: .65rem; }
+.mdr-chat-msg.is-hl { box-shadow: 0 0 0 2px rgba(255, 200, 87, .7); }
+.mdr-chat-msg-head { display: flex; gap: .6rem; align-items: baseline; margin-bottom: .2rem; }
+.mdr-chat-msg-head b { color: #00ffff; font-size: .68rem; }
+.mdr-chat-msg-head small { color: rgba(255, 255, 255, .45); font-size: .58rem; }
+.mdr-chat-body { white-space: pre-wrap; word-break: break-word; line-height: 1.8; }
+.mdr-chat-quote { border-inline-start: 3px solid rgba(0, 255, 255, .5); padding: .15rem .5rem; margin-bottom: .3rem; color: rgba(255, 255, 255, .6); font-size: .62rem; background: rgba(255, 255, 255, .04); border-radius: .3rem; }
+.mdr-chat-files a, .mdr-chat-msg-actions a, .mdr-chat-older a, .mdr-chat-reply a { color: #00ffff; text-decoration: none; font-size: .62rem; }
+.mdr-chat-msg-actions { margin-top: .25rem; opacity: .0; transition: opacity .2s ease; display: flex; gap: .7rem; }
+.mdr-chat-msg:hover .mdr-chat-msg-actions { opacity: 1; }
+.mdr-chat-mentions { margin-top: .2rem; }
+.mdr-chat-older { text-align: center; padding: .3rem 0; }
+.mdr-chat-reply { padding: .35rem .6rem; border-radius: .45rem; background: rgba(0, 255, 255, .06); border: 1px solid rgba(0, 255, 255, .25); font-size: .65rem; margin-top: .5rem; }
+.mdr-chat-actions { display: flex; gap: .4rem; align-items: stretch; }
+.mdr-chat-actions .glass-btn-ag { width: auto; flex: 1 1 auto; padding: 0 .6rem; }
+.mdr-chat-file { color: rgba(255, 255, 255, .55); font-size: .6rem; }
+@media (max-width: 992px) { .mdr-chat-msgs { height: 20rem; } .mdr-chat-msg { max-width: 94%; } }
+
+/* MDR | پنل ۱۶ | هوش مصنوعی سازمانی */
+.mdr-ai-conf { display: flex; align-items: center; gap: .6rem; font-size: .65rem; margin: .4rem 0; }
+.mdr-ai-conf-track { flex: 0 0 9rem; height: .5rem; border-radius: .3rem; background: rgba(255, 255, 255, .08); overflow: hidden; }
+.mdr-ai-conf-fill { display: block; height: 100%; background: #2fd47a; }
+.mdr-ai-conf-fill.is-low { background: #ffc857; }
+.mdr-ai-conf-fill.is-none { background: #ff6b6b; }
+.mdr-ai-warn { padding: .35rem .6rem; border-radius: .45rem; border: 1px solid rgba(255, 200, 87, .45); background: rgba(255, 200, 87, .08); color: #ffd98a; font-size: .64rem; margin: .3rem 0; }
+.mdr-ai-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .5rem; margin-top: .5rem; }
+.mdr-ai-source { padding: .5rem .65rem; border-radius: .55rem; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .04); font-size: .64rem; }
+.mdr-ai-source b { color: #00ffff; }
+.mdr-ai-source a { color: #fff; text-decoration: none; display: block; font-weight: 600; margin: .15rem 0; }
+.mdr-ai-source small { color: rgba(255, 255, 255, .55); display: block; line-height: 1.7; }
+.mdr-ai-answer { white-space: pre-wrap; line-height: 1.9; font-size: .72rem; }
+.mdr-ai-q { font-size: .72rem; color: #fff; padding: .4rem .6rem; border-radius: .6rem; background: rgba(0, 255, 255, .08); border: 1px solid rgba(0, 255, 255, .25); margin-bottom: .4rem; }

@@ -1,0 +1,20 @@
+/* MDR | نگاشت توکن‌ها به ظاهر لایه‌ی فعلی سامانه (Bootstrap 5 + متغیرهای glass/aqua خود سامانه).
+   فقط داخل عنصر .mdr-scope اثر دارد و هیچ قاعده‌ی سراسری (body/*) ندارد. */
+.mdr-scope {
+    --mdr-bg: var(--bs-body-bg, #0f1424);
+    --mdr-surface: var(--glass-bg, rgba(255, 255, 255, .06));
+    --mdr-border: var(--glass-border, rgba(255, 255, 255, .16));
+    --mdr-text: var(--bs-body-color, #e8ecf8);
+    --mdr-muted: var(--font-low-color, rgba(255, 255, 255, .55));
+    --mdr-accent: var(--aqua-btn, #00d1d1);
+    --mdr-accent-text: #04201a;
+    color: var(--mdr-text);
+    font-family: inherit;
+}
+.mdr-scope *, .mdr-scope *::before, .mdr-scope *::after { box-sizing: border-box; }
+.mdr-scope h3, .mdr-scope h4 { color: var(--mdr-text); }
+.mdr-scope a { text-decoration: none; }
+.mdr-scope select.mdr-input, .mdr-scope .mdr-btn { height: auto; }
+
+/* کشو به body منتقل می‌شود (کارت لایه backdrop-filter دارد و position:fixed را به خودش محدود می‌کند) */
+.mdr-drawer.mdr-scope { z-index: 1090; background: var(--bs-body-bg, #0f1424); }

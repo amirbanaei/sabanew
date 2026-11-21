@@ -1,0 +1,122 @@
+﻿/* MDR | مؤلفه‌های مشترک صفحه‌ها (همه با پیشوند mdr-)؛ فقط به متغیرهای --mdr-* وابسته‌اند.
+   در قاب مستقل: مقادیر از mdr-tokens.css؛ داخل لایه‌ی سامانه: از mdr-embedded.css (نگاشت به Bootstrap). */
+
+.mdr-btn { background: var(--mdr-surface); color: var(--mdr-text); border: 1px solid var(--mdr-border); border-radius: 10px; padding: 8px 14px; cursor: pointer; font: inherit; text-decoration: none; display: inline-block; }
+.mdr-btn:hover, .mdr-btn:focus-visible { border-color: var(--mdr-accent); outline: 2px solid var(--mdr-accent); outline-offset: 2px; }
+
+.mdr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.mdr-card { display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 14px; color: var(--mdr-text); text-decoration: none; backdrop-filter: blur(8px); }
+.mdr-card.is-available:hover { border-color: var(--mdr-accent); }
+.mdr-card.is-planned { opacity: .75; }
+.mdr-card-no { color: var(--mdr-muted); font-size: .85rem; }
+.mdr-card-title { font-weight: 600; }
+.mdr-badge { align-self: flex-start; font-size: .8rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--mdr-border); color: var(--mdr-muted); }
+.is-available .mdr-badge { background: var(--mdr-accent); color: var(--mdr-accent-text); border-color: transparent; }
+
+.mdr-denied { max-width: 480px; margin: 64px auto; text-align: center; padding: 32px; background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 14px; }
+
+/* ---- جدول، ناوبری و کشوی ماژول گردش کار ---- */
+.mdr-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.mdr-state { padding: 24px; text-align: center; color: var(--mdr-muted); }
+.mdr-state[hidden], .mdr-table[hidden] { display: none; }
+.mdr-tablewrap { overflow-x: auto; }
+.mdr-table { width: 100%; border-collapse: collapse; background: var(--mdr-surface); border: 1px solid var(--mdr-border); }
+.mdr-table th, .mdr-table td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--mdr-border); white-space: nowrap; }
+.mdr-table th { color: var(--mdr-muted); font-weight: 600; }
+.mdr-table tr.is-overdue td:first-child { border-inline-start: 3px solid #e5484d; }
+.mdr-pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; }
+.mdr-drawer { position: fixed; top: 0; inset-inline-start: 0; width: min(420px, 100%); height: 100%; overflow-y: auto; padding: 20px; background: var(--mdr-bg); border-inline-end: 1px solid var(--mdr-border); box-shadow: 0 0 40px rgba(0,0,0,.4); }
+.mdr-drawer[hidden] { display: none; }
+.mdr-timeline { padding-inline-start: 18px; line-height: 1.8; }
+.mdr-timeline small { color: var(--mdr-muted); }
+
+/* ---- طراح گردش کار ---- */
+.mdr-input { width: 100%; min-width: 90px; background: var(--mdr-surface); color: var(--mdr-text); border: 1px solid var(--mdr-border); border-radius: 8px; padding: 6px 8px; font: inherit; }
+.mdr-input:focus-visible { outline: 2px solid var(--mdr-accent); outline-offset: 1px; }
+.mdr-input:disabled { opacity: .7; }
+.mdr-field { display: block; max-width: 480px; margin-bottom: 16px; color: var(--mdr-muted); }
+.mdr-field .mdr-input { margin-top: 6px; color: var(--mdr-text); }
+.mdr-msg { padding: 10px 14px; margin-bottom: 16px; border: 1px solid var(--mdr-border); border-radius: 10px; background: var(--mdr-surface); }
+.mdr-msg.is-bad { border-color: #e5484d; }
+.mdr-msg[hidden], #editor[hidden], .edit-only[hidden] { display: none; }
+#editor h3 { margin: 24px 0 10px; }
+select.mdr-input { min-width: 130px; }
+
+/* ---- میزکار و کارتابل ---- */
+.mdr-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.mdr-kpi { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 12px; }
+.mdr-kpi span { font-size: 1.8rem; font-weight: 700; }
+.mdr-kpi small { color: var(--mdr-muted); }
+.mdr-kpi.is-bad span { color: #e5484d; }
+.mdr-batch { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 8px 12px; background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 10px; }
+.mdr-batch[hidden] { display: none; }
+
+/* ---- مدیریت تسک ---- */
+.mdr-wrap { flex-wrap: wrap; }
+.mdr-q { max-width: 220px; }
+.mdr-check { display: inline-flex; gap: 6px; align-items: center; color: var(--mdr-muted); }
+.mdr-primary { background: var(--mdr-accent); color: var(--mdr-accent-text); border-color: transparent; }
+.mdr-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; align-items: start; }
+.mdr-board[hidden], #listwrap[hidden] { display: none; }
+.mdr-col { background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 12px; padding: 10px; min-height: 120px; }
+.mdr-col h4 { margin: 4px 4px 10px; color: var(--mdr-muted); }
+.mdr-tcard { display: flex; flex-direction: column; gap: 6px; padding: 10px; margin-bottom: 8px; background: var(--mdr-bg); border: 1px solid var(--mdr-border); border-radius: 10px; cursor: pointer; }
+.mdr-tcard:hover { border-color: var(--mdr-accent); }
+.mdr-tcard.is-overdue { border-inline-start: 3px solid #e5484d; }
+.mdr-tcard small { color: var(--mdr-muted); }
+.mdr-badge.is-bad { border-color: #e5484d; color: #e5484d; }
+.mdr-drawer-wide { width: min(520px, 100%); z-index: 10; }
+.mdr-dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
+.mdr-dl dt { color: var(--mdr-muted); } .mdr-dl dd { margin: 0; }
+.mdr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.mdr-table tr[data-id] { cursor: pointer; }
+.mdr-table tr[data-id]:hover td { background: var(--mdr-surface); }
+textarea.mdr-input { resize: vertical; }
+
+/* ---- درخواست‌های سازمانی ---- */
+.mdr-cards { margin-top: 12px; }
+.mdr-cards .mdr-card { cursor: pointer; }
+.mdr-cards .mdr-card.is-planned { cursor: default; }
+.mdr-cards .mdr-card small { color: var(--mdr-muted); }
+#catalog[hidden], #listsec[hidden] { display: none; }
+.mdr-mono { font-family: Consolas, monospace; font-size: .85rem; }
+
+/* ---- پیوست‌ها ---- */
+.mdr-files { padding-inline-start: 18px; line-height: 2; }
+.mdr-files small { color: var(--mdr-muted); }
+.mdr-filemsg { margin-top: 6px; color: var(--mdr-muted); }
+.mdr-filemsg.is-bad { color: #e5484d; }
+.mdr-filein { max-width: 100%; }
+
+/* ---- مکاتبات ---- */
+.mdr-body { white-space: pre-wrap; padding: 12px; margin: 10px 0; background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 10px; line-height: 1.9; }
+.mdr-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.mdr-chip { display: inline-flex; gap: 6px; align-items: center; padding: 2px 10px; border: 1px solid var(--mdr-border); border-radius: 999px; background: var(--mdr-surface); }
+.mdr-chip button { background: none; border: 0; color: var(--mdr-muted); cursor: pointer; }
+.mdr-table tr.is-unread td { font-weight: 700; }
+
+/* ---- اسناد ---- */
+.mdr-split { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
+.mdr-tree { display: flex; flex-direction: column; gap: 2px; padding: 8px; background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 12px; }
+.mdr-node { text-align: right; background: none; border: 0; color: var(--mdr-text); padding: 6px 12px; border-radius: 8px; cursor: pointer; font: inherit; }
+.mdr-node:hover { background: var(--mdr-bg); }
+.mdr-node.is-sel { background: var(--mdr-accent); color: var(--mdr-accent-text); }
+.mdr-chip[data-tag] { cursor: pointer; }
+@media (max-width: 760px) { .mdr-split { grid-template-columns: 1fr; } }
+
+/* ---- جستجو ---- */
+.mdr-searchbar { display: flex; gap: 8px; margin-bottom: 12px; }
+.mdr-searchbar .mdr-input { flex: 1; }
+.mdr-adv { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.mdr-adv[hidden], .mdr-facets[hidden], .mdr-saved [hidden] { display: none; }
+.mdr-saved { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.mdr-facets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.mdr-group { margin-bottom: 24px; }
+.mdr-group h3 small { color: var(--mdr-muted); font-weight: 400; }
+.mdr-hits { list-style: none; margin: 0 0 8px; padding: 0; }
+.mdr-hit { padding: 10px 12px; margin-bottom: 8px; background: var(--mdr-surface); border: 1px solid var(--mdr-border); border-radius: 10px; }
+.mdr-hit a { color: var(--mdr-text); text-decoration: none; }
+.mdr-hit a:hover { color: var(--mdr-accent); }
+.mdr-hit p { margin: 6px 0; color: var(--mdr-muted); line-height: 1.8; }
+.mdr-hit small { color: var(--mdr-muted); }
+mark { background: var(--mdr-accent); color: var(--mdr-accent-text); padding: 0 2px; border-radius: 3px; }

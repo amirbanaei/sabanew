@@ -1,0 +1,104 @@
+﻿@{
+    ViewBag.Title = "کنترل و گردش مدارک";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@section Styles {
+    <link href="@Url.Content("~/Areas/DocumentControl/Assets/document-flow.css?v=2")" rel="stylesheet" />
+}
+<div id="df-app" dir="rtl" data-base="@Url.Content("~/DocumentControl/DocumentFlow/")">
+    <main>
+        <header><div><div class="eyebrow">سامانه مدیریت مدارک / فضای کاری</div><h1 id="page-title">کنترل مدارک</h1></div><div class="header-actions"><span id="today"></span><button id="refresh" class="secondary">↻ تازه‌سازی</button></div></header>
+        <nav class="top-tabs" role="tablist" aria-label="بخش‌های کنترل مدارک">
+            @if (ViewBag.IsManager == true)
+            {
+                <button data-page="dashboard" class="nav-item" role="tab" type="button">◈ <span>داشبورد</span></button>
+                <button data-page="types" class="nav-item" role="tab" type="button">▤ <span>تعریف مدارک</span></button>
+                <button data-page="workflow" class="nav-item" role="tab" type="button">⇄ <span>مراحل تأیید</span></button>
+            }
+            <button data-page="submit" class="nav-item" role="tab" type="button">＋ <span>بارگذاری مدرک</span></button>
+            <button data-page="tracking" class="nav-item" role="tab" type="button">▥ <span>مشاهده مدارک</span></button>
+            <button data-page="inbox" class="nav-item" role="tab" type="button" id="inbox-nav" hidden>✓ <span>کارتابل بررسی</span></button>
+        </nav>
+        <div id="message" role="status" aria-live="polite" hidden></div>
+        <section data-panel="dashboard" hidden>
+            <div class="hero glass"><div><span class="tag">● نمای کلی گردش مدارک</span><h2>هر مدرک، یک مسیر روشن</h2><p>وضعیت پرونده‌ها، تأییدها و اصلاحات را یک‌جا دنبال کنید.</p><button data-page="submit" class="primary">＋ ثبت مدرک جدید</button></div><div class="orbit" aria-hidden="true"><span>▧</span><i></i><b>✓</b></div></div>
+            <div id="stats" class="stats"></div>
+            <div class="section-heading"><h2>آخرین فعالیت‌ها</h2><button data-page="tracking" class="secondary">همه مدارک ←</button></div><div id="recent" class="glass table-wrap"></div>
+        </section>
+        <section data-panel="types" hidden>
+            <div class="two-columns">
+                <form id="type-form" class="glass card">
+                    <h2 id="type-form-title">تعریف مدرک جدید</h2><input type="hidden" name="id" value="0" /><input type="hidden" name="version" />
+                    <label>عنوان مدرک<input name="title" required maxlength="200" placeholder="مثلاً لیست بیمه تأمین اجتماعی" /></label>
+                    <label>شرح مدرک<textarea name="description" maxlength="2000" rows="3"></textarea></label>
+                    <label>مؤلفه دستمزدی <small>اختیاری</small><select name="componentId" id="component-select"></select></label>
+                    <label>دوره مدرک<select name="monthOffset"><option value="0">ماه جاری</option><option value="-1">ماه قبل</option></select></label>
+                    <label>فایل نمونه یا پیوست <small>اختیاری؛ هر نوع فایل؛ حداکثر ۱ مگابایت</small><input type="file" name="sample" /></label>
+                    <label class="check"><input type="checkbox" name="isActive" checked /> مدرک فعال است</label>
+                    <p class="muted">غیرفعال‌کردن، ثبت جدید را متوقف می‌کند؛ پرونده‌های قبلی باقی می‌مانند.</p>
+                    <div class="actions"><button class="primary" type="submit">ذخیره تعریف مدرک</button><button class="secondary" type="button" id="new-type">تعریف جدید</button></div>
+                </form><div class="glass card"><h2>مدارک تعریف‌شده</h2><div id="type-list"></div></div>
+            </div>
+        </section>
+        <section data-panel="workflow" hidden>
+            <div class="glass card">
+                <h2>طراحی مسیر تأیید</h2><p class="muted">افراد هر مرحله را مشخص کنید. این تنظیمات روی پرونده‌های جدید اعمال می‌شوند.</p>
+                <label>نوع مدرک<select id="workflow-type"></select></label>
+                <div id="stages"></div><div class="actions"><button id="add-stage" class="secondary">＋ افزودن مرحله</button><button id="save-workflow" class="primary">ذخیره گردش تأیید</button></div>
+                <p class="muted">در حالت «یک نفر کافی است»، اولین نتیجه مرحله را تعیین می‌کند. در حالت «همه»، عودت هر فرد باعث برگشت پرونده می‌شود. تأیید مشروط به مرحله بعد می‌رود و در نتیجه نهایی مشخص می‌ماند.</p>
+            </div>
+        </section>
+        <section data-panel="submit" hidden>
+            <form id="submit-form" class="glass card wide-form">
+                <div class="section-heading"><div><span class="tag">ثبت و ارسال</span><h2>بارگذاری مدرک جدید</h2></div><span class="muted">نسخه ۱</span></div>
+                <div class="form-grid"><label>پیمان<select name="contractId" id="contract-select" required></select></label><label>نوع مدرک<select name="typeId" id="submit-type" required></select></label></div>
+                <div class="period-strip"><span>دوره: <strong id="period-label">—</strong></span><a id="sample-link" class="secondary" hidden>↓ دانلود فایل نمونه</a><a class="secondary" href="@Url.Action("ExcelTemplate", "DocumentFlow", new { area = "DocumentControl" })">↓ دانلود اکسل نمونه (لیست پرسنل شما)</a><small id="sample-empty">فایل نمونه تعریف نشده است</small></div>
+                <label>شرح مدرک<textarea name="description" required maxlength="4000" rows="3" placeholder="توضیحات مربوط به این دوره را بنویسید…"></textarea></label>
+                <div class="form-grid"><label class="upload-box"><span class="upload-icon">▦</span><strong>فایل اکسل (اختیاری)</strong><small>XLSX · حداکثر ۱ مگابایت؛ ابتدا فایل نمونه را دانلود کنید و فقط ستون مبلغ را پر کنید. کد پرسنلی باید دقیقاً همان کد فایل نمونه باشد.</small><input name="excel" type="file" accept=".xlsx" /></label><label class="upload-box"><span class="upload-icon">⌁</span><strong>پیوست تکمیلی (الزامی)</strong><small>هر نوع فایل · حداکثر ۱ مگابایت</small><input name="attachment" type="file" required /></label></div>
+                <p class="muted">دوره بر اساس تنظیمات مدرک و تاریخ ایران محاسبه می‌شود. برای هر مدرک، پیمان و دوره فقط یک پرونده ثبت می‌شود.</p><button type="submit" class="primary">ثبت و ارسال برای بررسی ←</button>
+            </form>
+        </section>
+        <section data-panel="tracking" hidden><div class="toolbar"><input id="search" placeholder="جست‌وجوی مدرک یا پیمان…" aria-label="جست‌وجو" /><select id="status-filter" aria-label="وضعیت"><option value="">همه وضعیت‌ها</option><option value="0">برگشت برای اصلاح</option><option value="1">در حال بررسی</option><option value="2">تأیید نهایی</option><option value="3">تأیید مشروط</option></select></div><div id="tracking-list" class="glass table-wrap"></div></section>
+        <section data-panel="inbox" hidden><div class="glass card"><h2>در انتظار نظر شما</h2><p class="muted">فقط مدارکی نمایش داده می‌شوند که مرحله فعلی آن‌ها به شما ارجاع شده و هنوز نظر نداده‌اید.</p><div id="inbox-list" class="table-wrap"></div></div></section>
+    </main>
+    <dialog id="detail-dialog"><div class="dialog-header"><h2>جزئیات و گردش مدرک</h2><button id="close-detail" class="secondary" aria-label="بستن">✕</button></div><div id="detail-body"></div></dialog>
+    <div hidden id="anti-forgery">@Html.AntiForgeryToken()</div>
+</div>
+@section Scripts {
+    <script src="@Url.Content("~/Areas/DocumentControl/Assets/document-flow.js?v=3")"></script>
+    <script>
+        (function () {
+            var app = document.getElementById('df-app');
+            function requireAttachments() {
+                app.querySelectorAll('input[type="file"][name="attachment"]').forEach(function (input) {
+                    input.required = true;
+                    var label = input.closest('label');
+                    if (label) {
+                        var walker = document.createTreeWalker(label, NodeFilter.SHOW_TEXT, null, false);
+                        var node;
+                        while ((node = walker.nextNode())) {
+                            node.nodeValue = node.nodeValue.replace('اختیاری', 'الزامی');
+                        }
+                    }
+                });
+            }
+            requireAttachments();
+            new MutationObserver(requireAttachments).observe(app, { childList: true, subtree: true });
+            app.addEventListener('submit', function (event) {
+                var input = event.target.querySelector('input[type="file"][name="attachment"]');
+                if (input && !input.files.length) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    input.setCustomValidity('بارگذاری پیوست الزامی است.');
+                    input.reportValidity();
+                }
+            }, true);
+            app.addEventListener('change', function (event) {
+                if (event.target.matches('input[type="file"][name="attachment"]')) {
+                    event.target.setCustomValidity('');
+                }
+            });
+        })();
+    </script>
+
+}

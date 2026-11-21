@@ -1,0 +1,1087 @@
+﻿@model SaabWebProject.Areas.DocumentControl.Models.DocumentControlIndexVm
+@using System.Web
+@using System.Globalization
+@{
+    ViewBag.Title = "کنترل و پیگیری مدارک";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var persianCalendar = new PersianCalendar();
+    var currentPersianYear = persianCalendar.GetYear(DateTime.Now);
+    var currentPersianMonth = persianCalendar.GetMonth(DateTime.Now);
+    var persianMonths = new[] { "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند" };
+}
+
+<style>
+    :root {
+        --dc-bg: #06101f;
+        --dc-glass: rgba(10,29,52,.72);
+        --dc-glass-strong: rgba(8,24,44,.92);
+        --dc-line: rgba(103,232,249,.22);
+        --dc-cyan: #22d3ee;
+        --dc-blue: #38bdf8;
+        --dc-purple: #a78bfa;
+        --dc-green: #34d399;
+        --dc-red: #fb7185;
+        --dc-text: #e8f7ff;
+        --dc-muted: #93b7ca
+    }
+
+    .dc-page {
+        direction: rtl;
+        font-family: Tahoma;
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        min-height: 100vh;
+        padding: 22px;
+        color: var(--dc-text);
+        background: radial-gradient(circle at 8% 10%,rgba(34,211,238,.18),transparent 28%),radial-gradient(circle at 92% 18%,rgba(167,139,250,.18),transparent 28%),linear-gradient(145deg,#040b16 0%,#07192d 50%,#06101f 100%)
+    }
+
+        .dc-page:before, .dc-page:after {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            width: 330px;
+            height: 330px;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: .28;
+            pointer-events: none;
+            animation: dcFloat 10s ease-in-out infinite alternate
+        }
+
+        .dc-page:before {
+            top: 22%;
+            right: -130px;
+            background: var(--dc-cyan)
+        }
+
+        .dc-page:after {
+            left: -130px;
+            bottom: 8%;
+            background: var(--dc-purple);
+            animation-delay: -4s
+        }
+
+    .dc-head {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(120deg,rgba(7,35,64,.9),rgba(18,65,99,.62));
+        color: #fff;
+        border: 1px solid rgba(103,232,249,.36);
+        border-radius: 22px;
+        padding: 23px 28px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.12),0 0 28px rgba(34,211,238,.12);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px)
+    }
+
+        .dc-head:after {
+            content: "";
+            position: absolute;
+            inset: auto -15% -80px 20%;
+            height: 115px;
+            background: linear-gradient(90deg,transparent,rgba(34,211,238,.25),rgba(167,139,250,.2),transparent);
+            filter: blur(24px);
+            transform: rotate(-3deg)
+        }
+
+        .dc-head h1 {
+            font-size: 24px;
+            margin: 0 0 8px;
+            text-shadow: 0 0 18px rgba(34,211,238,.36)
+        }
+
+        .dc-head p {
+            margin: 0;
+            color: #b9dbea
+        }
+
+    .dc-badge {
+        position: relative;
+        z-index: 1;
+        background: rgba(255,255,255,.07);
+        border: 1px solid rgba(103,232,249,.42);
+        padding: 10px 16px;
+        border-radius: 30px;
+        color: #bff7ff;
+        box-shadow: inset 0 0 18px rgba(34,211,238,.08),0 0 16px rgba(34,211,238,.12)
+    }
+
+    .dc-tabs {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 18px 0
+    }
+
+    .dc-tab {
+        border: 1px solid rgba(148,197,220,.18);
+        border-radius: 13px;
+        background: rgba(12,34,57,.68);
+        padding: 11px 17px;
+        color: #a9c9da;
+        cursor: pointer;
+        box-shadow: 0 8px 24px rgba(0,0,0,.18);
+        backdrop-filter: blur(12px);
+        transition: .22s ease
+    }
+
+        .dc-tab:hover {
+            color: #fff;
+            border-color: rgba(34,211,238,.5);
+            transform: translateY(-2px)
+        }
+
+        .dc-tab.active {
+            background: linear-gradient(135deg,rgba(14,165,233,.8),rgba(99,102,241,.78));
+            border-color: #67e8f9;
+            color: #fff;
+            box-shadow: 0 0 22px rgba(34,211,238,.34),inset 0 1px 0 rgba(255,255,255,.25)
+        }
+
+    .dc-panel {
+        display: none
+    }
+
+        .dc-panel.active {
+            display: block;
+            animation: dcReveal .28s ease
+        }
+
+    .dc-grid {
+        display: grid;
+        grid-template-columns: repeat(12,1fr);
+        gap: 15px
+    }
+
+    .dc-col-4 {
+        grid-column: span 4
+    }
+
+    .dc-col-5 {
+        grid-column: span 5
+    }
+
+    .dc-col-6 {
+        grid-column: span 6
+    }
+
+    .dc-col-7 {
+        grid-column: span 7
+    }
+
+    .dc-col-8 {
+        grid-column: span 8
+    }
+
+    .dc-col-12 {
+        grid-column: span 12
+    }
+
+    .dc-card {
+        background: var(--dc-glass);
+        border: 1px solid var(--dc-line);
+        border-radius: 19px;
+        padding: 19px;
+        box-shadow: 0 18px 48px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.07);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px)
+    }
+
+        .dc-card h2, .dc-card h3 {
+            margin: 0 0 15px;
+            color: #f2fbff
+        }
+
+        .dc-card h2 {
+            font-size: 17px
+        }
+
+        .dc-card h3 {
+            font-size: 14px;
+            color: #ccefff
+        }
+
+    .dc-form {
+        display: grid;
+        grid-template-columns: repeat(2,minmax(0,1fr));
+        gap: 13px
+    }
+
+    .dc-field.full {
+        grid-column: 1/-1
+    }
+
+    .dc-field label {
+        display: block;
+        font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 7px;
+        color: #9fc7da
+    }
+
+    .dc-field input, .dc-field select, .dc-field textarea {
+        box-sizing: border-box;
+        width: 100%;
+        border: 1px solid rgba(147,197,220,.24);
+        border-radius: 11px;
+        padding: 10px 11px;
+        background: rgba(3,14,28,.56);
+        color: var(--dc-text);
+        outline: none;
+        transition: .2s
+    }
+
+        .dc-field input:focus, .dc-field select:focus, .dc-field textarea:focus {
+            border-color: var(--dc-cyan);
+            box-shadow: 0 0 0 3px rgba(34,211,238,.1),0 0 17px rgba(34,211,238,.12)
+        }
+
+        .dc-field select option {
+            background: #0a1d34;
+            color: #e8f7ff
+        }
+
+        .dc-field select[multiple] {
+            height: 110px
+        }
+
+    .dc-field textarea {
+        min-height: 80px;
+        resize: vertical
+    }
+
+        .dc-field input::placeholder, .dc-field textarea::placeholder {
+            color: #608398
+        }
+
+    .dc-actions {
+        display: flex;
+        gap: 9px;
+        justify-content: flex-end;
+        margin-top: 15px
+    }
+
+    .dc-btn {
+        border: 1px solid transparent;
+        border-radius: 11px;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: .2s;
+        box-shadow: 0 7px 20px rgba(0,0,0,.18)
+    }
+
+        .dc-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.12)
+        }
+
+    .dc-primary {
+        background: linear-gradient(135deg,#0ea5e9,#6366f1);
+        color: #fff;
+        box-shadow: 0 0 20px rgba(56,189,248,.2)
+    }
+
+    .dc-green {
+        background: linear-gradient(135deg,#10b981,#06b6d4);
+        color: #fff;
+        box-shadow: 0 0 22px rgba(52,211,153,.22)
+    }
+
+    .dc-light {
+        background: rgba(34,211,238,.1);
+        border-color: rgba(34,211,238,.25);
+        color: #a5f3fc
+    }
+
+    .dc-danger {
+        background: rgba(244,63,94,.82);
+        color: #fff
+    }
+
+    .dc-note {
+        font-size: 11px;
+        color: var(--dc-muted);
+        line-height: 1.9
+    }
+
+    .dc-alert {
+        display: none;
+        position: fixed;
+        left: 20px;
+        bottom: 20px;
+        z-index: 10000;
+        max-width: 440px;
+        padding: 14px 18px;
+        border: 1px solid rgba(110,231,183,.5);
+        border-radius: 13px;
+        color: #eafff7;
+        background: rgba(6,95,70,.91);
+        box-shadow: 0 0 30px rgba(52,211,153,.28);
+        backdrop-filter: blur(16px)
+    }
+
+        .dc-alert.err {
+            background: rgba(136,19,55,.93);
+            border-color: rgba(251,113,133,.55);
+            box-shadow: 0 0 30px rgba(251,113,133,.22)
+        }
+
+    .dc-step {
+        border: 1px solid rgba(103,232,249,.17);
+        background: rgba(4,20,37,.48);
+        border-radius: 15px;
+        padding: 13px;
+        margin-bottom: 11px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.04)
+    }
+
+        .dc-step.dragging {
+            opacity: .42;
+            border-color: var(--dc-purple)
+        }
+
+    .dc-step-head {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 11px
+    }
+
+    .dc-handle {
+        cursor: grab;
+        background: rgba(34,211,238,.1);
+        color: #67e8f9;
+        border-radius: 9px;
+        padding: 7px 10px
+    }
+
+    .dc-step-no {
+        background: linear-gradient(135deg,#06b6d4,#8b5cf6);
+        color: #fff;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        text-align: center;
+        line-height: 28px;
+        box-shadow: 0 0 14px rgba(34,211,238,.35)
+    }
+
+    .dc-step-grid {
+        display: grid;
+        grid-template-columns: 2fr 1.3fr 1fr;
+        gap: 10px
+    }
+
+        .dc-step-grid select[multiple] {
+            height: 90px
+        }
+
+    .dc-step-remove {
+        margin-right: auto
+    }
+
+    .dc-contracts {
+        display: grid;
+        grid-template-columns: repeat(4,minmax(0,1fr));
+        gap: 11px
+    }
+
+    .dc-contract-card {
+        border: 1px solid rgba(103,232,249,.18);
+        border-radius: 16px;
+        padding: 14px;
+        background: linear-gradient(145deg,rgba(14,43,70,.72),rgba(8,25,45,.68));
+        box-shadow: 0 14px 35px rgba(0,0,0,.18)
+    }
+
+    .dc-kpis {
+        display: flex;
+        gap: 7px;
+        margin-top: 11px
+    }
+
+    .dc-kpi {
+        flex: 1;
+        text-align: center;
+        border-radius: 9px;
+        padding: 8px 4px;
+        background: rgba(56,189,248,.09);
+        color: #acd8e9
+    }
+
+        .dc-kpi b {
+            display: block;
+            font-size: 18px;
+            color: #e8fbff
+        }
+
+        .dc-kpi.late {
+            background: rgba(251,113,133,.12);
+            color: #fda4af
+        }
+
+            .dc-kpi.late b {
+                color: #fb7185
+            }
+
+    .dc-table-wrap {
+        overflow: auto;
+        border-radius: 13px
+    }
+
+    .dc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px
+    }
+
+        .dc-table th {
+            background: rgba(14,61,91,.72);
+            color: #bcecff;
+            white-space: nowrap
+        }
+
+        .dc-table th, .dc-table td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(147,197,220,.11);
+            text-align: center
+        }
+
+        .dc-table tr:hover td {
+            background: rgba(34,211,238,.045)
+        }
+
+    .dc-status {
+        display: inline-block;
+        border: 1px solid rgba(148,163,184,.2);
+        border-radius: 20px;
+        padding: 5px 9px;
+        background: rgba(100,116,139,.15)
+    }
+
+        .dc-status.Approved {
+            background: rgba(16,185,129,.14);
+            color: #6ee7b7
+        }
+
+        .dc-status.InProgress {
+            background: rgba(14,165,233,.14);
+            color: #7dd3fc
+        }
+
+        .dc-status.ConditionallyApproved {
+            background: rgba(245,158,11,.14);
+            color: #fcd34d
+        }
+
+        .dc-status.Rejected {
+            background: rgba(244,63,94,.14);
+            color: #fda4af
+        }
+
+    .dc-upload {
+        position: relative;
+        border: 1px dashed rgba(103,232,249,.52);
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+        background: linear-gradient(135deg,rgba(34,211,238,.055),rgba(167,139,250,.055));
+        transition: .2s;
+        cursor: pointer
+    }
+
+        .dc-upload:hover, .dc-upload.has-file {
+            border-color: #67e8f9;
+            background: linear-gradient(135deg,rgba(34,211,238,.11),rgba(167,139,250,.1));
+            box-shadow: inset 0 0 28px rgba(34,211,238,.06),0 0 20px rgba(34,211,238,.08)
+        }
+
+        .dc-upload input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%
+        }
+
+    .dc-upload-icon {
+        display: block;
+        font-size: 31px;
+        margin-bottom: 7px;
+        filter: drop-shadow(0 0 9px rgba(34,211,238,.58))
+    }
+
+    .dc-upload-title {
+        display: block;
+        color: #dffaff;
+        font-weight: bold
+    }
+
+    .dc-file-meta {
+        display: block;
+        margin-top: 7px;
+        color: #7dd3fc;
+        font-size: 11px;
+        direction: ltr
+    }
+
+    .dc-rule-list {
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none
+    }
+
+        .dc-rule-list li {
+            position: relative;
+            padding: 8px 26px 8px 0;
+            color: #a9c9da;
+            border-bottom: 1px solid rgba(147,197,220,.08)
+        }
+
+            .dc-rule-list li:before {
+                content: '✓';
+                position: absolute;
+                right: 2px;
+                color: var(--dc-green);
+                text-shadow: 0 0 9px rgba(52,211,153,.65)
+            }
+
+    .dc-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(1,7,16,.78);
+        z-index: 9000;
+        padding: 25px;
+        overflow: auto;
+        backdrop-filter: blur(8px)
+    }
+
+    .dc-modal-card {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: var(--dc-glass-strong);
+        border: 1px solid rgba(103,232,249,.25);
+        color: var(--dc-text);
+        border-radius: 20px;
+        padding: 19px;
+        box-shadow: 0 0 55px rgba(34,211,238,.14)
+    }
+
+    .dc-modal-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(147,197,220,.14);
+        padding-bottom: 11px;
+        margin-bottom: 14px
+    }
+
+    .dc-close {
+        font-size: 24px;
+        border: 0;
+        background: transparent;
+        color: #a5f3fc;
+        cursor: pointer
+    }
+
+    .dc-timeline {
+        border-right: 3px solid rgba(34,211,238,.24);
+        padding-right: 16px
+    }
+
+    .dc-event {
+        position: relative;
+        padding: 0 10px 16px
+    }
+
+        .dc-event:before {
+            content: '';
+            position: absolute;
+            right: -23px;
+            top: 3px;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: var(--dc-cyan);
+            box-shadow: 0 0 13px var(--dc-cyan)
+        }
+
+        .dc-event small {
+            color: #789bad
+        }
+
+    .dc-source-table {
+        max-height: 280px;
+        overflow: auto
+    }
+
+    .dc-loading {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(2,10,22,.82);
+        z-index: 11000;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #a5f3fc;
+        backdrop-filter: blur(7px);
+        text-shadow: 0 0 15px rgba(34,211,238,.7)
+    }
+    /* Compact layout: more content in the viewport and local scrolling only where needed. */
+    .dc-page {
+        min-height: calc(100vh - 60px);
+        padding: 12px 16px
+    }
+
+    .dc-head {
+        padding: 13px 20px;
+        border-radius: 17px
+    }
+
+        .dc-head h1 {
+            font-size: 20px;
+            margin-bottom: 3px
+        }
+
+        .dc-head p, .dc-badge {
+            font-size: 12px
+        }
+
+    .dc-tabs {
+        gap: 7px;
+        margin: 9px 0
+    }
+
+    .dc-tab {
+        padding: 8px 13px;
+        border-radius: 10px;
+        font-size: 12px
+    }
+
+    .dc-card {
+        padding: 13px;
+        border-radius: 15px
+    }
+
+        .dc-card h2, .dc-card h3 {
+            margin-bottom: 10px
+        }
+
+    .dc-form {
+        gap: 9px
+    }
+
+    .dc-field label {
+        margin-bottom: 5px;
+        font-size: 11px
+    }
+
+    .dc-field input, .dc-field select, .dc-field textarea {
+        padding: 8px 10px;
+        border-radius: 9px
+    }
+
+    .dc-field textarea {
+        min-height: 62px
+    }
+
+    .dc-actions {
+        margin-top: 10px
+    }
+
+    .dc-table-wrap {
+        max-height: calc(100vh - 390px);
+        min-height: 180px;
+        overflow: auto
+    }
+
+    .dc-source-table {
+        max-height: 230px
+    }
+
+    .dc-step-builder {
+        padding: 10px;
+        margin-bottom: 8px
+    }
+
+        .dc-step-builder .dc-step-grid {
+            grid-template-columns: 1.3fr 1fr .65fr 1.3fr 1.3fr 1.1fr
+        }
+
+    .dc-desk-filter {
+        grid-template-columns: 2fr 1.4fr 1fr .75fr .65fr auto !important
+    }
+
+        .dc-desk-filter .dc-field:last-child {
+            align-self: end
+        }
+    /* Document progress road. */
+    .dc-doc-road {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 190px;
+        direction: rtl
+    }
+
+    .dc-road-node {
+        display: flex;
+        flex: 0 0 42px;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        color: #65879a;
+        font-size: 9px
+    }
+
+    .dc-road-dot {
+        display: grid;
+        width: 20px;
+        height: 20px;
+        place-items: center;
+        border: 2px solid #385367;
+        border-radius: 50%;
+        color: #789bad;
+        background: #0a1d34;
+        box-shadow: 0 0 0 3px rgba(10,29,52,.9)
+    }
+
+    .dc-road-line {
+        flex: 1;
+        height: 2px;
+        min-width: 18px;
+        background: #294558
+    }
+
+    .dc-road-node.done {
+        color: #6ee7b7
+    }
+
+        .dc-road-node.done .dc-road-dot {
+            border-color: #34d399;
+            color: #052e24;
+            background: #34d399;
+            box-shadow: 0 0 12px rgba(52,211,153,.42)
+        }
+
+    .dc-road-line.done {
+        background: linear-gradient(90deg,#34d399,#22d3ee)
+    }
+
+    .dc-road-node.active {
+        color: #7dd3fc
+    }
+
+        .dc-road-node.active .dc-road-dot {
+            border-color: #22d3ee;
+            color: #dffaff;
+            background: #075985;
+            box-shadow: 0 0 14px rgba(34,211,238,.58);
+            animation: dcPulse 1.5s ease-in-out infinite
+        }
+
+    .dc-road-node.warn {
+        color: #fcd34d
+    }
+
+        .dc-road-node.warn .dc-road-dot {
+            border-color: #f59e0b;
+            color: #422006;
+            background: #fbbf24
+        }
+
+    .dc-road-node.error {
+        color: #fda4af
+    }
+
+        .dc-road-node.error .dc-road-dot {
+            border-color: #fb7185;
+            color: #fff;
+            background: #be123c
+        }
+
+    .dc-route-step.done:before {
+        background: #34d399
+    }
+
+    .dc-route-step.active:before {
+        background: #22d3ee;
+        animation: dcPulse 1.5s ease-in-out infinite
+    }
+
+    .dc-route-step.issue:before {
+        background: #fb7185
+    }
+
+    .dc-route-step.pending:before {
+        background: #385367;
+        box-shadow: none
+    }
+
+    .dc-route-state {
+        display: inline-block;
+        margin: 4px 0;
+        padding: 3px 8px;
+        border-radius: 12px;
+        color: #9fc7da;
+        background: rgba(100,116,139,.14)
+    }
+
+    @@keyframes dcPulse {
+        50% {
+            transform: scale(1.12);
+            filter: brightness(1.2)
+        }
+    }
+
+    @@keyframes dcReveal {
+        from {
+            opacity: 0;
+            transform: translateY(8px)
+        }
+
+        to {
+            opacity: 1;
+            transform: none
+        }
+    }
+
+    @@keyframes dcFloat {
+        to {
+            transform: translateY(45px) scale(1.12)
+        }
+    }
+
+    @@media(max-width:1250px) {
+        .dc-step-builder .dc-step-grid {
+            grid-template-columns: repeat(3,1fr)
+        }
+    }
+
+    @@media(max-width:1000px) {
+        .dc-page {
+            padding: 10px
+        }
+
+        .dc-head {
+            align-items: flex-start;
+            gap: 10px;
+            flex-direction: column
+        }
+
+        .dc-col-4, .dc-col-5, .dc-col-6, .dc-col-7, .dc-col-8 {
+            grid-column: span 12
+        }
+
+        .dc-contracts {
+            grid-template-columns: repeat(2,1fr)
+        }
+
+        .dc-step-grid, .dc-step-builder .dc-step-grid {
+            grid-template-columns: 1fr
+        }
+
+        .dc-form, .dc-desk-filter {
+            grid-template-columns: 1fr !important
+        }
+
+        .dc-field.full {
+            grid-column: auto
+        }
+
+        .dc-table-wrap {
+            max-height: 55vh
+        }
+    }
+</style>
+
+<div class="dc-page">
+    @Html.AntiForgeryToken()
+    <div class="dc-head">
+        <div><h1>سامانه کنترل و پیگیری مدارک قراردادها</h1><p>تعریف مدرک، طراحی گردش، ثبت نتیجه، تاریخچه و میز مدیریت</p></div>
+        <div class="dc-badge">کنترل باز و شفافیت کامل</div>
+    </div>
+
+    <div class="dc-tabs">
+        <button class="dc-tab active" data-panel="desk">میز مدیریت</button>
+        <button class="dc-tab" data-panel="register">ثبت مدرک</button>
+        @if (Model.CanConfigure)
+        {
+            <a class="dc-tab" href="@Url.Action("DocumentTypes")" style="text-decoration:none">تعریف نوع مدرک</a>
+            <a class="dc-tab" href="@Url.Action("RoleManagement")" style="text-decoration:none">مدیریت دسترسی‌ها</a>
+            <button class="dc-tab" data-panel="results">عناوین نتایج</button>
+            <button class="dc-tab" data-panel="workflow">مراحل پیگیری</button>
+        }
+    </div>
+
+    <section class="dc-panel active" id="desk">
+        <div class="dc-card" style="margin-bottom:14px">
+            <div class="dc-form dc-desk-filter">
+                <div class="dc-field"><label>قرارداد</label><select id="dashContract" class="glass-select-search" data-search="true"><option value="">همه قراردادها</option>@foreach (var x in Model.Contracts)
+                {<option value="@x.Id">@x.Title</option>}</select></div>
+                <div class="dc-field"><label>جستجو</label><input id="dashSearch" type="search" placeholder="قرارداد، مدرک یا صورت‌وضعیت..." /></div>
+                <div class="dc-field"><label>وضعیت</label><select id="dashStatus" class="glass-select-search" data-search="true"><option value="">همه</option><option value="InProgress">در حال بررسی</option><option value="ConditionallyApproved">تأیید مشروط</option><option value="Approved">تأیید شده</option><option value="Rejected">عودت/رد</option></select></div>
+                <div class="dc-field"><label>سال</label><input id="dashYear" type="number" min="1300" max="1600" /></div>
+                <div class="dc-field"><label>ماه</label><input id="dashMonth" type="number" min="1" max="12" /></div>
+                <div class="dc-field" style="align-self:end"><button id="loadDesk" class="dc-btn dc-primary">نمایش</button></div>
+            </div>
+        </div>
+        <div id="contractCards" class="dc-contracts"></div>
+        <div class="dc-card" style="margin-top:14px">
+            <h2>مدارک قراردادها</h2>
+            <div class="dc-table-wrap"><table class="dc-table"><thead><tr><th>قرارداد</th><th>مدرک</th><th>صورت‌وضعیت</th><th>دوره</th><th>مرحله جاری</th><th>وضعیت</th><th>سررسید</th><th>تأخیر</th><th>عملیات</th></tr></thead><tbody id="deskRows"></tbody></table></div>
+        </div>
+    </section>
+
+    <section class="dc-panel" id="register">
+        <div class="dc-grid">
+            <div class="dc-card dc-col-7">
+                <h2>ثبت مدرک جدید و آغاز گردش</h2>
+                <form id="registerForm" enctype="multipart/form-data">
+                    <div class="dc-form">
+                        <div class="dc-field"><label>قرارداد</label><select id="regContract" class="glass-select-search" data-search="true" required><option value="">جستجو و انتخاب قرارداد</option>@foreach (var x in Model.Contracts)
+                        {<option value="@x.Id">@x.Title</option>}</select></div>
+                        <div class="dc-field"><label>نوع مدرک</label><input id="regDocumentSearch" type="search" placeholder="جستجوی نوع مدرک..." autocomplete="off" style="margin-bottom:6px" /><select id="regDocument" required><option value="">ابتدا قرارداد را انتخاب کنید</option>@foreach (var x in Model.Documents)
+                        {<option value="@x.Id" data-extensions="@x.Meta" data-contracts="@x.RelationIds">@x.Title</option>}</select>@if (Model.Documents.Count == 0)
+                        {<div class="dc-note" style="color:#fcd34d">هنوز نوع مدرکی تعریف نشده است؛ از صفحه «تعریف نوع مدرک» یک مورد ایجاد و به قرارداد متصل کنید.</div>}</div>
+                        <div class="dc-field"><label>شماره صورت‌وضعیت</label><input id="regStatement" /></div>
+                        <div class="dc-field"><label>دوره شمسی</label><div style="display:grid;grid-template-columns:1fr 1.4fr;gap:7px"><select id="regYear" class="glass-select-search" data-search="true" required>@for (var year = currentPersianYear - 3; year <= currentPersianYear + 1; year++)
+                        {<option value="@year" @(year == currentPersianYear ? "selected" : "")>@year</option>}</select><select id="regMonth" class="glass-select-search" data-search="true" required>@for (var month = 1; month <= 12; month++)
+                        {<option value="@month" @(month == currentPersianMonth ? "selected" : "")>@persianMonths[month - 1]</option>}</select></div></div>
+                        <div class="dc-field full"><label>فایل مدرک</label><label class="dc-upload" id="regDropZone"><input id="regFile" name="file" type="file" required /><span class="dc-upload-icon">⬆</span><span class="dc-upload-title">فایل را انتخاب کنید یا اینجا رها کنید</span><span id="regFileMeta" class="dc-file-meta">هنوز فایلی انتخاب نشده است</span></label></div>
+                    </div><div class="dc-actions"><button type="submit" class="dc-btn dc-green">ثبت و آغاز پیگیری</button></div>
+                </form>
+            </div><div class="dc-card dc-col-5"><h2>ثبت امن و هوشمند</h2><p class="dc-note">با ثبت فایل، پرونده مدرک ایجاد و گردش پیگیری به‌صورت خودکار آغاز می‌شود.</p><ul class="dc-rule-list"><li>کنترل پسوند و حداکثر حجم فایل</li><li>ذخیره امن با نام غیرقابل حدس</li><li>محاسبه و ثبت SHA-256 فایل</li><li>فعال‌سازی مرحله اول و محاسبه مهلت</li><li>جلوگیری از ثبت تکراری در همان دوره</li></ul></div>
+        </div>
+    </section>
+
+    <section class="dc-panel" id="results">
+        <div class="dc-grid">
+            <div class="dc-card dc-col-6">
+                <h2>تعریف عنوان مجاز نتیجه پیگیری</h2><form id="resultForm">
+                    <input type="hidden" id="resultId" /><div class="dc-form">
+                        <div class="dc-field"><label>عنوان</label><input id="resultTitle" required /></div><div class="dc-field"><label>رفتار گردش</label><select id="resultBehavior" class="glass-select-search" data-search="true"><option value="1">ارسال به مرحله بعد</option><option value="2">ماندن در همین مرحله</option><option value="3">عودت به مرحله قبل</option></select></div>
+                        <div class="dc-field"><label>رنگ</label><input id="resultColor" type="color" value="#159a64" /></div><div class="dc-field"><label>قواعد</label><label><input id="resultComment" type="checkbox" style="width:auto" /> توضیح اجباری</label><label><input id="resultFinal" type="checkbox" style="width:auto" /> تأیید نهایی</label><label><input id="resultActive" type="checkbox" checked style="width:auto" /> فعال</label></div>
+                    </div><div class="dc-actions"><button type="submit" class="dc-btn dc-primary">ذخیره عنوان</button></div>
+                </form>
+            </div>
+            <div class="dc-card dc-col-6"><h2>عناوین فعال</h2>@foreach (var x in Model.ResultTitles)
+            {<div class="dc-step"><b>@x.Title</b></div>}</div>
+        </div>
+    </section>
+
+    <section class="dc-panel" id="workflow">
+        <div class="dc-card">
+            <h2>تعریف مراحل پیگیری</h2><form id="workflowForm">
+                <input type="hidden" id="workflowId" /><div class="dc-form">
+                    <div class="dc-field"><label>قرارداد</label><select id="wfContract" class="glass-select-search" data-search="true"><option value="">انتخاب کنید</option>@foreach (var x in Model.Contracts)
+                    {<option value="@x.Id">@x.Title</option>}</select></div>
+                    <div class="dc-field"><label>مدرک</label><select id="wfDocument" class="glass-select-search" data-search="true"><option value="">انتخاب کنید</option>@foreach (var x in Model.Documents)
+                    {<option value="@x.Id">@x.Title</option>}</select></div>
+                    <div class="dc-field"><label>نام مستعار گردش</label><input id="wfAlias" /></div><div class="dc-field"><label>وضعیت</label><label><input id="wfActive" type="checkbox" checked style="width:auto" /> فعال</label></div>
+                    <div class="dc-field"><label>دریافت اطلاعات از دیتابیس</label><select id="wfSource" class="glass-select-search" data-search="true"><option value="">بدون اتصال</option>@foreach (var x in Model.SourceEndpoints)
+                    {<option value="@x.Id">@x.Title</option>}</select></div>
+                    <div class="dc-field"><label>ارسال خروجی تأییدشده</label><select id="wfOutput" class="glass-select-search" data-search="true"><option value="">بدون اتصال</option>@foreach (var x in Model.OutputEndpoints)
+                    {<option value="@x.Id">@x.Title</option>}</select></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin:17px 0 8px"><h3>مراحل ـ برای جابه‌جایی، دستگیره را بکشید</h3><button type="button" id="addStep" class="dc-btn dc-light">+ افزودن مرحله</button></div>
+                <div id="stepList"></div><div class="dc-actions"><button type="submit" class="dc-btn dc-primary">ذخیره گردش</button></div>
+            </form>
+        </div>
+    </section>
+</div>
+
+<div id="historyModal" class="dc-modal">
+    <div class="dc-modal-card">
+        <div class="dc-modal-head"><div><h2 id="historyTitle" style="margin:0">جزئیات مدرک</h2><div id="historyMeta" class="dc-note"></div></div><button class="dc-close" data-close>&times;</button></div>
+        <div class="dc-grid">
+            <div class="dc-col-5"><div class="dc-card"><h3>مراحل و وضعیت</h3><div id="historySteps" class="dc-timeline"></div></div><div class="dc-card" style="margin-top:10px"><h3>فایل‌ها</h3><div id="historyFiles"></div></div></div>
+            <div class="dc-col-7">
+                <div class="dc-card"><h3>ثبت نتیجه مرحله جاری</h3><form id="actionForm"><input type="hidden" id="actionInstance" /><div class="dc-form"><div class="dc-field"><label>نتیجه</label><select id="actionResult" class="glass-select-search" data-search="true">@foreach (var x in Model.ResultTitles)
+                {<option value="@x.Id">@x.Title</option>}</select></div><div class="dc-field"><label>جمع کل تأییدشده</label><input id="actionTotal" type="number" step="0.01" /></div><div class="dc-field full"><label>توضیح</label><textarea id="actionComment"></textarea></div><div class="dc-field full"><label>لیست مغایرت‌ها (JSON)</label><textarea id="actionDiff" placeholder='[{"title":"مغایرت مبلغ","amount":1200}]'></textarea></div></div><div class="dc-actions"><button type="button" id="loadSource" class="dc-btn dc-light">دریافت اطلاعات متناظر</button><button type="submit" class="dc-btn dc-green">ثبت نتیجه</button></div></form><div id="sourceData" class="dc-source-table"></div></div>
+                <div class="dc-card" style="margin-top:10px"><h3>تاریخچه اقدامات و نکات</h3><div id="historyActions" class="dc-timeline"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="dcAlert" class="dc-alert"></div><div id="dcLoading" class="dc-loading">در حال پردازش...</div>
+
+<select id="userOptionTemplate" style="display:none">@foreach (var x in Model.Users)
+{<option value="@x.Id" data-user-name="@x.Title" data-user-code="@x.Meta">@x.Title — کد ملی: @x.Meta</option>}</select>
+<select id="resultOptionTemplate" style="display:none">@foreach (var x in Model.ResultTitles)
+{<option value="@x.Id">@x.Title</option>}</select>
+
+@section Scripts {
+    <script>
+$(function(){
+    var urls={saveDocument:'@Url.Action("SaveDocumentDefinition")',saveResult:'@Url.Action("SaveResultTitle")',saveWorkflow:'@Url.Action("SaveWorkflow")',dashboard:'@Url.Action("GetDashboard")',history:'@Url.Action("GetDocumentHistory")',register:'@Url.Action("RegisterDocument")',submit:'@Url.Action("SubmitStepResult")',source:'@Url.Action("GetSourceData")',download:'@Url.Action("DownloadFile")'};
+    var token=$('input[name="__RequestVerificationToken"]').val(), dragged=null;
+    function notify(t,err){$('#dcAlert').toggleClass('err',!!err).text(t||'').fadeIn(120);setTimeout(function(){$('#dcAlert').fadeOut(150)},5000)}
+    function loading(v){$('#dcLoading').css('display',v?'flex':'none')}
+    function esc(v){return $('<div>').text(v==null?'':v).html()}
+    var userNames={};$('#userOptionTemplate option').each(function(){userNames[String(this.value)]=$(this).attr('data-user-name')||$(this).text()});
+    function faState(value){var labels={Pending:'در انتظار',Active:'مرحله جاری',Completed:'تکمیل شده',Returned:'عودت شده',NeedsCorrection:'نیازمند اصلاح',InProgress:'در حال بررسی',ConditionallyApproved:'تأیید مشروط',Approved:'تأیید نهایی',Rejected:'عودت / رد'};return labels[value]||value||'-'}
+    function documentRoad(status,stepTitle){var middle=status==='Rejected'?'error':status==='ConditionallyApproved'?'warn':status==='InProgress'?'active':'done',last=status==='Approved'?'done':'',line2=status==='Approved'?'done':'';return '<div class="dc-doc-road" title="'+esc(stepTitle||faState(status))+'"><span class="dc-road-node done"><span class="dc-road-dot">&#10003;</span><span>ثبت</span></span><i class="dc-road-line done"></i><span class="dc-road-node '+middle+'"><span class="dc-road-dot">'+(middle==='done'?'&#10003;':middle==='error'?'!':'&#8226;')+'</span><span>بررسی</span></span><i class="dc-road-line '+line2+'"></i><span class="dc-road-node '+last+'"><span class="dc-road-dot">'+(last?'&#10003;':'3')+'</span><span>تأیید</span></span></div>'}
+    function decorateDashboardRoads(){$('#deskRows tr').each(function(){var $row=$(this),$status=$row.find('.dc-status');if(!$status.length)return;var status=$status.text(),stepTitle=$row.children('td').eq(4).text();$status.closest('td').html(documentRoad(status,stepTitle))})}
+    function decorateHistoryRoute(data){$.each((data&&data.steps)||[],function(index,step){var $event=$('#historySteps .dc-event').eq(index),kind=step.status==='Completed'?'done':step.status==='Active'?'active':(step.status==='Returned'||step.status==='NeedsCorrection')?'issue':'pending';$event.addClass('dc-route-step '+kind);$event.children('div').first().addClass('dc-route-state').text(faState(step.status))});$.each((data&&data.actions)||[],function(index,action){var name=userNames[String(action.userId)]||('کاربر '+action.userId);$('#historyActions .dc-event').eq(index).find('small').text((action.at||'')+' | '+name)})}
+    $(document).ajaxSuccess(function(event,xhr,settings,data){var requestUrl=String(settings&&settings.url||'');if(requestUrl.indexOf(urls.dashboard)>=0)setTimeout(decorateDashboardRoads,0);if(requestUrl.indexOf(urls.history)>=0)setTimeout(function(){decorateHistoryRoute(data)},0)});
+    function post(url,data){data=data||{};data.__RequestVerificationToken=token;loading(true);return $.ajax({url:url,type:'POST',data:data}).always(function(){loading(false)})}
+    function jsonPost(url,obj){return post(url,{payload:JSON.stringify(obj)})}
+    function formatBytes(bytes){if(!bytes)return '۰ بایت';var units=['B','KB','MB','GB'],i=Math.floor(Math.log(bytes)/Math.log(1024));return (bytes/Math.pow(1024,i)).toFixed(i?1:0)+' '+units[i]}
+    var registrationDocumentOptions=$('#regDocument option[data-contracts]').clone();
+    function rebuildRegistrationDocuments(){
+        var contractId=String($('#regContract').val()||''),select=$('#regDocument'),matched=0;
+        select.empty().append($('<option>',{value:'',text:contractId?'جستجو و انتخاب نوع مدرک':'ابتدا قرارداد را انتخاب کنید',selected:true}));
+        if(contractId){registrationDocumentOptions.each(function(){var option=$(this).clone(),ids=String(option.attr('data-contracts')||'').split(',');if(ids.indexOf(contractId)>=0){select.append(option);matched++}});if(!matched)select.empty().append($('<option>',{value:'',text:'برای این قرارداد مدرکی تعریف نشده است',selected:true}))}
+        $('#regDocumentSearch').val('').prop('disabled',!contractId);
+        $('#regFile').val('').attr('accept','');$('#regDropZone').removeClass('has-file');$('#regFileMeta').text('هنوز فایلی انتخاب نشده است');
+    }
+    $('#regContract').on('change',rebuildRegistrationDocuments);
+    $('#regDocumentSearch').on('input',function(){var query=String($(this).val()||'').toLowerCase().trim();$('#regDocument option').each(function(){if(!this.value){this.hidden=false;return}this.hidden=query&&String($(this).text()||'').toLowerCase().indexOf(query)<0})});
+    rebuildRegistrationDocuments();
+    $('.dc-tab').click(function(){var p=$(this).data('panel');$('.dc-tab').removeClass('active');$(this).addClass('active');$('.dc-panel').removeClass('active');$('#'+p).addClass('active');if(p==='desk')loadDesk()});
+
+    $('#resultForm').submit(function(e){e.preventDefault();jsonPost(urls.saveResult,{Id:+$('#resultId').val()||null,Title:$('#resultTitle').val(),ResultBehavior:+$('#resultBehavior').val(),ColorCode:$('#resultColor').val(),RequiresComment:$('#resultComment').is(':checked'),IsFinalApproval:$('#resultFinal').is(':checked'),IsActive:$('#resultActive').is(':checked')}).done(doneReload).fail(xhrFail)});
+    function doneReload(r){if(r&&r.success){notify(r.message);setTimeout(function(){location.reload()},700)}else notify(r&&r.message||'عملیات ناموفق بود.',true)}
+    function xhrFail(x){var message='خطای ارتباط با سرور: '+x.status;if(x.responseJSON&&x.responseJSON.message)message=x.responseJSON.message;notify(message,true)}
+
+    function refreshGlassSelects(target){
+        if(!window.GlassSelect||typeof window.GlassSelect.refresh!=='function')return;
+        $(target).each(function(){window.GlassSelect.refresh(this)});
+    }
+    function addStep(seed){
+        seed=seed||{};
+        var n=$('.dc-step-builder').length+1,users=$('#userOptionTemplate').html(),results=$('#resultOptionTemplate').html();
+        var html="<div class='dc-step dc-step-builder' draggable='true'><div class='dc-step-head'><span class='dc-handle'>↕</span><span class='dc-step-no'>"+n+"</span><b>مرحله پیگیری</b><button type='button' class='dc-btn dc-danger dc-step-remove'>حذف</button></div><div class='dc-step-grid'><div class='dc-field'><label>نام مرحله</label><input class='st-title' value='"+esc(seed.Title||'')+"'/></div><div class='dc-field'><label>نام مستعار</label><input class='st-alias' value='"+esc(seed.Alias||'')+"'/></div><div class='dc-field'><label>مهلت (ساعت)</label><input class='st-hours' type='number' min='1' value='"+(seed.AllowedHours||24)+"'/></div><div class='dc-field'><label>کاربران مجاز به اقدام</label><select class='st-action glass-select-search' data-search='true' multiple>"+users+"</select></div><div class='dc-field'><label>کاربران فقط مشاهده</label><select class='st-view glass-select-search' data-search='true' multiple>"+users+"</select></div><div class='dc-field'><label>نتایج مجاز</label><select class='st-results glass-select-search' data-search='true' multiple>"+results+"</select></div><div class='dc-field'><label><input class='st-upload' type='checkbox' style='width:auto'/> مرحله ثبت فایل</label></div><div class='dc-field'><label><input class='st-final' type='checkbox' style='width:auto'/> مرحله نهایی</label></div></div></div>";
+        var $step=$(html).appendTo('#stepList');
+        $step.find('.st-upload').prop('checked',!!seed.IsUploadStep);$step.find('.st-final').prop('checked',!!seed.IsFinalStep);
+        $step.find('.st-action').val((seed.ActionUserIds||[]).map(String));$step.find('.st-view').val((seed.ViewUserIds||[]).map(String));$step.find('.st-results').val((seed.ResultTitleIds||[]).map(String));
+        setTimeout(function(){refreshGlassSelects($step.find('select'))},0);renumber();
+    }
+    function renumber(){$('.dc-step-builder').each(function(i){$(this).find('.dc-step-no').text(i+1)})}
+    $('#addStep').click(function(){addStep()});$(document).on('click','.dc-step-remove',function(){$(this).closest('.dc-step-builder').remove();renumber()});
+    $(document).on('dragstart','.dc-step-builder',function(e){dragged=this;$(this).addClass('dragging');e.originalEvent.dataTransfer.effectAllowed='move'}).on('dragend','.dc-step-builder',function(){dragged=null;$(this).removeClass('dragging');renumber()}).on('dragover','.dc-step-builder',function(e){e.preventDefault();if(!dragged||dragged===this)return;var rect=this.getBoundingClientRect();if(e.originalEvent.clientY<rect.top+rect.height/2)this.parentNode.insertBefore(dragged,this);else this.parentNode.insertBefore(dragged,this.nextSibling)});
+    $('#workflowForm').submit(function(e){e.preventDefault();var steps=[];$('.dc-step-builder').each(function(i){steps.push({ClientKey:'s'+i,Title:$(this).find('.st-title').val(),Alias:$(this).find('.st-alias').val(),SortOrder:i+1,AllowedHours:+$(this).find('.st-hours').val(),IsUploadStep:$(this).find('.st-upload').is(':checked'),IsFinalStep:$(this).find('.st-final').is(':checked'),ActionUserIds:($(this).find('.st-action').val()||[]).map(Number),ViewUserIds:($(this).find('.st-view').val()||[]).map(Number),ResultTitleIds:($(this).find('.st-results').val()||[]).map(Number)})});jsonPost(urls.saveWorkflow,{Id:+$('#workflowId').val()||null,ContractId:+$('#wfContract').val(),DocumentDefinitionId:+$('#wfDocument').val(),Alias:$('#wfAlias').val(),SourceEndpointId:+$('#wfSource').val()||null,OutputEndpointId:+$('#wfOutput').val()||null,IsActive:$('#wfActive').is(':checked'),Steps:steps}).done(doneReload).fail(xhrFail)});
+
+    $('#regDocument').on('change',function(){var extensions=$(this).find(':selected').data('extensions')||'';$('#regFile').attr('accept',extensions);if(extensions)$('#regFileMeta').text('فرمت‌های مجاز: '+extensions)});
+    $('#regFile').change(function(){var file=this.files&&this.files[0];$('#regDropZone').toggleClass('has-file',!!file);$('#regFileMeta').text(file?file.name+' — '+formatBytes(file.size):'هنوز فایلی انتخاب نشده است')});
+    $('#registerForm').submit(function(e){e.preventDefault();if(!this.checkValidity()){this.reportValidity();return}var file=$('#regFile')[0].files[0];if(!file){notify('فایل مدرک را انتخاب کنید.',true);return}var fd=new FormData();fd.append('__RequestVerificationToken',token);fd.append('payload',JSON.stringify({ContractId:+$('#regContract').val(),DocumentDefinitionId:+$('#regDocument').val(),StatementNo:$('#regStatement').val(),PeriodYear:+$('#regYear').val(),PeriodMonth:+$('#regMonth').val()}));fd.append('file',file);loading(true);$.ajax({url:urls.register,type:'POST',data:fd,processData:false,contentType:false}).done(function(r){if(r&&r.success){notify(r.message);$('#registerForm')[0].reset();$('#regDropZone').removeClass('has-file');$('#regFileMeta').text('هنوز فایلی انتخاب نشده است');setTimeout(function(){$('.dc-tab[data-panel="desk"]').trigger('click')},650)}else notify(r&&r.message||'ثبت مدرک انجام نشد.',true)}).fail(xhrFail).always(function(){loading(false)})});
+
+    $('#loadDesk').click(loadDesk);$('#dashSearch').on('keydown',function(e){if(e.keyCode===13)loadDesk()});function loadDesk(){post(urls.dashboard,{contractId:$('#dashContract').val(),status:$('#dashStatus').val(),periodYear:$('#dashYear').val(),periodMonth:$('#dashMonth').val(),search:$('#dashSearch').val()}).done(function(r){if(!r.success){notify(r.message,true);return}var c='';$.each(r.contracts||[],function(_,x){c+="<div class='dc-contract-card'><b>"+esc(x.contractNo)+"</b><div class='dc-note'>"+esc(x.title)+"</div><div class='dc-kpis'><div class='dc-kpi'><b>"+x.total+"</b>کل</div><div class='dc-kpi'><b>"+x.approved+"</b>تأیید</div><div class='dc-kpi'><b>"+x.open+"</b>باز</div><div class='dc-kpi late'><b>"+x.late+"</b>تأخیر</div></div></div>"});$('#contractCards').html(c||'<div class="dc-note">قراردادی یافت نشد.</div>');var d='';$.each(r.documents||[],function(_,x){d+='<tr><td>'+esc(x.contractNo)+'</td><td>'+esc(x.documentTitle)+'</td><td>'+esc(x.statementNo)+'</td><td>'+esc(x.period)+'</td><td>'+esc(x.stepTitle)+'</td><td><span class="dc-status '+esc(x.status)+'">'+esc(x.status)+'</span></td><td>'+esc(x.dueAt)+'</td><td>'+(x.lateDays?x.lateDays+' روز':'-')+'</td><td><button class="dc-btn dc-light dc-history" data-id="'+x.id+'">مشاهده</button></td></tr>'});$('#deskRows').html(d||'<tr><td colspan="9">موردی یافت نشد.</td></tr>')}).fail(xhrFail)}
+    $(document).on('click','.dc-history',function(){openHistory($(this).data('id'))});function openHistory(id){post(urls.history,{id:id}).done(function(r){if(!r.success){notify(r.message,true);return}var h=r.header||{};$('#actionInstance').val(id);$('#historyTitle').text((h.documentTitle||'مدرک')+' - '+(h.contractNo||''));$('#historyMeta').text('دوره '+(h.period||'-')+' | وضعیت '+(h.status||'-')+' | صورت‌وضعیت '+(h.statementNo||'-'));var s='';$.each(r.steps||[],function(_,x){s+='<div class="dc-event"><b>'+x.order+'- '+esc(x.title)+'</b><div>'+esc(x.status)+'</div><small>شروع: '+esc(x.startedAt||'-')+' | مهلت: '+esc(x.dueAt||'-')+'</small></div>'});$('#historySteps').html(s);var a='';$.each(r.actions||[],function(_,x){a+='<div class="dc-event"><b>'+esc(x.result||x.actionType)+'</b><div>'+esc(x.comment||'')+'</div><small>'+esc(x.at)+' | کاربر '+x.userId+'</small></div>'});$('#historyActions').html(a||'<div class="dc-note">تاریخچه‌ای ثبت نشده است.</div>');var f='';$.each(r.files||[],function(_,x){f+='<div><a href="'+urls.download+'?id='+x.id+'">'+esc(x.name)+'</a> <small>('+Math.round(x.size/1024)+' KB)</small></div>'});$('#historyFiles').html(f||'-');$('#sourceData').empty();$('#historyModal').show()}).fail(xhrFail)}
+    $('[data-close]').click(function(){$(this).closest('.dc-modal').hide()});$('#historyModal').click(function(e){if(e.target===this)$(this).hide()});
+    $('#actionForm').submit(function(e){e.preventDefault();jsonPost(urls.submit,{DocumentInstanceId:+$('#actionInstance').val(),ResultTitleId:+$('#actionResult').val(),Comment:$('#actionComment').val(),ApprovedTotal:$('#actionTotal').val()?+$('#actionTotal').val():null,DiscrepanciesJson:$('#actionDiff').val()}).done(function(r){if(r.success){notify(r.message);openHistory(+$('#actionInstance').val());loadDesk()}else notify(r.message,true)}).fail(xhrFail)});
+    $('#loadSource').click(function(){post(urls.source,{id:+$('#actionInstance').val()}).done(function(r){if(!r.success){notify(r.message,true);return}var h='<table class="dc-table"><thead><tr>';$.each(r.columns||[],function(_,c){h+='<th>'+esc(c)+'</th>'});h+='</tr></thead><tbody>';$.each(r.rows||[],function(_,row){h+='<tr>';$.each(r.columns,function(_,c){h+='<td>'+esc(row[c])+'</td>'});h+='</tr>'});h+='</tbody></table>';$('#sourceData').html(h)}).fail(xhrFail)});
+    addStep({Title:'ثبت مدرک',AllowedHours:48,IsUploadStep:true});addStep({Title:'کنترل اولیه',AllowedHours:72});addStep({Title:'تأیید نهایی',AllowedHours:72,IsFinalStep:true});$('.dc-step-builder').last().find('.st-final').prop('checked',true);loadDesk();
+});
+    </script>
+}

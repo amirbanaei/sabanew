@@ -1,0 +1,106 @@
+/* MDR | نگاشت اجزای تولیدشده توسط JS صفحه‌ها (mdr-*) به ظاهر AG — فقط زیر .mdr-ag
+   (اسکلت صفحه‌ها از کلاس‌های خود AG استفاده می‌کند؛ این فایل فقط عناصری را که JS می‌سازد هم‌سبک می‌کند) */
+
+/* عناصر AG (مثل glass-btn-ag) display:flex دارند و ویژگی hidden را بی‌اثر می‌کنند؛ اسکریپت‌های صفحه با hidden کار می‌کنند */
+.mdr-ag [hidden] { display: none !important; }
+
+/* مودال با ویژگی hidden (ModalAG در Layout پیش‌فرض display:none دارد) */
+.ModalAG.mdr-ag:not([hidden]) { display: flex; }
+.ModalAG.mdr-ag[hidden] { display: none !important; }
+
+/* کارت‌های خانه و کاتالوگ */
+.mdr-ag .mdr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .8rem; }
+.mdr-ag .mdr-card { display: flex; flex-direction: column; gap: .5rem; padding: .9rem 1rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background: rgba(255, 255, 255, .035);
+    backdrop-filter: blur(12px) saturate(150%); -webkit-backdrop-filter: blur(12px) saturate(150%); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12); color: rgba(255, 255, 255, .92); text-decoration: none; transition: .3s ease; }
+.mdr-ag .mdr-card.is-available:hover { border-color: rgba(0, 255, 255, .55); background: rgba(0, 255, 255, .055); transform: translateY(-1px); }
+.mdr-ag .mdr-card.is-planned { opacity: .6; }
+.mdr-ag .mdr-card-no { font-size: .62rem; color: rgba(255, 255, 255, .45); }
+.mdr-ag .mdr-card-title { font-size: .8rem; font-weight: 600; color: #fff; }
+.mdr-ag .mdr-card small { font-size: .65rem; color: rgba(255, 255, 255, .5); }
+
+/* نشان‌ها */
+.mdr-ag .mdr-badge { display: inline-flex; align-items: center; align-self: flex-start; height: 1.3rem; padding: 0 .55rem; border-radius: .45rem; font-size: .6rem; white-space: nowrap; background: transparent;
+    border: 1px solid rgba(0, 255, 255, .35); color: #00ffff; }
+.mdr-ag .is-available .mdr-badge { background: rgba(0, 255, 255, .12); }
+.mdr-ag .mdr-badge.is-bad { border-color: rgba(255, 90, 79, .55); color: #ff5a4f; background: rgba(255, 90, 79, .06); }
+
+/* فرم‌های تولیدشده */
+.mdr-ag .mdr-field { display: block; max-width: none; margin-bottom: .8rem; font-size: .68rem; color: rgba(255, 255, 255, .85); }
+.mdr-ag .mdr-field .mdr-input { margin-top: .3rem; }
+.mdr-ag .mdr-input:hover { border-color: rgba(0, 255, 255, .4); background-color: rgba(0, 255, 255, .055); }
+.mdr-ag .mdr-input:focus, .mdr-ag .mdr-input:focus-visible { outline: none; color: #fff; border-color: rgba(0, 255, 255, .65);
+    background: linear-gradient(135deg, rgba(0, 255, 255, .09), rgba(255, 255, 255, .035)); box-shadow: inset 0 0 .7rem rgba(0, 255, 255, .06), 0 0 .8rem rgba(0, 255, 255, .08); }
+.mdr-ag .mdr-input:disabled { opacity: .5; cursor: not-allowed; }
+.mdr-ag select.mdr-input { min-width: 8rem; }
+.mdr-ag textarea.mdr-input { height: auto; }
+.mdr-ag .mdr-primary { background: linear-gradient(135deg, rgba(0, 255, 255, .24), rgba(0, 255, 255, .08)); border: 1px solid rgba(0, 255, 255, .65); }
+.mdr-ag .mdr-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
+.mdr-ag .mdr-check { display: inline-flex; gap: .45rem; align-items: center; font-size: .68rem; color: rgba(255, 255, 255, .8); }
+.mdr-ag .mdr-chip { display: inline-flex; align-items: center; gap: .4rem; padding: .1rem .6rem; font-size: .62rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: .45rem; background: rgba(255, 255, 255, .035); }
+.mdr-ag .mdr-chip button { background: none; border: 0; color: rgba(255, 255, 255, .5); cursor: pointer; }
+.mdr-ag .mdr-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: .35rem 0; }
+
+/* پیام‌ها و حالت‌ها */
+.mdr-ag .mdr-msg { padding: .55rem .8rem; margin-bottom: .8rem; font-size: .68rem; border: 1px solid rgba(0, 255, 255, .35); border-radius: .55rem; background: rgba(0, 255, 255, .06); }
+.mdr-ag .mdr-msg.is-bad { border-color: rgba(255, 90, 79, .6); background: rgba(255, 90, 79, .07); color: #ff9c94; }
+.mdr-ag .mdr-state { padding: 2rem; text-align: center; font-size: .7rem; color: rgba(255, 255, 255, .55); }
+
+/* جزئیات تولیدشده */
+.mdr-ag .mdr-dl { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1rem; font-size: .7rem; }
+.mdr-ag .mdr-dl dt { color: rgba(255, 255, 255, .45); font-weight: 400; }
+.mdr-ag .mdr-dl dd { margin: 0; }
+.mdr-ag .mdr-timeline { list-style: none; margin: 0; padding: 0; font-size: .66rem; line-height: 1.7; }
+.mdr-ag .mdr-timeline li { padding: .4rem .6rem; margin-bottom: .35rem; border-inline-start: 2px solid rgba(0, 255, 255, .35); background: rgba(255, 255, 255, .025); border-radius: 0 .45rem .45rem 0; }
+.mdr-ag .mdr-timeline small { color: rgba(255, 255, 255, .45); }
+.mdr-ag .mdr-body { white-space: pre-wrap; padding: .7rem; font-size: .72rem; line-height: 1.9; border: 1px solid rgba(255, 255, 255, .1); border-radius: .55rem; background: rgba(255, 255, 255, .03); }
+.mdr-ag ul, .mdr-ag ol { font-size: .68rem; }
+.mdr-ag .mdr-ag-modal-body h3 { font-size: .9rem; color: #fff; margin: 0 0 .6rem; }
+.mdr-ag .mdr-ag-modal-body h4 { margin: 1rem 0 .4rem; }
+.mdr-ag .mdr-ag-modal-body a { color: #00ffff; text-decoration: none; }
+.mdr-ag .mdr-pager { display: flex; justify-content: center; align-items: center; gap: .6rem; margin-top: .8rem; font-size: .7rem; }
+.mdr-ag .mdr-pager .glass-btn-ag { width: 3rem; }
+
+/* جدول: ردیف‌های قابل کلیک و حاشیه‌ی تأخیر */
+.mdr-ag .glass-table-ag tbody tr[data-id] { cursor: pointer; }
+.mdr-ag .glass-table-ag tr.is-overdue td:first-child { border-inline-start: 3px solid #ff5a4f; }
+.mdr-ag .glass-table-ag td .mdr-input { margin: 0; }
+.mdr-ag .glass-table-ag td { vertical-align: middle; }
+
+/* جستجو و اسناد */
+.mdr-ag .mdr-hit { list-style: none; padding: .6rem .8rem; margin-bottom: .5rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background: rgba(255, 255, 255, .035); }
+.mdr-ag .mdr-hits { list-style: none; margin: 0 0 .5rem; padding: 0; }
+.mdr-ag .mdr-hit a { color: #fff; text-decoration: none; }
+.mdr-ag .mdr-hit a:hover { color: #00ffff; }
+.mdr-ag .mdr-hit p { margin: .3rem 0; color: rgba(255, 255, 255, .6); font-size: .68rem; }
+.mdr-ag .mdr-hit small { color: rgba(255, 255, 255, .45); }
+.mdr-ag mark { background: rgba(0, 255, 255, .85); color: #04201a; padding: 0 2px; border-radius: 3px; }
+.mdr-ag .mdr-group { margin-bottom: 1.2rem; }
+.mdr-ag .mdr-group h3 { font-size: .85rem; color: #fff; }
+.mdr-ag .mdr-group h3 small { color: rgba(255, 255, 255, .45); font-weight: 400; }
+.mdr-ag .mdr-facets { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.mdr-ag .mdr-facets .mdr-btn.mdr-primary { color: #00ffff; }
+.mdr-ag .mdr-split { display: grid; grid-template-columns: 14rem 1fr; gap: .8rem; align-items: start; }
+.mdr-ag .mdr-tree { display: flex; flex-direction: column; gap: 2px; padding: .5rem; border: 1px solid rgba(255, 255, 255, .14); border-radius: .55rem; background: rgba(255, 255, 255, .035); }
+.mdr-ag .mdr-node { text-align: right; background: none; border: 0; color: rgba(255, 255, 255, .85); padding: .35rem .7rem; border-radius: .45rem; font-size: .68rem; cursor: pointer; }
+.mdr-ag .mdr-node:hover { background: rgba(0, 255, 255, .08); }
+.mdr-ag .mdr-node.is-sel { background: rgba(0, 255, 255, .18); color: #00ffff; }
+@media (max-width: 760px) { .mdr-ag .mdr-split { grid-template-columns: 1fr; } }
+
+/* صفحه‌ی «دسترسی ندارید» */
+.mdr-ag .mdr-denied { max-width: 30rem; margin: 3rem auto; padding: 2rem; text-align: center; border: 1px solid rgba(255, 255, 255, .14); border-radius: .75rem; background: rgba(255, 255, 255, .035); }
+.mdr-ag .mdr-denied h2 { font-size: 1.1rem; color: #fff; }
+.mdr-ag .mdr-denied p { font-size: .75rem; color: rgba(255, 255, 255, .6); }
+
+/* دکمه‌های AG که JS با mdr-primary فعال/غیرفعال می‌کند (مثل تب‌های صندوق نامه‌ها) */
+.mdr-ag .glass-btn-ag.mdr-primary { background: linear-gradient(135deg, rgba(0, 255, 255, .24), rgba(0, 255, 255, .08)) !important; border: 1px solid rgba(0, 255, 255, .65) !important; color: #00ffff; }
+.mdr-ag .mdr-saved, .mdr-ag .mdr-adv { display: block; }
+
+/* ورودی‌های تولیدشده: همان مقادیر glass-input-ag با !important (قواعد سراسری تم سامانه برای input حاشیه‌ی ۲px و پس‌زمینه‌ی خود را دارند) */
+.mdr-ag .mdr-input { font-size: 12px !important; padding: .375rem .75rem !important; margin-bottom: 0 !important; color: rgba(255, 255, 255, .92) !important; border: 1px solid rgba(255, 255, 255, .14) !important;
+    border-radius: .55rem !important; background-color: rgba(255, 255, 255, .035) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -1px 0 rgba(255, 255, 255, .025) !important; }
+.mdr-ag .mdr-input:hover { border-color: rgba(0, 255, 255, .40) !important; background-color: rgba(0, 255, 255, .055) !important; }
+.mdr-ag .mdr-input:focus { outline: none !important; color: #fff !important; border-color: rgba(0, 255, 255, .65) !important;
+    background: linear-gradient(135deg, rgba(0, 255, 255, .09), rgba(255, 255, 255, .035)) !important; box-shadow: inset 0 0 .7rem rgba(0, 255, 255, .06), 0 0 .8rem rgba(0, 255, 255, .08) !important; }
+.mdr-ag .mdr-input::placeholder { color: rgba(255, 255, 255, .38) !important; }
+.mdr-ag .mdr-input:disabled { opacity: .5; background: rgba(255, 255, 255, .025) !important; border-color: transparent !important; }
+.mdr-ag select.mdr-input option { background: #1d2734; color: #fff; }
