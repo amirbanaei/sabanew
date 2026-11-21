@@ -1,0 +1,170 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("fin.title");
+    bool isManager = ViewBag.IsManager == true;
+    bool canDocs = ViewBag.CanDocs == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-cash-coin", MdrText.T("fin.title"), MdrText.T("fin.hdr.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("fin.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-3 col-md-4"><label class="glass-label-ag">@MdrText.T("fin.f.from")</label><input id="from" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" /></div>
+                <div class="col-xl-3 col-md-4"><label class="glass-label-ag">@MdrText.T("fin.f.to")</label><input id="to" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" /></div>
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("fin.f.scope")</label>
+                    <select id="scope" class="glass-select-search">
+                        <option value="mine">@MdrText.T("fin.scope.mine")</option>
+                        @if (isManager) { <option value="all">@MdrText.T("fin.scope.all")</option> }
+                    </select>
+                </div>
+            </div>
+            <div class="row row-btn-AG row-ltr-AG">
+                <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("fin.act.back")</p></a></div>
+                @if (canDocs)
+                {
+                    <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Documents", "Finance", new { area = "Mdr" })"><i class="bi bi-receipt"></i><p>@MdrText.T("fin.act.docs")</p></a></div>
+                }
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="apply"><i class="bi bi-arrow-repeat"></i><p>@MdrText.T("fin.act.apply")</p></button></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+    <div id="out"></div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-cash-coin", MdrText.T("fin.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("wf.empty"),
+        k = new { draft = MdrText.T("fin.k.draft"), submitted = MdrText.T("fin.k.submitted"), approved = MdrText.T("fin.k.approved"), rejected = MdrText.T("fin.k.rejected"), paid = MdrText.T("fin.k.paid"),
+                  paymentPaid = MdrText.T("fin.k.paymentPaid"), receiptPaid = MdrText.T("fin.k.receiptPaid"), pendingAmount = MdrText.T("fin.k.pendingAmount"),
+                  approvedUnpaidAmount = MdrText.T("fin.k.approvedUnpaidAmount"), avgApprovalH = MdrText.T("fin.k.avgApprovalH") },
+        sec = new { kpi = MdrText.T("fin.sec.kpi"), trend = MdrText.T("fin.sec.trend"), budget = MdrText.T("fin.sec.budget"), alerts = MdrText.T("fin.sec.alerts") },
+        trend = new { payment = MdrText.T("fin.trend.payment"), receipt = MdrText.T("fin.trend.receipt") }, emptyBudget = MdrText.T("fin.empty.budget"),
+        alert = new { budgetNear = MdrText.T("fin.alert.budgetNear"), budgetOver = MdrText.T("fin.alert.budgetOver"), longPending = MdrText.T("fin.alert.longPending"),
+                      closedPeriodPending = MdrText.T("fin.alert.closedPeriodPending"), duplicates = MdrText.T("fin.alert.duplicates"), none = MdrText.T("fin.alert.none") },
+        legacy = new { title = MdrText.T("fin.legacy.title"), hint = MdrText.T("fin.legacy.hint"), count = MdrText.T("fin.legacy.count"), debtor = MdrText.T("fin.legacy.debtor"), creditor = MdrText.T("fin.legacy.creditor"),
+                       net = MdrText.T("fin.legacy.net"), top = MdrText.T("fin.legacy.top"), notitle = MdrText.T("fin.legacy.notitle"), docs = MdrText.T("fin.legacy.docs") },
+        col = new { number = MdrText.T("fin.col.number"), title = MdrText.T("fin.col.title"), dir = MdrText.T("fin.col.dir"), amount = MdrText.T("fin.col.amount"), date = MdrText.T("fin.col.date"), status = MdrText.T("fin.col.status"), cc = MdrText.T("fin.col.cc") },
+        st = new { Draft = MdrText.T("fin.st.Draft"), Submitted = MdrText.T("fin.st.Submitted"), Approved = MdrText.T("fin.st.Approved"), Rejected = MdrText.T("fin.st.Rejected"), Paid = MdrText.T("fin.st.Paid"), Cancelled = MdrText.T("fin.st.Cancelled") },
+        dir = new { Payment = MdrText.T("fin.dir.Payment"), Receipt = MdrText.T("fin.dir.Receipt") },
+        cfg = new { budget = MdrText.T("fin.cfg.budget"), used = MdrText.T("fin.cfg.used") }, drillTitle = MdrText.T("rep.drill.title") }));
+    var u = @Html.Raw(Json.Encode(new {
+        dash = Url.Action("GetDashboard", "Finance", new { area = "Mdr" }), drill = Url.Action("GetDrill", "Finance", new { area = "Mdr" }), legacy = Url.Action("GetLegacyDocs", "Finance", new { area = "Mdr" }),
+        doc = Url.Action("Documents", "Finance", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var cur = { from: "", to: "", scope: "mine" };
+
+    function today(d) { var x = new Date(); x.setDate(x.getDate() - (d || 0)); return x.getFullYear() + "-" + ("0" + (x.getMonth() + 1)).slice(-2) + "-" + ("0" + x.getDate()).slice(-2); }
+    function money(v) { return v === null || v === undefined ? "—" : Math.round(Number(v)).toLocaleString("fa-IR"); }
+    function qs() { return "from=" + cur.from + "&to=" + cur.to + "&scope=" + cur.scope; }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function field(icon, title, body) {
+        return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) +
+            '</div></div></div><div class="glass-field-body">' + body + "</div></div>";
+    }
+    function stat(style, label, value, metric) {
+        return '<div class="mdr-ag-stat mdr-ag-stat-' + style + (metric ? " mdr-clickable" : "") + '"' + (metric ? ' data-metric="' + metric + '"' : "") + '><div><div class="mdr-ag-stat-value">' + E(value) + '</div><div class="mdr-ag-stat-label">' + E(label) + "</div></div></div>";
+    }
+
+    function render(d) {
+        var k = d.Kpi, grid = 'style="grid-template-columns:repeat(auto-fill,minmax(10rem,1fr))"';
+        var kp = '<div class="mdr-ag-stats" ' + grid + ">" +
+            stat("info", L.k.draft, k.draft, "status.Draft") + stat("warning", L.k.submitted, k.submitted, "status.Submitted") + stat("info", L.k.approved, k.approved, "status.Approved") +
+            stat("danger", L.k.rejected, k.rejected, "status.Rejected") + stat("success", L.k.paid, k.paid, "status.Paid") + stat("info", L.k.avgApprovalH, k.avgApprovalH === null ? "—" : k.avgApprovalH) + "</div>" +
+            '<div class="mdr-ag-stats" ' + grid + ">" +
+            stat("success", L.k.paymentPaid, money(k.paymentPaid)) + stat("success", L.k.receiptPaid, money(k.receiptPaid)) +
+            stat("warning", L.k.pendingAmount, money(k.pendingAmount), "pendingPayments") + stat("info", L.k.approvedUnpaidAmount, money(k.approvedUnpaidAmount), "approvedUnpaid") + "</div>";
+        var html = field("bi-card-checklist", L.sec.kpi, kp);
+
+        var al = Object.keys(d.Alerts).filter(function (x) { return d.Alerts[x] > 0; });
+        html += field("bi-exclamation-triangle", L.sec.alerts, al.length ? '<ul class="mdr-ag-list">' + al.map(function (x) {
+            var metric = x === "longPending" ? ' data-metric="longPending" class="mdr-clickable"' : "";
+            return "<li" + metric + '><span class="mdr-ag-badge glass-status-danger">' + d.Alerts[x] + "</span> " + E(L.alert[x]) + "</li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.alert.none) + "</div>");
+
+        var max = Math.max.apply(null, d.Trend.map(function (p) { return Math.max(p.Payment, p.Receipt); })) || 1;
+        var any = d.Trend.some(function (p) { return p.Payment || p.Receipt; });
+        html += field("bi-graph-up", L.sec.trend, any ? '<div class="mdr-ag-trend">' + d.Trend.map(function (p) {
+            return '<div class="mdr-ag-trend-col" title="' + E(p.Label + " — " + L.trend.payment + ": " + money(p.Payment) + " / " + L.trend.receipt + ": " + money(p.Receipt)) + '"><span class="is-c" style="height:' + Math.round(100 * p.Payment / max) + '%"></span><span class="is-d" style="height:' + Math.round(100 * p.Receipt / max) + '%"></span></div>'; }).join("") +
+            '</div><div class="mdr-ag-trend-legend"><i class="is-c"></i> ' + E(L.trend.payment) + ' <i class="is-d"></i> ' + E(L.trend.receipt) + "</div>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>");
+
+        if (d.IsManager && !d.Personal) {
+            html += field("bi-piggy-bank", L.sec.budget, d.Budgets.length ? '<ul class="mdr-ag-bars">' + d.Budgets.map(function (b) {
+                return '<li><span class="mdr-ag-bars-name">' + E(b.CostCenter || "#" + b.CostCenterID) + '</span><span class="mdr-ag-bars-track"><i style="width:' + Math.min(100, b.Pct) + "%" + (b.Pct >= 100 ? ";background:#ff5a4f" : b.Pct >= 90 ? ";background:#ffc857" : "") + '"></i></span><b>' +
+                    b.Pct + "٪ · " + money(b.Used) + " / " + money(b.Budget) + "</b></li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.emptyBudget) + "</div>");
+        }
+
+        if (d.Legacy) {
+            var g = d.Legacy, ls = '<div class="mdr-ag-msg" style="margin-bottom:.7rem">' + E(L.legacy.hint) + "</div>" +
+                '<div class="mdr-ag-stats" ' + grid + ">" + stat("info", L.legacy.count, money(g.Count)) + stat("danger", L.legacy.debtor, money(g.Debtor)) + stat("success", L.legacy.creditor, money(g.Creditor)) + stat("warning", L.legacy.net, money(g.Net)) + "</div>";
+            var mx = Math.max.apply(null, g.Trend.map(function (p) { return Math.max(p.Debtor, p.Creditor); })) || 1;
+            ls += g.Trend.length ? '<div class="mdr-ag-trend">' + g.Trend.map(function (p) {
+                return '<div class="mdr-ag-trend-col" title="' + E(p.Month + " — " + L.legacy.debtor + ": " + money(p.Debtor) + " / " + L.legacy.creditor + ": " + money(p.Creditor)) + '"><span class="is-c" style="height:' + Math.round(100 * p.Debtor / mx) + '%"></span><span class="is-d" style="height:' + Math.round(100 * p.Creditor / mx) + '%"></span></div>'; }).join("") + "</div>" : "";
+            ls += "<h4 style=\"margin-top:.8rem\">" + E(L.legacy.top) + "</h4>" + (g.Top.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.title) + "</th><th>" + E(L.legacy.count) + "</th><th>" + E(L.legacy.debtor) + "</th><th>" + E(L.legacy.creditor) + "</th></tr></thead><tbody>" +
+                g.Top.map(function (t) { return '<tr class="mdr-clickable" data-title="' + E(t.Title || "") + '"><td>' + E(t.Title || L.legacy.notitle) + "</td><td>" + t.Count + "</td><td>" + money(t.Debtor) + "</td><td>" + money(t.Creditor) + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>");
+            html += field("bi-archive", L.legacy.title, ls);
+        }
+        $("out").innerHTML = html;
+    }
+
+    function load() {
+        cur.from = mdr.jd.get("from") || today(29); cur.to = mdr.jd.get("to") || today(0); cur.scope = $("scope").value; mdr.jd.set("from", cur.from); mdr.jd.set("to", cur.to);
+        history.replaceState(null, "", location.pathname + "#" + qs());
+        $("state").hidden = false; $("state").textContent = L.loading; $("out").innerHTML = "";
+        mdr.get(u.dash + "?" + qs()).then(function (r) {
+            if (!r.success) { $("state").textContent = r.message || L.error; return; }
+            $("state").hidden = true; render(r.data);
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    function drill(metric) {
+        mdr.get(u.drill + "?metric=" + metric + "&" + qs()).then(function (r) {
+            showModal(true); $("mtitle").textContent = L.drillTitle; $("msub").textContent = cur.from + " … " + cur.to; $("dmsg").hidden = !!r.success;
+            if (!r.success) { $("dmsg").className = "mdr-ag-msg is-bad"; $("dmsg").textContent = r.message || L.error; $("dbody").innerHTML = ""; return; }
+            $("dbody").innerHTML = r.items.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.number) + "</th><th>" + E(L.col.title) + "</th><th>" + E(L.col.dir) + "</th><th>" + E(L.col.amount) + "</th><th>" + E(L.col.date) + "</th><th>" + E(L.col.status) + "</th></tr></thead><tbody>" +
+                r.items.map(function (x) { return '<tr><td><a style="color:#00ffff" href="' + u.doc + "#id=" + x.DocumentID + '">' + E(x.Number) + "</a></td><td>" + E(x.Title) + "</td><td>" + E(L.dir[x.Direction]) + "</td><td>" + money(x.Amount) + "</td><td>" + E(x.DocDate) + "</td><td>" + E(L.st[x.Status] || x.Status) + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+        });
+    }
+
+    function legacyDocs(title) {
+        mdr.get(u.legacy + "?" + (title ? "title=" + encodeURIComponent(title) + "&" : "") + "from=" + cur.from + "&to=" + cur.to).then(function (r) {
+            showModal(true); $("mtitle").textContent = L.legacy.docs; $("msub").textContent = title || ""; $("dmsg").hidden = !!r.success;
+            if (!r.success) { $("dmsg").className = "mdr-ag-msg is-bad"; $("dmsg").textContent = r.message || L.error; $("dbody").innerHTML = ""; return; }
+            $("dbody").innerHTML = r.items.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.title) + "</th><th>" + E(L.col.date) + "</th><th>" + E(L.legacy.debtor) + "</th><th>" + E(L.legacy.creditor) + "</th></tr></thead><tbody>" +
+                r.items.map(function (x) { return "<tr><td>" + E(x.Title) + "</td><td>" + E(x.Date || "") + "</td><td>" + money(x.Debtore) + "</td><td>" + money(x.Creditor) + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+        });
+    }
+
+    $("out").addEventListener("click", function (e) {
+        var m = e.target.closest("[data-metric]"); if (m) return drill(m.getAttribute("data-metric"));
+        var p = e.target.closest("tr[data-title]"); if (p) legacyDocs(p.getAttribute("data-title"));
+    });
+    $("apply").onclick = load;
+    $("dclose").onclick = function () { showModal(false); };
+    $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) showModal(false); });
+
+    var h = {}; (location.hash || "").replace(/^#/, "").split("&").forEach(function (q) { var kv = q.split("="); if (kv[0]) h[kv[0]] = decodeURIComponent(kv[1] || ""); });
+    mdr.jd.set("from", /^\d{4}-\d{2}-\d{2}$/.test(h.from || "") ? h.from : today(29));
+    mdr.jd.set("to", /^\d{4}-\d{2}-\d{2}$/.test(h.to || "") ? h.to : today(0));
+    if (h.scope === "all" && $("scope").querySelector('option[value="all"]')) $("scope").value = "all";
+    load();
+})();
+</script>
+}

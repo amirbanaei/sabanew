@@ -1,0 +1,215 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("wf.design.title");
+    bool canEdit = ViewBag.CanEdit == true;
+    int workflowId = ViewBag.WorkflowId;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-bezier2", MdrText.T("wf.design.title"), MdrText.T("wf.design.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-info-circle"></i></div>
+            <div class="glass-field-heading">
+                <div class="glass-field-title" id="title">@MdrText.T("wf.design.title")</div>
+                <div class="glass-field-subtitle"><span id="status"></span></div>
+            </div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-btn-AG row-ltr-AG" style="margin-top:0 !important">
+                <div class="col-xl-2 col-md-4">
+                    <a class="glass-btn-ag" id="back" href="@Url.Action("Index", "Workflow", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("wf.act.back")</p></a>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="save" hidden><i class="bi bi-check2"></i><p>@MdrText.T("wf.act.save")</p></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-state">@MdrText.T("wf.loading")</div>
+    <div id="msg" class="mdr-msg" hidden></div>
+
+    <section id="editor" hidden>
+        <div class="glass-field-ag">
+            <div class="glass-field-header">
+                <div class="glass-field-icon"><i class="bi bi-card-heading"></i></div>
+                <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("wf.panel.main")</div></div>
+            </div>
+            <div class="glass-field-body">
+                <div class="row row-input-AG">
+                    <div class="col-xl-6 col-md-12">
+                        <label class="glass-label-ag">@MdrText.T("wf.col.name")</label>
+                        <input id="name" class="glass-input-ag" maxlength="200" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-field-ag">
+            <div class="glass-field-header">
+                <div class="glass-field-icon"><i class="bi bi-diagram-2"></i></div>
+                <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("wf.design.steps")</div></div>
+            </div>
+            <div class="glass-field-body">
+                <table class="glass-table-ag" id="steps">
+                    <thead><tr>
+                        <th>@MdrText.T("wf.col.key")</th><th>@MdrText.T("wf.col.name")</th><th>@MdrText.T("wf.col.type")</th>
+                        <th>@MdrText.T("wf.col.assignee")</th><th>@MdrText.T("wf.col.sla")</th><th></th>
+                    </tr></thead>
+                    <tbody class="scrollbar"></tbody>
+                </table>
+                <div class="row row-btn-AG row-ltr-AG">
+                    <div class="col-xl-2 col-md-4">
+                        <button type="button" class="glass-btn-ag edit-only" id="addstep"><i class="bi bi-plus-lg"></i><p>@MdrText.T("wf.act.addstep")</p></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-field-ag">
+            <div class="glass-field-header">
+                <div class="glass-field-icon"><i class="bi bi-arrow-left-right"></i></div>
+                <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("wf.design.transitions")</div></div>
+            </div>
+            <div class="glass-field-body">
+                <table class="glass-table-ag" id="trans">
+                    <thead><tr>
+                        <th>@MdrText.T("wf.col.from")</th><th>@MdrText.T("wf.col.action")</th><th>@MdrText.T("wf.col.to")</th><th></th>
+                    </tr></thead>
+                    <tbody class="scrollbar"></tbody>
+                </table>
+                <div class="row row-btn-AG row-ltr-AG">
+                    <div class="col-xl-2 col-md-4">
+                        <button type="button" class="glass-btn-ag edit-only" id="addtrans"><i class="bi bi-plus-lg"></i><p>@MdrText.T("wf.act.addtrans")</p></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canEdit = @(canEdit ? "true" : "false");
+    var T = @Html.Raw(Json.Encode(new {
+        empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"), remove = MdrText.T("wf.act.remove"),
+        readonly_ = MdrText.T("wf.design.readonly"), saved = MdrText.T("wf.saved"), savedWarn = MdrText.T("wf.saved.warn"),
+        unsaved = MdrText.T("wf.unsaved"),
+        Next = MdrText.T("wf.act.Next"), Approve = MdrText.T("wf.act.Approve"), Reject = MdrText.T("wf.act.Reject") }));
+    var u = @Html.Raw(Json.Encode(new {
+        get = Url.Action("GetDefinition", "Workflow", new { area = "Mdr", id = workflowId }),
+        save = Url.Action("Save", "Workflow", new { area = "Mdr" }) }));
+    var id = @workflowId, def = null, editable = false, dirty = false;
+    var TYPES = ["Start", "Task", "Approval", "Gateway", "Timer", "End"], ACTIONS = ["Next", "Approve", "Reject"];
+    var $ = function (x) { return document.getElementById(x); };
+
+    function msg(text, bad) { var m = $("msg"); m.hidden = !text; m.textContent = text || ""; m.className = "mdr-msg" + (bad ? " is-bad" : ""); }
+    function touch() { dirty = true; }
+    function opts(list, sel, label) {
+        return list.map(function (v) { return '<option value="' + mdr.esc(v) + '"' + (v === sel ? " selected" : "") + ">" + mdr.esc(label ? label(v) : v) + "</option>"; }).join("");
+    }
+    function dis() { return editable ? "" : " disabled"; }
+
+    function renderSteps() {
+        var tb = $("steps").querySelector("tbody"); tb.innerHTML = "";
+        def.Steps.forEach(function (s, i) {
+            var tr = document.createElement("tr");
+            tr.innerHTML =
+                '<td><input class="mdr-input" data-f="StepKey" value="' + mdr.esc(s.StepKey) + '" maxlength="50"' + dis() + "></td>" +
+                '<td><input class="mdr-input" data-f="Name" value="' + mdr.esc(s.Name) + '" maxlength="200"' + dis() + "></td>" +
+                '<td><select class="glass-select-search" data-f="StepType"' + dis() + ">" + opts(TYPES, s.StepType) + "</select></td>" +
+                '<td><input class="mdr-input" type="number" min="1" data-f="AssigneeUserId" value="' + (s.AssigneeUserId == null ? "" : s.AssigneeUserId) + '"' + dis() + "></td>" +
+                '<td><input class="mdr-input" type="number" min="1" max="8760" data-f="SlaHours" value="' + (s.SlaHours == null ? "" : s.SlaHours) + '"' + dis() + "></td>" +
+                "<td>" + (editable ? '<button class="mdr-btn" data-rm="' + i + '">' + T.remove + "</button>" : "") + "</td>";
+            tb.appendChild(tr);
+        });
+    }
+
+    function keySelect(sel, f, i) {
+        return '<select class="glass-select-search" data-t="' + f + '" data-i="' + i + '"' + dis() + ">" +
+            opts(def.Steps.map(function (s) { return s.StepKey; }), sel) + "</select>";
+    }
+
+    function renderTrans() {
+        var tb = $("trans").querySelector("tbody"); tb.innerHTML = "";
+        def.Transitions.forEach(function (t, i) {
+            var tr = document.createElement("tr");
+            tr.innerHTML = "<td>" + keySelect(t.From, "From", i) + "</td>" +
+                '<td><select class="glass-select-search" data-t="ActionKey" data-i="' + i + '"' + dis() + ">" + opts(ACTIONS, t.ActionKey, function (a) { return T[a] || a; }) + "</select></td>" +
+                "<td>" + keySelect(t.To, "To", i) + "</td>" +
+                "<td>" + (editable ? '<button class="mdr-btn" data-rmt="' + i + '">' + T.remove + "</button>" : "") + "</td>";
+            tb.appendChild(tr);
+        });
+    }
+
+    $("steps").addEventListener("change", function (e) {
+        var el = e.target, f = el.getAttribute("data-f"); if (!f) return;
+        var i = Array.prototype.indexOf.call($("steps").querySelector("tbody").children, el.closest("tr")), s = def.Steps[i], v = el.value;
+        if (f === "AssigneeUserId" || f === "SlaHours") s[f] = v === "" ? null : parseInt(v, 10);
+        else if (f === "StepKey") {
+            var old = s.StepKey; s.StepKey = v.trim();
+            def.Transitions.forEach(function (t) { if (t.From === old) t.From = s.StepKey; if (t.To === old) t.To = s.StepKey; });
+            renderTrans();
+        } else s[f] = v;
+        touch();
+    });
+    $("steps").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-rm]"); if (!b) return;
+        var i = +b.getAttribute("data-rm"), key = def.Steps[i].StepKey;
+        def.Steps.splice(i, 1);
+        def.Transitions = def.Transitions.filter(function (t) { return t.From !== key && t.To !== key; });
+        renderSteps(); renderTrans(); touch();
+    });
+    $("trans").addEventListener("change", function (e) {
+        var el = e.target, f = el.getAttribute("data-t"); if (!f) return;
+        def.Transitions[+el.getAttribute("data-i")][f] = el.value; touch();
+    });
+    $("trans").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-rmt]"); if (!b) return;
+        def.Transitions.splice(+b.getAttribute("data-rmt"), 1); renderTrans(); touch();
+    });
+    $("addstep").onclick = function () {
+        var n = def.Steps.length + 1, key = "step" + n;
+        while (def.Steps.some(function (s) { return s.StepKey === key; })) key = "step" + (++n);
+        def.Steps.push({ StepKey: key, Name: key, StepType: "Task", AssigneeUserId: null, SlaHours: null });
+        renderSteps(); renderTrans(); touch();
+    };
+    $("addtrans").onclick = function () {
+        if (!def.Steps.length) return;
+        def.Transitions.push({ From: def.Steps[0].StepKey, To: def.Steps[def.Steps.length - 1].StepKey, ActionKey: "Next" });
+        renderTrans(); touch();
+    };
+    $("name").oninput = function () { def.Name = this.value; touch(); };
+
+    $("save").onclick = function () {
+        msg("");
+        mdr.post(u.save, { id: id, json: JSON.stringify(def) }).then(function (r) {
+            if (!r.success) { msg(r.message || T.error, true); return; }
+            dirty = false;
+            msg(r.warning ? T.savedWarn + " " + r.warningText : T.saved, !!r.warning);
+        }).catch(function () { msg(T.error, true); });
+    };
+    window.addEventListener("beforeunload", function (e) { if (dirty) { e.preventDefault(); e.returnValue = T.unsaved; } });
+
+    mdr.get(u.get).then(function (d) {
+        if (!d.success) { $("state").textContent = d.message || T.error; return; }
+        def = d.item; editable = canEdit && def.Status === "Draft";
+        $("state").hidden = true; $("editor").hidden = false;
+        $("title").textContent = def.Code + " v" + def.Version; $("status").textContent = def.Status;
+        $("name").value = def.Name; $("name").disabled = !editable; $("save").hidden = !editable;
+        Array.prototype.forEach.call(document.querySelectorAll(".edit-only"), function (b) { b.hidden = !editable; });
+        if (def.Status !== "Draft") msg(T.readonly_);
+        renderSteps(); renderTrans();
+    }).catch(function () { $("state").textContent = T.error; });
+})();
+</script>
+}

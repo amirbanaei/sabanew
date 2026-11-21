@@ -1,0 +1,378 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("chat.title");
+    bool canTask = ViewBag.CanTask == true;
+    int userId = ViewBag.UserId;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-chat-dots", MdrText.T("chat.title"), MdrText.T("chat.hdr.sub") })
+
+    <div class="row" style="align-items:flex-start">
+        <div class="col-xl-4 col-lg-5 col-md-12">
+            <div class="glass-field-ag">
+                <div class="glass-field-header">
+                    <div class="glass-field-icon"><i class="bi bi-chat-left-text"></i></div>
+                    <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("chat.threads")</div></div>
+                </div>
+                <div class="glass-field-body">
+                    <div class="row row-btn-AG" style="margin-top:0 !important">
+                        <div class="col-6"><button type="button" class="glass-btn-ag" id="newdirect"><i class="bi bi-person-plus"></i><p>@MdrText.T("chat.new.direct")</p></button></div>
+                        <div class="col-6"><button type="button" class="glass-btn-ag" id="newgroup"><i class="bi bi-people"></i><p>@MdrText.T("chat.new.group")</p></button></div>
+                    </div>
+                    <input id="tq" class="glass-input-ag" style="margin-top:.7rem" placeholder="@MdrText.T("chat.search")" autocomplete="off" />
+                    <div id="threads" class="mdr-chat-threads scrollbar"><div class="mdr-ag-state">@MdrText.T("wf.loading")</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-8 col-lg-7 col-md-12">
+            <div class="glass-field-ag" id="convwrap">
+                <div class="glass-field-header" id="convhead">
+                    <div class="glass-field-icon"><i class="bi bi-chat-dots" id="convicon"></i></div>
+                    <div class="glass-field-heading"><div class="glass-field-title" id="convtitle">@MdrText.T("chat.empty.pick")</div><div class="glass-field-subtitle" id="convsub"></div></div>
+                </div>
+                <div class="glass-field-body">
+                    <div id="convbar" class="mdr-chat-bar" hidden></div>
+                    <div id="msgs" class="mdr-chat-msgs scrollbar"><div class="mdr-ag-empty">@MdrText.T("chat.empty.pick")</div></div>
+                    <div id="composer" hidden>
+                        <div id="replybar" class="mdr-chat-reply" hidden></div>
+                        <div id="mentionbox" class="mdr-ag-picks" hidden></div>
+                        <div class="row row-input-AG" style="margin-top:.5rem">
+                            <div class="col-xl-9 col-md-8"><textarea id="body" class="glass-textarea-ag" rows="2" maxlength="4000" style="height:3.4rem" placeholder="@MdrText.T("chat.ph")"></textarea><small id="filename" class="mdr-chat-file"></small></div>
+                            <div class="col-xl-3 col-md-4 mdr-chat-actions">
+                                <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="send"><i class="bi bi-send"></i><p>@MdrText.T("chat.send")</p></button>
+                                <button type="button" class="glass-btn-ag" id="mention" title="@MdrText.T("chat.mention")"><i class="bi bi-at"></i></button>
+                                <button type="button" class="glass-btn-ag" id="attachbtn" title="@MdrText.T("chat.attach")"><i class="bi bi-paperclip"></i></button>
+                                <input type="file" id="file" hidden />
+                            </div>
+                        </div>
+                    </div>
+                    <div id="archived" class="mdr-ag-msg" hidden>@MdrText.T("chat.archived")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-chat-dots", MdrText.T("chat.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var me = @userId, canTask = @(canTask ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("wf.empty"),
+        kind = new { Direct = MdrText.T("chat.kind.Direct"), Group = MdrText.T("chat.kind.Group"), Entity = MdrText.T("chat.kind.Entity") },
+        ent = new { req = MdrText.T("chat.ent.req"), tsk = MdrText.T("chat.ent.tsk"), ltr = MdrText.T("chat.ent.ltr"), doc = MdrText.T("chat.ent.doc"), wf = MdrText.T("chat.ent.wf"), ctr = MdrText.T("chat.ent.ctr"), cas = MdrText.T("chat.ent.cas") },
+        noThreads = MdrText.T("chat.empty.threads"), pick = MdrText.T("chat.empty.pick"), noMsgs = MdrText.T("chat.empty.msgs"),
+        send = MdrText.T("chat.send"), reply = MdrText.T("chat.reply"), cancel = MdrText.T("chat.cancel"),
+        act = new { reply = MdrText.T("chat.act.reply"), edit = MdrText.T("chat.act.edit"), del = MdrText.T("chat.act.delete"), forward = MdrText.T("chat.act.forward"), task = MdrText.T("chat.act.task"),
+                    mute = MdrText.T("chat.act.mute"), unmute = MdrText.T("chat.act.unmute"), members = MdrText.T("chat.act.members"), add = MdrText.T("chat.act.add"), remove = MdrText.T("chat.act.remove"),
+                    leave = MdrText.T("chat.act.leave"), rename = MdrText.T("chat.act.rename"), archive = MdrText.T("chat.act.archive"), older = MdrText.T("chat.act.older"), open = MdrText.T("chat.act.open"), create = MdrText.T("chat.act.create") },
+        f = new { title = MdrText.T("chat.f.title"), members = MdrText.T("chat.f.members"), user = MdrText.T("chat.f.user"), assignee = MdrText.T("chat.f.assignee"), taskTitle = MdrText.T("chat.f.taskTitle"), due = MdrText.T("chat.f.due") },
+        deleted = MdrText.T("chat.deleted"), edited = MdrText.T("chat.edited"), forwarded = MdrText.T("chat.forwarded"), you = MdrText.T("chat.you"),
+        role = new { Owner = MdrText.T("chat.role.Owner"), Member = MdrText.T("chat.role.Member") },
+        sec = new { members = MdrText.T("chat.sec.members"), forward = MdrText.T("chat.sec.forward"), task = MdrText.T("chat.sec.task") }, taskCreated = MdrText.T("chat.task.created"),
+        prompt = new { edit = MdrText.T("chat.prompt.edit"), reason = MdrText.T("chat.prompt.reason"), rename = MdrText.T("chat.prompt.rename") },
+        confirm = new { del = MdrText.T("chat.confirm.delete"), leave = MdrText.T("chat.confirm.leave"), archive = MdrText.T("chat.confirm.archive") },
+        newDirect = MdrText.T("chat.new.direct"), newGroup = MdrText.T("chat.new.group") }));
+    var u = @Html.Raw(Json.Encode(new {
+        threads = Url.Action("GetThreads", "Chat", new { area = "Mdr" }), thread = Url.Action("GetThread", "Chat", new { area = "Mdr" }), msgs = Url.Action("GetMessages", "Chat", new { area = "Mdr" }),
+        users = Url.Action("SearchUsers", "Chat", new { area = "Mdr" }), direct = Url.Action("OpenDirect", "Chat", new { area = "Mdr" }), group = Url.Action("CreateGroup", "Chat", new { area = "Mdr" }),
+        entity = Url.Action("OpenEntity", "Chat", new { area = "Mdr" }), addMember = Url.Action("AddMember", "Chat", new { area = "Mdr" }), removeMember = Url.Action("RemoveMember", "Chat", new { area = "Mdr" }),
+        rename = Url.Action("Rename", "Chat", new { area = "Mdr" }), archive = Url.Action("Archive", "Chat", new { area = "Mdr" }), mute = Url.Action("Mute", "Chat", new { area = "Mdr" }),
+        send = Url.Action("Send", "Chat", new { area = "Mdr" }), edit = Url.Action("Edit", "Chat", new { area = "Mdr" }), del = Url.Action("Delete", "Chat", new { area = "Mdr" }),
+        read = Url.Action("Read", "Chat", new { area = "Mdr" }), forward = Url.Action("Forward", "Chat", new { area = "Mdr" }), task = Url.Action("CreateTask", "Chat", new { area = "Mdr" }),
+        attach = Url.Action("Attach", "Chat", new { area = "Mdr" }), download = "/Mdr/Files/Download" }));
+
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var threads = [], cur = null, info = null, lastId = 0, oldestId = 0, hasMore = false, replyTo = null, mentions = {}, msgIndex = {}, highlight = 0;
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function setHash() { history.replaceState(null, "", location.pathname + (cur ? "#t=" + cur : "")); }
+    function ok(r) { if (r && r.success) return true; toast(E((r && r.message) || L.error), true); return false; }
+    function field(icon, title, body) {
+        return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) +
+            '</div></div></div><div class="glass-field-body">' + body + "</div></div>";
+    }
+    function icon(kind) { return kind === "Direct" ? "bi-person" : kind === "Group" ? "bi-people" : "bi-link-45deg"; }
+
+    // ---------- فهرست گفتگوها ----------
+    function renderThreads() {
+        var q = $("tq").value.trim().toLowerCase();
+        var list = threads.filter(function (t) { return !q || (t.Title || "").toLowerCase().indexOf(q) >= 0; });
+        $("threads").innerHTML = list.length ? list.map(function (t) {
+            var title = (t.Kind === "Entity" ? (L.ent[t.EntityType] || "") + ": " : "") + (t.Title || "—");
+            return '<div class="mdr-chat-thread' + (t.ThreadID === cur ? " is-on" : "") + '" data-t="' + t.ThreadID + '"><i class="bi ' + icon(t.Kind) + '"></i><div class="mdr-chat-thread-body"><b>' + E(title) +
+                (t.IsMuted ? ' <i class="bi bi-bell-slash"></i>' : "") + "</b><small>" + E(t.LastPreview ? (t.LastSender ? t.LastSender + ": " : "") + t.LastPreview : L.kind[t.Kind]) + "</small></div>" +
+                '<div class="mdr-chat-thread-meta"><small>' + E((t.LastAt || "").slice(5)) + "</small>" + (t.Unread ? '<span class="mdr-chat-unread">' + t.Unread + "</span>" : "") + "</div></div>";
+        }).join("") : '<div class="mdr-ag-empty">' + E(L.noThreads) + "</div>";
+    }
+    function loadThreads() {
+        return mdr.get(u.threads).then(function (r) { if (r.success) { threads = r.items; renderThreads(); } });
+    }
+
+    // ---------- گفتگوی جاری ----------
+    function msgHtml(m) {
+        if (m.Deleted) return '<div class="mdr-chat-msg ' + (m.Mine ? "mine" : "theirs") + ' is-deleted" data-m="' + m.MessageID + '"><i>' + E(L.deleted) + "</i></div>";
+        var head = '<div class="mdr-chat-msg-head"><b>' + E(m.Mine ? L.you : m.Sender) + "</b><small>" + E(m.At) + (m.Edited ? " · " + E(L.edited) : "") + (m.Forwarded ? " · " + E(L.forwarded) : "") + "</small></div>";
+        var rep = m.ReplyTo ? '<div class="mdr-chat-quote"><b>' + E(m.ReplySender || "") + "</b> " + E(m.ReplySnippet || "…") + "</div>" : "";
+        var files = m.Files && m.Files.length ? '<div class="mdr-chat-files">' + m.Files.map(function (f) { return '<a href="' + u.download + "?id=" + f.FileGuid + '"><i class="bi bi-paperclip"></i> ' + E(f.Name) + "</a>"; }).join("") + "</div>" : "";
+        var men = m.Mentions && m.Mentions.length ? '<div class="mdr-chat-mentions">' + m.Mentions.map(function (n) { return '<span class="mdr-ag-badge glass-status-info">@@' + E(n) + "</span>"; }).join("") + "</div>" : "";
+        var acts = '<div class="mdr-chat-msg-actions"><a href="#" data-a="reply">' + E(L.act.reply) + "</a>" + (m.CanEdit ? ' <a href="#" data-a="edit">' + E(L.act.edit) + "</a>" : "") +
+            ' <a href="#" data-a="forward">' + E(L.act.forward) + "</a>" + (canTask ? ' <a href="#" data-a="task">' + E(L.act.task) + "</a>" : "") + (m.CanDelete ? ' <a href="#" data-a="delete">' + E(L.act.del) + "</a>" : "") + "</div>";
+        return '<div class="mdr-chat-msg ' + (m.Mine ? "mine" : "theirs") + (highlight === m.MessageID ? " is-hl" : "") + '" data-m="' + m.MessageID + '">' + head + rep + '<div class="mdr-chat-body">' + E(m.Body) + "</div>" + men + files + acts + "</div>";
+    }
+
+    function paintMessages(items, mode) {
+        var box = $("msgs"), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+        items.forEach(function (m) { msgIndex[m.MessageID] = m; });
+        if (mode === "replace") {
+            box.innerHTML = items.length ? "" : '<div class="mdr-ag-empty">' + E(L.noMsgs) + "</div>";
+        } else if (box.querySelector(".mdr-ag-empty")) box.innerHTML = "";
+        var html = items.map(msgHtml).join("");
+        if (mode === "prepend") {
+            var h = box.scrollHeight; box.insertAdjacentHTML("afterbegin", html); box.scrollTop = box.scrollHeight - h;
+        } else box.insertAdjacentHTML("beforeend", html);
+        if (mode === "replace" || (mode === "append" && atBottom)) box.scrollTop = box.scrollHeight;
+        if (highlight) { var el = box.querySelector('[data-m="' + highlight + '"]'); if (el) el.scrollIntoView({ block: "center" }); }
+    }
+
+    function markRead() { if (cur && lastId) mdr.post(u.read, { id: cur, upTo: lastId }).then(function () { loadThreads(); }); }
+
+    function openThread(id, msgId) {
+        cur = id; highlight = msgId || 0; replyTo = null; mentions = {}; msgIndex = {}; setHash(); renderThreads();
+        $("replybar").hidden = true; $("body").value = ""; $("filename").textContent = ""; $("file").value = "";
+        Promise.all([mdr.get(u.thread + "?id=" + id), mdr.get(u.msgs + "?id=" + id)]).then(function (res) {
+            var t = res[0], m = res[1];
+            if (!t.success || !m.success) { cur = null; info = null; setHash(); renderThreads(); $("convtitle").textContent = L.pick; $("convsub").textContent = ""; $("convbar").hidden = true; $("composer").hidden = true; $("archived").hidden = true;
+                $("msgs").innerHTML = '<div class="mdr-ag-empty">' + E((t && t.message) || L.error) + "</div>"; return; }
+            info = t.thread; lastId = m.lastId || 0; hasMore = m.hasMore; oldestId = m.items.length ? m.items[0].MessageID : 0;
+            renderHead(); $("composer").hidden = info.IsArchived; $("archived").hidden = !info.IsArchived;
+            $("msgs").innerHTML = ""; paintMessages(m.items, "replace");
+            if (hasMore) $("msgs").insertAdjacentHTML("afterbegin", '<div class="mdr-chat-older"><a href="#" data-a="older">' + E(L.act.older) + "</a></div>");
+            markRead();
+        });
+    }
+
+    function renderHead() {
+        var t = info;
+        $("convicon").className = "bi " + icon(t.Kind);
+        $("convtitle").textContent = (t.Kind === "Entity" ? (L.ent[t.EntityType] || "") + ": " : "") + (t.Title || "—");
+        $("convsub").textContent = L.kind[t.Kind] + " · " + t.Members.length + " " + L.f.members;
+        var bar = '<button type="button" class="mdr-btn" data-h="members">' + E(L.act.members) + "</button> " +
+            '<button type="button" class="mdr-btn" data-h="mute">' + E(t.IsMuted ? L.act.unmute : L.act.mute) + "</button> " +
+            (t.EntityUrl ? '<a class="mdr-btn" href="' + E(t.EntityUrl) + '">' + E(L.act.open) + "</a> " : "") +
+            (t.CanRename ? '<button type="button" class="mdr-btn" data-h="rename">' + E(L.act.rename) + "</button> " : "") +
+            (t.CanArchive ? '<button type="button" class="mdr-btn" data-h="archive">' + E(L.act.archive) + "</button> " : "") +
+            (t.Kind !== "Direct" ? '<button type="button" class="mdr-btn" data-h="leave">' + E(L.act.leave) + "</button>" : "");
+        $("convbar").innerHTML = bar; $("convbar").hidden = false;
+    }
+
+    function poll() {
+        if (document.hidden) return;
+        if (cur && lastId >= 0) {
+            mdr.get(u.msgs + "?id=" + cur + "&after=" + lastId).then(function (r) {
+                if (!r.success || !r.items.length) return;
+                lastId = r.lastId; paintMessages(r.items, "append"); markRead();
+            }).catch(function () { });
+        }
+    }
+    setInterval(poll, 5000);
+    setInterval(function () { if (!document.hidden) loadThreads(); }, 15000);
+
+    // ---------- ارسال ----------
+    function mentionIds() {
+        var text = $("body").value, ids = [];
+        Object.keys(mentions).forEach(function (id) { if (text.indexOf("@@" + mentions[id]) >= 0) ids.push(id); });
+        return ids.join(",");
+    }
+    function send() {
+        if (!cur) return;
+        var f = $("file").files[0], text = $("body").value.trim();
+        if (!text && f) text = f.name;
+        if (!text) return;
+        $("send").disabled = true;
+        mdr.post(u.send, { id: cur, body: text, replyTo: replyTo, mentions: mentionIds() }).then(function (r) {
+            if (!r.success) { $("send").disabled = false; alert(r.message || L.error); return; }
+            function done() {
+                $("send").disabled = false; $("body").value = ""; $("file").value = ""; $("filename").textContent = ""; replyTo = null; mentions = {}; $("replybar").hidden = true;
+                mdr.get(u.msgs + "?id=" + cur + "&after=" + lastId).then(function (x) { if (x.success && x.items.length) { lastId = x.lastId; paintMessages(x.items, "append"); $("msgs").scrollTop = $("msgs").scrollHeight; markRead(); } });
+            }
+            if (!f) return done();
+            var fd = new FormData();
+            fd.append("__RequestVerificationToken", mdr.token()); fd.append("id", r.id); fd.append("file", f);
+            fetch(u.attach, { method: "POST", credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" }, body: fd }).then(function (x) { return x.json(); }).then(function (a) {
+                if (a.success) return done();
+                // پیوست رد شد (مثلاً «فایل ممنوع»): پیام بدون فایل حذف می‌شود تا ناقص نماند
+                mdr.post(u.del, { id: r.id, reason: "" }).then(function () { alert(a.message || L.error); done(); });
+            }).catch(function () { done(); });
+        });
+    }
+
+    function setReply(m) {
+        replyTo = m.MessageID;
+        $("replybar").hidden = false;
+        $("replybar").innerHTML = "<span>" + E(L.reply) + " <b>" + E(m.Mine ? L.you : m.Sender) + "</b>: " + E((m.Body || "").slice(0, 80)) + '</span> <a href="#" data-a="cancelreply">' + E(L.cancel) + "</a>";
+        $("body").focus();
+    }
+
+    // ---------- انتخاب کاربر ----------
+    function userPicker(inputId, boxId, onPick) {
+        var inp = $(inputId), box = $(boxId), timer;
+        inp.oninput = function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                if (inp.value.trim().length < 2) { box.innerHTML = ""; return; }
+                mdr.get(u.users + "?q=" + encodeURIComponent(inp.value.trim())).then(function (d) {
+                    box.innerHTML = d.items.map(function (x) { return '<button type="button" class="glass-btn-ag" data-u="' + x.Id + '">' + E(x.Name) + "</button>"; }).join("");
+                });
+            }, 300);
+        };
+        box.onclick = function (e) { var b = e.target.closest("button[data-u]"); if (!b) return; onPick(+b.getAttribute("data-u"), b.textContent); box.innerHTML = ""; inp.value = ""; };
+    }
+
+    function modalDirect() {
+        $("mtitle").textContent = L.newDirect; $("msub").textContent = ""; toast("");
+        $("dbody").innerHTML = field("bi-person-plus", L.newDirect, '<input id="du-q" class="glass-input-ag" placeholder="' + E(L.f.user) + '" autocomplete="off"><div id="du-r" class="mdr-ag-picks"></div>');
+        userPicker("du-q", "du-r", function (id) {
+            mdr.post(u.direct, { userId: id }).then(function (r) { if (!ok(r)) return; showModal(false); loadThreads().then(function () { openThread(r.id); }); });
+        });
+        showModal(true);
+    }
+
+    function modalGroup() {
+        var chosen = {};
+        $("mtitle").textContent = L.newGroup; $("msub").textContent = ""; toast("");
+        $("dbody").innerHTML = field("bi-people", L.newGroup, '<div class="row row-input-AG"><div class="col-12"><label class="glass-label-ag">' + E(L.f.title) + ' *</label><input id="g-title" class="glass-input-ag" maxlength="200"></div></div>' +
+            '<div class="row row-input-AG"><div class="col-12"><label class="glass-label-ag">' + E(L.f.members) + '</label><input id="gu-q" class="glass-input-ag" placeholder="' + E(L.f.user) + '" autocomplete="off"><div id="gu-r" class="mdr-ag-picks"></div><div id="gu-c" class="mdr-ag-picks"></div></div></div>' +
+            '<div class="row row-btn-AG row-ltr-AG"><div class="col-xl-4 col-md-6"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="g-go"><i class="bi bi-check2"></i><p>' + E(L.act.create) + "</p></button></div></div>");
+        function paint() { $("gu-c").innerHTML = Object.keys(chosen).map(function (id) { return '<span class="mdr-ag-badge glass-status-success">' + E(chosen[id]) + ' <a href="#" data-x="' + id + '">×</a></span>'; }).join(""); }
+        userPicker("gu-q", "gu-r", function (id, name) { chosen[id] = name; paint(); });
+        $("gu-c").onclick = function (e) { var x = e.target.closest("[data-x]"); if (x) { e.preventDefault(); delete chosen[x.getAttribute("data-x")]; paint(); } };
+        $("g-go").onclick = function () {
+            mdr.post(u.group, { title: $("g-title").value, members: Object.keys(chosen).join(",") }).then(function (r) { if (!ok(r)) return; showModal(false); loadThreads().then(function () { openThread(r.id); }); });
+        };
+        showModal(true);
+    }
+
+    function modalMembers() {
+        var t = info; toast("");
+        $("mtitle").textContent = L.sec.members; $("msub").textContent = $("convtitle").textContent;
+        var list = '<ul class="mdr-ag-list">' + t.Members.map(function (m) {
+            return "<li><b>" + E(m.Name) + "</b> <span class=\"mdr-ag-badge glass-status-info\">" + E(L.role[m.Role] || m.Role) + "</span>" +
+                (t.Kind === "Group" && t.MyRole === "Owner" && m.UserID !== me ? ' <button type="button" class="mdr-btn" data-rm="' + m.UserID + '">' + E(L.act.remove) + "</button>" : "") + "</li>"; }).join("") + "</ul>";
+        var add = t.CanAdd ? '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-12"><label class="glass-label-ag">' + E(L.act.add) + '</label><input id="am-q" class="glass-input-ag" placeholder="' + E(L.f.user) + '" autocomplete="off"><div id="am-r" class="mdr-ag-picks"></div></div></div>' : "";
+        $("dbody").innerHTML = field("bi-people", L.sec.members, list + add);
+        if (t.CanAdd) userPicker("am-q", "am-r", function (id) { mdr.post(u.addMember, { id: t.ThreadID, userId: id }).then(function (r) { if (!ok(r)) return; refreshThread(modalMembers); }); });
+        showModal(true);
+    }
+    function refreshThread(then) { mdr.get(u.thread + "?id=" + cur).then(function (t) { if (t.success) { info = t.thread; renderHead(); if (then) then(); } }); }
+
+    function modalForward(m) {
+        $("mtitle").textContent = L.sec.forward; $("msub").textContent = ""; toast("");
+        var opts = threads.filter(function (t) { return !t.IsArchived; });
+        $("dbody").innerHTML = field("bi-forward", L.sec.forward, '<ul class="mdr-ag-list">' + opts.map(function (t) {
+            return '<li><a href="#" data-fw="' + t.ThreadID + '">' + E((t.Kind === "Entity" ? (L.ent[t.EntityType] || "") + ": " : "") + (t.Title || "—")) + "</a></li>"; }).join("") + "</ul>");
+        $("dbody").onclick = function (e) {
+            var a = e.target.closest("[data-fw]"); if (!a) return; e.preventDefault();
+            mdr.post(u.forward, { id: m.MessageID, targetThreadId: a.getAttribute("data-fw") }).then(function (r) { if (!ok(r)) return; showModal(false); loadThreads(); if (+a.getAttribute("data-fw") === cur) poll(); });
+        };
+        showModal(true);
+    }
+
+    function modalTask(m) {
+        var assignee = null; toast("");
+        $("mtitle").textContent = L.sec.task; $("msub").textContent = "";
+        $("dbody").innerHTML = field("bi-check2-square", L.sec.task, '<div class="row row-input-AG"><div class="col-12"><label class="glass-label-ag">' + E(L.f.taskTitle) + '</label><input id="t-title" class="glass-input-ag" maxlength="300" value="' + E((m.Body || "").slice(0, 100)) + '"></div></div>' +
+            '<div class="row row-input-AG"><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.due) + '</label>' + mdr.jd.html("t-due", "") + '</div><div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + mdr.jd.L.time + '</label>' + mdr.jd.timeHtml("t-due-t", "") + '</div>' +
+            '<div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.assignee) + '</label><select id="t-as" class="glass-select-search">' + info.Members.map(function (x) { return '<option value="' + x.UserID + '"' + (x.UserID === me ? " selected" : "") + ">" + E(x.Name) + "</option>"; }).join("") + "</select></div></div>" +
+            '<div class="row row-btn-AG row-ltr-AG"><div class="col-xl-4 col-md-6"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="t-go"><i class="bi bi-check2"></i><p>' + E(L.act.create) + "</p></button></div></div>");
+        $("t-go").onclick = function () {
+            mdr.post(u.task, { id: m.MessageID, title: $("t-title").value, assigneeUserId: $("t-as").value, dueAt: mdr.jd.getDT("t-due", "t-due-t", "23:59") }).then(function (r) { if (!ok(r)) return; toast(E(L.taskCreated)); });
+        };
+        showModal(true);
+    }
+
+    // ---------- رویدادها ----------
+    $("threads").addEventListener("click", function (e) { var t = e.target.closest("[data-t]"); if (t) openThread(+t.getAttribute("data-t")); });
+    $("tq").oninput = renderThreads;
+    $("newdirect").onclick = modalDirect; $("newgroup").onclick = modalGroup;
+    $("send").onclick = send;
+    $("body").addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } });
+    $("attachbtn").onclick = function () { $("file").click(); };
+    $("file").onchange = function () { $("filename").textContent = this.files[0] ? this.files[0].name : ""; };
+    $("mention").onclick = function () {
+        if (!info) return;
+        var box = $("mentionbox"); box.hidden = !box.hidden;
+        box.innerHTML = info.Members.filter(function (m) { return m.UserID !== me; }).map(function (m) { return '<button type="button" class="glass-btn-ag" data-mu="' + m.UserID + '" data-name="' + E(m.Name) + '">@@' + E(m.Name) + "</button>"; }).join("");
+    };
+    $("mentionbox").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-mu]"); if (!b) return;
+        var name = b.getAttribute("data-name"); mentions[b.getAttribute("data-mu")] = name;
+        var ta = $("body"); ta.value += (ta.value && !/\s$/.test(ta.value) ? " " : "") + "@@" + name + " "; $("mentionbox").hidden = true; ta.focus();
+    });
+    $("replybar").addEventListener("click", function (e) { if (e.target.closest('[data-a="cancelreply"]')) { e.preventDefault(); replyTo = null; $("replybar").hidden = true; } });
+
+    $("msgs").addEventListener("click", function (e) {
+        var a = e.target.closest("[data-a]"); if (!a) return; e.preventDefault();
+        var act = a.getAttribute("data-a");
+        if (act === "older") {
+            mdr.get(u.msgs + "?id=" + cur + "&before=" + oldestId).then(function (r) {
+                if (!r.success) return;
+                var o = $("msgs").querySelector(".mdr-chat-older"); if (o) o.remove();
+                if (r.items.length) { oldestId = r.items[0].MessageID; paintMessages(r.items, "prepend"); }
+                if (r.hasMore) $("msgs").insertAdjacentHTML("afterbegin", '<div class="mdr-chat-older"><a href="#" data-a="older">' + E(L.act.older) + "</a></div>");
+            });
+            return;
+        }
+        var box = a.closest("[data-m]"), m = msgIndex[box.getAttribute("data-m")]; if (!m) return;
+        if (act === "reply") return setReply(m);
+        if (act === "forward") return modalForward(m);
+        if (act === "task") return modalTask(m);
+        if (act === "edit") {
+            var t = prompt(L.prompt.edit, m.Body); if (!t || t === m.Body) return;
+            mdr.post(u.edit, { id: m.MessageID, body: t }).then(function (r) { if (!r.success) { alert(r.message || L.error); return; } openThread(cur); });
+            return;
+        }
+        if (act === "delete") {
+            if (!confirm(L.confirm.del)) return;
+            var reason = m.Mine ? "" : prompt(L.prompt.reason); if (!m.Mine && !reason) return;
+            mdr.post(u.del, { id: m.MessageID, reason: reason }).then(function (r) { if (!r.success) { alert(r.message || L.error); return; } openThread(cur); });
+        }
+    });
+
+    $("convbar").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-h]"); if (!b) return;
+        var h = b.getAttribute("data-h");
+        if (h === "members") return modalMembers();
+        if (h === "mute") return mdr.post(u.mute, { id: cur, muted: !info.IsMuted }).then(function (r) { if (r.success) { refreshThread(); loadThreads(); } });
+        if (h === "rename") { var t = prompt(L.prompt.rename, info.Title); if (!t) return; return mdr.post(u.rename, { id: cur, title: t }).then(function (r) { if (!r.success) alert(r.message || L.error); else { refreshThread(); loadThreads(); } }); }
+        if (h === "archive") { if (!confirm(L.confirm.archive)) return; var rs = prompt(L.prompt.reason); if (!rs) return; return mdr.post(u.archive, { id: cur, reason: rs }).then(function (r) { if (!r.success) alert(r.message || L.error); else { loadThreads(); openThread(cur); } }); }
+        if (h === "leave") { if (!confirm(L.confirm.leave)) return; mdr.post(u.removeMember, { id: cur, userId: me }).then(function (r) { if (!r.success) { alert(r.message || L.error); return; } cur = null; info = null; setHash(); loadThreads(); $("convtitle").textContent = L.pick; $("convsub").textContent = ""; $("convbar").hidden = true; $("composer").hidden = true; $("msgs").innerHTML = '<div class="mdr-ag-empty">' + E(L.pick) + "</div>"; }); }
+    });
+    $("dbody").addEventListener("click", function (e) {
+        var rm = e.target.closest("[data-rm]");
+        if (rm) mdr.post(u.removeMember, { id: cur, userId: rm.getAttribute("data-rm") }).then(function (r) { if (!ok(r)) return; refreshThread(modalMembers); });
+    });
+    $("dclose").onclick = function () { showModal(false); $("dbody").onclick = null; };
+    $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) $("dclose").onclick(); });
+
+    // ---------- شروع: #t=ID[&m=MID] یا #e=type:id (گفتگوی مرتبط با موجودیت از صفحه‌های دیگر) ----------
+    var hh = {}; (location.hash || "").replace(/^#/, "").split("&").forEach(function (p) { var kv = p.split("="); if (kv[0]) hh[kv[0]] = decodeURIComponent(kv[1] || ""); });
+    loadThreads().then(function () {
+        if (hh.e && /^[a-z]+:\d+$/.test(hh.e)) {
+            var p = hh.e.split(":");
+            mdr.post(u.entity, { type: p[0], entityId: p[1] }).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); showModal(true); $("mtitle").textContent = L.pick; $("dbody").innerHTML = ""; return; } loadThreads().then(function () { openThread(r.id); }); });
+        } else if (hh.t && /^\d+$/.test(hh.t)) openThread(+hh.t, hh.m ? +hh.m : 0);
+    });
+})();
+</script>
+}

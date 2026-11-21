@@ -1,0 +1,53 @@
+﻿@model SaabWebProject.Areas.Mdr.Infrastructure.MdrMenuModel
+@* MDR | بخش «MDR» منوی کناری سامانه؛ هر آیتم فقط برای کاربری که به همان صفحه دسترسی دارد دیده می‌شود.
+   آیتم‌های «ساختار سازمانی، تاریخچه رویدادها، مدیریت فایل‌ها» (صفحه‌های قدیمی MDR که خودشان مجوز ندارند) فقط برای مدیر MDR نمایش داده می‌شوند. *@
+@helper Item(string href, string title)
+{
+    <div class="menu-item">
+        <a href="@Url.Content(href)" class="menu-link">
+            <span class="menu-text">@title</span>
+        </a>
+    </div>
+}
+<div class="menu-item has-sub position-relative">
+    <div class="position-absolute data-MdrTop"></div>
+    <a href="#" class="menu-link">
+        <span class="menu-icon menu-iconSidebar">
+            <i class="bi bi-kanban"></i>
+        </span>
+        <span class="menu-text">MDR</span>
+        <span class="menu-caret">
+            <b class="caret"></b>
+        </span>
+    </a>
+    <div class="menu-submenu menu-submenuSidebar">
+        @if (Model.Has("MDR.Home")) { @Item("~/Mdr", "میز مدیریت") }
+        @if (Model.Has("MDR.Workbench")) { @Item("~/Mdr/Workbench", "میزکار من (کارتابل)") }
+        @if (Model.Has("MDR.Letters")) { @Item("~/Mdr/Letters", "مکاتبات و دبیرخانه") }
+        @if (Model.Has("MDR.Requests")) { @Item("~/Mdr/Requests", "درخواست‌های سازمانی") }
+        @if (Model.Has("MDR.Tasks")) { @Item("~/Mdr/Tasks", "مدیریت تسک") }
+        @if (Model.Has("MDR.Documents")) { @Item("~/Mdr/Documents", "اسناد و مستندسازی") }
+        @if (Model.Has("MDR.Cases")) { @Item("~/Mdr/Cases", "پرونده‌ی الکترونیکی") }
+        @if (Model.Has("MDR.Workflow.List")) { @Item("~/Mdr/Workflow", "فهرست فرایندها") }
+        @if (Model.Has("MDR.Workflow.Monitor")) { @Item("~/Mdr/Workflow/Monitor", "مانیتور فرایند") }
+        @if (Model.Has("MDR.Chat")) { @Item("~/Mdr/Chat", "چت داخلی") }
+        @if (Model.Has("MDR.Finance")) { @Item("~/Mdr/Finance", "داشبورد مالی") }
+        @if (Model.Has("MDR.Finance.Docs")) { @Item("~/Mdr/Finance/Documents", "اسناد و پرداخت") }
+        @if (Model.Has("MDR.Warehouse")) { @Item("~/Mdr/Warehouse", "انبار") }
+        @if (Model.Has("MDR.Assets")) { @Item("~/Mdr/Assets", "اموال") }
+        @if (Model.Has("MDR.Training")) { @Item("~/Mdr/Training", "آموزش") }
+        @if (Model.Has("MDR.Skills")) { @Item("~/Mdr/Training/Skills", "ماتریس مهارت") }
+        @if (Model.Has("MDR.AI")) { @Item("~/Mdr/Ai", "دستیار هوشمند") }
+        @if (Model.Has("MDR.AI.Context")) { @Item("~/Mdr/Ai/Context", "AI در متن کار") }
+        @if (Model.Has("MDR.Search")) { @Item("~/Mdr/Search", "جستجوی جامع") }
+        @if (Model.Has("MDR.Reports")) { @Item("~/Mdr/Reports", "گزارش عملیاتی") }
+        @if (Model.Has("MDR.Reports.Process")) { @Item("~/Mdr/Reports/Process", "تحلیل فرایند") }
+        @if (Model.Has("MDR.Home")) { @Item("~/Mdr/AG/Notifications", "مرکز اعلان‌ها") }
+        @if (Model.IsManager)
+        {
+            @Item("~/Mdr/AG/OrganizationStructure", "ساختار سازمانی")
+            @Item("~/Mdr/AG/AuditLogs", "تاریخچه رویدادها")
+            @Item("~/Mdr/AG/FileManagement", "مدیریت فایل‌ها")
+        }
+    </div>
+</div>

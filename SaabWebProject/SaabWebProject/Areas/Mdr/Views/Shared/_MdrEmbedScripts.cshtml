@@ -1,0 +1,51 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@* MDR | اسکریپت‌های مشترک صفحه‌هایی که داخل لایه‌ی فعلی سامانه نمایش داده می‌شوند (اول داخل @section Scripts) *@
+<script src="@Url.Content("~/Areas/Mdr/Content/mdr-core.js")"></script>
+@* تقویم جلالی (همان کتابخانه و تنظیمات صفحه‌ی «تاریخچه‌ی رویدادها»): فیلد تاریخ = input با data-jdp و کلاس pdate؛ مقدار شمسی است و با mdr.jd به/از ISO تبدیل می‌شود *@
+<script data-cfasync="false" src="@Url.Content("~/Assets/js/jalalidatepicker.min.js")"></script>
+<script data-cfasync="false">
+    if (window.jalaliDatepicker && !window.__mdrJdpInit && !window.__mdrAuditJdpInit) {
+        window.__mdrJdpInit = true;
+        jalaliDatepicker.startWatch({
+            time: false,
+            days: ["شنبه", "1شنبه", "2شنبه", "3شنبه", "4شنبه", "5شنبه", "جمعه"],
+            persianDigits: true,
+            autoClose: true,
+            autocomplete: true,
+            showEmptyBtn: false,
+            showCloseBtn: true,
+            zIndex: 100000
+        });
+    }
+</script>
+<script>
+    window.mdrText = { attach: @Html.Raw(Json.Encode(new {
+        title = MdrText.T("att.title"), add = MdrText.T("att.add"), remove = MdrText.T("wf.act.remove"), none = MdrText.T("att.none"),
+        max = MdrText.T("att.max"), confirmDelete = MdrText.T("att.confirmdelete"), nofile = MdrText.T("att.err.nofile"),
+        uploading = MdrText.T("att.uploading"), error = MdrText.T("wf.error") })) };
+
+    // کارت لایه‌ی سامانه (.bodyDashbord) backdrop-filter دارد و مودال‌های سامانه (مثل «ساختار سازمانی») داخل همان کارت‌اند؛ یعنی روی ناحیه‌ی کارت
+    // (زیر نوار بالا، کنار منوی کناری) باز می‌شوند. اینجا مودال به body می‌رود (تا با اسکرول صفحه جابه‌جا نشود) و دقیقاً همان ناحیه‌ی کارت را می‌پوشاند.
+    // کلیک روی پس‌زمینه‌ی تیره مودال را می‌بندد (همان دکمه‌ی ×).
+    (function () {
+        function place(d, host) {
+            if (!host) return;
+            var r = host.getBoundingClientRect();
+            var top = Math.max(r.top, 0), left = Math.max(r.left, 0), right = Math.min(r.right, window.innerWidth), bottom = Math.min(r.bottom, window.innerHeight);
+            if (right - left < 200 || bottom - top < 200) return;
+            d.style.inset = "auto"; d.style.top = top + "px"; d.style.left = left + "px"; d.style.width = (right - left) + "px"; d.style.height = (bottom - top) + "px";
+        }
+        Array.prototype.forEach.call(document.querySelectorAll(".mdr-drawer, .ModalAG"), function (d) {
+            var host = d.closest(".bodyDashbord") || d.closest(".card");
+            d.classList.add("mdr-scope", "mdr-ag");
+            document.body.appendChild(d);
+            var sync = function () { if (!d.hidden && window.getComputedStyle(d).display !== "none") place(d, host); };
+            new MutationObserver(sync).observe(d, { attributes: true, attributeFilter: ["hidden"] });
+            window.addEventListener("resize", sync);
+            d.addEventListener("mousedown", function (e) {
+                if (e.target === d) { var c = d.querySelector(".BtnCloseAG"); if (c) c.click(); }
+            });
+        });
+    })();
+</script>
+<script src="@Url.Content("~/Areas/Mdr/Content/mdr-attach.js")"></script>

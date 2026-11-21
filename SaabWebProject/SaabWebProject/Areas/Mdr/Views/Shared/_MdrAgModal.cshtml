@@ -1,0 +1,25 @@
+﻿@model string[]
+@* MDR | مودال AG دقیقاً با ساختار مودال «ساختار سازمانی» سامانه: ModalAG > ContentModalAG > BtnCloseAG + #BodyModalAG > .tab-content > .glass-field-ag.
+   Model = { آیکن، عنوان }. شناسه‌ها: drawer (با ویژگی hidden)، dclose، mtitle، msub، dmsg، dbody. هنگام اجرا به body منتقل می‌شود. *@
+<div id="drawer" class="ModalAG" hidden>
+    <div class="ContentModalAG">
+        <div class="BtnCloseAG action-reject" id="dclose"><i class="bi bi-x"></i></div>
+        <div id="BodyModalAG">
+            <div class="tab-content scrollbar">
+                <div class="glass-field-ag">
+                    <div class="glass-field-header">
+                        <div class="glass-field-icon"><i class="bi @Model[0]"></i></div>
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title" id="mtitle">@Model[1]</div>
+                            <div class="glass-field-subtitle" id="msub"></div>
+                        </div>
+                    </div>
+                    <div class="glass-field-body">
+                        <div id="dmsg" class="mdr-msg" hidden></div>
+                        <div id="dbody"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

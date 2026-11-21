@@ -1,0 +1,170 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("wf.monitor.title");
+    bool canEdit = ViewBag.CanEdit == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-activity", MdrText.T("wf.monitor.title"), MdrText.T("wf.monitor.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("mdr.panel.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("wf.col.status")</label>
+                    <select id="status" class="glass-select-search">
+                        <option value="">—</option><option>Running</option><option>Paused</option><option>Completed</option><option>Terminated</option>
+                    </select>
+                </div>
+                <div class="col-xl-2 col-md-4 d-flex align-items-end">
+                    <a class="glass-btn-ag" href="@Url.Action("Index", "Workflow", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("wf.act.back")</p></a>
+                </div>
+                @if (canEdit)
+                {
+                    <div class="col-xl-3 col-md-4 d-flex align-items-end">
+                        <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="runsla"><i class="bi bi-alarm"></i><p>@MdrText.T("wf.act.runsla")</p></button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-state">@MdrText.T("wf.loading")</div>
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-list-check"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("wf.panel.inst")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <table class="glass-table-ag" id="grid" hidden>
+                <thead><tr>
+                    <th>@MdrText.T("wf.col.subject")</th><th>@MdrText.T("wf.col.workflow")</th><th>@MdrText.T("wf.col.step")</th>
+                    <th>@MdrText.T("wf.col.status")</th><th>@MdrText.T("wf.col.started")</th><th>@MdrText.T("wf.col.due")</th><th></th>
+                </tr></thead>
+                <tbody class="scrollbar"></tbody>
+            </table>
+            <div class="mdr-pager">
+                <button type="button" class="glass-btn-ag" id="prev"><i class="bi bi-chevron-right"></i></button>
+                <span id="pageinfo"></span>
+                <button type="button" class="glass-btn-ag" id="next"><i class="bi bi-chevron-left"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="drawer" class="ModalAG" hidden>
+        <div class="ContentModalAG">
+            <div class="BtnCloseAG action-reject" id="drawerclose" title="×"><i class="bi bi-x"></i></div>
+            <div id="BodyModalAG">
+                <div class="tab-content scrollbar">
+                    <div class="glass-field-ag">
+                        <div class="glass-field-header">
+                            <div class="glass-field-icon"><i class="bi bi-clock-history"></i></div>
+                            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("wf.act.timeline")</div></div>
+                        </div>
+                        <div class="glass-field-body"><ol id="timeline" class="mdr-timeline"></ol></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canEdit = @(canEdit ? "true" : "false");
+    var T = @Html.Raw(Json.Encode(new {
+        reason = MdrText.T("wf.prompt.reason"), empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"), timeline = MdrText.T("wf.act.timeline"),
+        Next = MdrText.T("wf.act.Next"), Approve = MdrText.T("wf.act.Approve"), Reject = MdrText.T("wf.act.Reject"),
+        slaResult = MdrText.T("wf.sla.result"),
+        Pause = MdrText.T("wf.act.pause"), Resume = MdrText.T("wf.act.resume"), Terminate = MdrText.T("wf.act.terminate") }));
+    var u = @Html.Raw(Json.Encode(new {
+        list = Url.Action("GetInstances", "Workflow", new { area = "Mdr" }),
+        tl = Url.Action("GetTimeline", "Workflow", new { area = "Mdr" }),
+        act = Url.Action("Act", "Workflow", new { area = "Mdr" }),
+        iv = Url.Action("Intervene", "Workflow", new { area = "Mdr" }),
+        sla = Url.Action("RunSla", "Workflow", new { area = "Mdr" }) }));
+    var state = document.getElementById("state"), grid = document.getElementById("grid"), body = grid.querySelector("tbody");
+    var page = 1, total = 0, size = 20, rows = {};
+
+    function load() {
+        var st = document.getElementById("status").value;
+        mdr.get(u.list + "?page=" + page + (st ? "&status=" + encodeURIComponent(st) : "")).then(function (d) {
+            if (!d.success) { state.hidden = false; state.textContent = T.error; return; }
+            total = d.total; size = d.pageSize; body.innerHTML = ""; rows = {};
+            if (!d.items.length) { state.hidden = false; state.textContent = T.empty; grid.hidden = true; }
+            else { state.hidden = true; grid.hidden = false; }
+            d.items.forEach(function (i) {
+                rows[i.InstanceID] = i;
+                var tr = document.createElement("tr"); if (i.Overdue) tr.className = "is-overdue";
+                var b = '<button class="mdr-btn" data-act="tl" data-id="' + i.InstanceID + '">' + T.timeline + '</button>';
+                if (canEdit && i.Status === "Running") b += ' <button class="mdr-btn" data-act="Pause" data-id="' + i.InstanceID + '">' + T.Pause + '</button>';
+                if (canEdit && i.Status === "Paused") b += ' <button class="mdr-btn" data-act="Resume" data-id="' + i.InstanceID + '">' + T.Resume + '</button>';
+                if (canEdit && (i.Status === "Running" || i.Status === "Paused")) b += ' <button class="mdr-btn" data-act="Terminate" data-id="' + i.InstanceID + '">' + T.Terminate + '</button>';
+                tr.innerHTML = "<td>" + mdr.esc(i.Subject) + "</td><td>" + mdr.esc(i.Workflow) + "</td><td>" + mdr.esc(i.Step) +
+                    "</td><td><span class='mdr-badge'>" + mdr.esc(i.Status) + "</span></td><td>" + mdr.esc(i.StartedAt) +
+                    "</td><td>" + mdr.esc(i.DueAt) + "</td><td>" + b + "</td>";
+                body.appendChild(tr);
+            });
+            document.getElementById("pageinfo").textContent = page + " / " + Math.max(1, Math.ceil(total / size));
+        }).catch(function () { state.hidden = false; state.textContent = T.error; });
+    }
+
+    function showTimeline(id) {
+        mdr.get(u.tl + "?id=" + id).then(function (d) {
+            var ol = document.getElementById("timeline"); ol.innerHTML = "";
+            d.items.forEach(function (h) {
+                var li = document.createElement("li");
+                li.innerHTML = "<b>" + mdr.esc(h.ActionKey) + "</b> " + mdr.esc(h.Step) + "<br><small>" + mdr.esc(h.CreatedAt) +
+                    (h.Reason ? " — " + mdr.esc(h.Reason) : "") + "<br>" + mdr.esc(h.CorrelationID) + "</small>";
+                ol.appendChild(li);
+            });
+            var i = rows[id], bar = document.createElement("li");
+            if (i && i.Status === "Running") d.actions.forEach(function (a) {
+                var bt = document.createElement("button"); bt.className = "mdr-btn"; bt.textContent = T[a] || a;
+                bt.onclick = function () {
+                    var reason = null; if (a === "Reject") { reason = prompt(T.reason); if (!reason) return; }
+                    mdr.post(u.act, { id: id, actionKey: a, reason: reason, rowVer: i.RowVer }).then(function (r) {
+                        if (!r.success) alert(r.message || T.error);
+                        document.getElementById("drawer").hidden = true; load();
+                    });
+                };
+                bar.appendChild(bt); bar.appendChild(document.createTextNode(" "));
+            });
+            if (bar.childNodes.length) ol.appendChild(bar);
+            document.getElementById("drawer").hidden = false;
+        });
+    }
+
+    body.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-act]"); if (!b) return;
+        var id = b.getAttribute("data-id"), a = b.getAttribute("data-act");
+        if (a === "tl") return showTimeline(id);
+        var reason = prompt(T.reason); if (!reason) return;
+        mdr.post(u.iv, { id: id, action: a, reason: reason, rowVer: rows[id].RowVer }).then(function (r) {
+            if (!r.success) alert(r.message || T.error); load();
+        });
+    });
+    document.getElementById("drawerclose").onclick = function () { document.getElementById("drawer").hidden = true; };
+    document.getElementById("status").onchange = function () { page = 1; load(); };
+    document.getElementById("prev").onclick = function () { if (page > 1) { page--; load(); } };
+    document.getElementById("next").onclick = function () { if (page * size < total) { page++; load(); } };
+    var rs = document.getElementById("runsla");
+    if (rs) rs.onclick = function () {
+        mdr.post(u.sla, {}).then(function (r) { alert(r.success ? T.slaResult + " " + r.notified : (r.message || T.error)); load(); });
+    };
+    var q = new URLSearchParams(location.search).get("id");
+    load(); if (q) showTimeline(q);
+})();
+</script>
+}

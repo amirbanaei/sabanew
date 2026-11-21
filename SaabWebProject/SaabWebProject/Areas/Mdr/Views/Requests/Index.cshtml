@@ -1,0 +1,240 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("req.title");
+    bool canInsert = ViewBag.CanInsert == true;
+    bool isManager = ViewBag.IsManager == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-clipboard-check", MdrText.T("req.title"), MdrText.T("req.hdr.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-lightning-charge"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("mdr.panel.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-btn-AG row-ltr-AG" style="margin-top:0 !important">
+                <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("wf.act.back")</p></a></div>
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="tcat"><i class="bi bi-grid"></i><p>@MdrText.T("req.tab.catalog")</p></button></div>
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="tlist"><i class="bi bi-list-ul"></i><p>@MdrText.T("req.tab.list")</p></button></div>
+                @if (isManager)
+                {
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newtype"><i class="bi bi-plus-lg"></i><p>@MdrText.T("req.newtype")</p></button></div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-state">@MdrText.T("wf.loading")</div>
+
+    <section id="catalog" hidden>
+        <div class="glass-field-ag">
+            <div class="glass-field-body">
+                <div class="row row-input-AG">
+                    <div class="col-xl-4 col-md-6">
+                        <label class="glass-label-ag">@MdrText.T("tsk.f.q")</label>
+                        <input id="cq" class="glass-input-ag" placeholder="@MdrText.T("tsk.search")" autocomplete="off" />
+                    </div>
+                </div>
+                <div id="cards" class="mdr-grid mdr-cards"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="listsec" hidden>
+        <div class="glass-field-ag">
+            <div class="glass-field-body">
+                <div class="row row-input-AG">
+                    <div class="col-xl-3 col-md-4">
+                        <label class="glass-label-ag">@MdrText.T("wf.col.status")</label>
+                        <select id="status" class="glass-select-search">
+                            <option value="">@MdrText.T("tsk.f.all")</option>
+                            <option value="Draft">@MdrText.T("req.st.Draft")</option><option value="Submitted">@MdrText.T("req.st.Submitted")</option>
+                            <option value="Approved">@MdrText.T("req.st.Approved")</option><option value="Rejected">@MdrText.T("req.st.Rejected")</option>
+                            <option value="Cancelled">@MdrText.T("req.st.Cancelled")</option>
+                        </select>
+                    </div>
+                    <div class="col-xl-4 col-md-6">
+                        <label class="glass-label-ag">@MdrText.T("tsk.f.q")</label>
+                        <input id="q" class="glass-input-ag" placeholder="@MdrText.T("req.search")" autocomplete="off" />
+                    </div>
+                </div>
+                <table class="glass-table-ag">
+                    <thead><tr>
+                        <th>@MdrText.T("req.col.number")</th><th>@MdrText.T("tsk.f.title")</th><th>@MdrText.T("req.col.type")</th>
+                        <th>@MdrText.T("wf.col.status")</th><th>@MdrText.T("req.col.requester")</th><th>@MdrText.T("req.col.created")</th>
+                    </tr></thead>
+                    <tbody id="list" class="scrollbar"></tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-clipboard-check", MdrText.T("req.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canInsert = @(canInsert ? "true" : "false"), isManager = @(isManager ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"),
+        ready = MdrText.T("req.ready"), notready = MdrText.T("req.notready"), inactive = MdrText.T("req.inactive"),
+        st = new { Draft = MdrText.T("req.st.Draft"), Submitted = MdrText.T("req.st.Submitted"), Approved = MdrText.T("req.st.Approved"), Rejected = MdrText.T("req.st.Rejected"), Cancelled = MdrText.T("req.st.Cancelled") },
+        act = new { saveDraft = MdrText.T("req.act.savedraft"), submit = MdrText.T("req.act.submit"), cancel = MdrText.T("req.act.cancel"), edit = MdrText.T("req.act.edit"),
+                    editType = MdrText.T("req.edittype"), newType = MdrText.T("req.newtype"), save = MdrText.T("tsk.act.Save") },
+        confirmSubmit = MdrText.T("req.confirm.submit"), promptCancel = MdrText.T("req.prompt.cancel"),
+        f = new { title = MdrText.T("tsk.f.title"), code = MdrText.T("req.f.code"), name = MdrText.T("req.f.name"), desc = MdrText.T("req.f.desc"), workflow = MdrText.T("req.f.workflow"),
+                  active = MdrText.T("req.f.active"), fields = MdrText.T("req.f.fields"), fieldsHelp = MdrText.T("req.f.fieldsHelp") },
+        flow = MdrText.T("req.flow"), step = MdrText.T("req.flow.step"), due = MdrText.T("req.flow.due"), timeline = MdrText.T("req.timeline"), history = MdrText.T("req.history"),
+        type = MdrText.T("req.col.type"), requester = MdrText.T("req.col.requester") }));
+    var u = @Html.Raw(Json.Encode(new {
+        types = Url.Action("GetTypes", "Requests", new { area = "Mdr" }), saveType = Url.Action("SaveType", "Requests", new { area = "Mdr" }),
+        list = Url.Action("GetList", "Requests", new { area = "Mdr" }), get = Url.Action("GetRequest", "Requests", new { area = "Mdr" }),
+        save = Url.Action("Save", "Requests", new { area = "Mdr" }), submit = Url.Action("Submit", "Requests", new { area = "Mdr" }),
+        cancel = Url.Action("Cancel", "Requests", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var types = [], tab = "catalog";
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.textContent = m || ""; d.className = "mdr-msg" + (bad ? " is-bad" : ""); }
+    function show(t) { tab = t; $("catalog").hidden = t !== "catalog"; $("listsec").hidden = t !== "list"; location.hash = t === "list" ? "tab=list" : ""; }
+
+    // ---- کاتالوگ ----
+    function loadTypes() {
+        $("state").hidden = false; $("state").textContent = L.loading;
+        return mdr.get(u.types).then(function (d) {
+            if (!d.success) { $("state").textContent = L.error; return; }
+            types = d.items; $("state").hidden = true; renderCards();
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+    function renderCards() {
+        var q = $("cq").value.trim().toLowerCase();
+        var list = types.filter(function (t) { return !q || (t.Name + " " + (t.Description || "")).toLowerCase().indexOf(q) >= 0; });
+        $("cards").innerHTML = list.length ? list.map(function (t) {
+            var badge = !t.IsActive ? L.inactive : (t.Ready ? L.ready : L.notready);
+            return '<article class="mdr-card' + (t.Ready && canInsert ? " is-available" : " is-planned") + '" data-t="' + t.TypeID + '"><span class="mdr-card-title">' + E(t.Name) + "</span><small>" +
+                E(t.Description || "") + '</small><span class="mdr-badge">' + E(badge) + "</span>" +
+                (isManager ? '<button class="mdr-btn" data-edit="' + t.TypeID + '">' + E(L.act.editType) + "</button>" : "") + "</article>";
+        }).join("") : '<div class="mdr-state">' + E(L.empty) + "</div>";
+    }
+    $("cq").oninput = renderCards;
+
+    // ---- فرم پویا ----
+    function fieldInput(f, v) {
+        var id = "fd-" + f.Key, req = f.Required ? " *" : "", val = v == null ? "" : v, lbl = '<label class="mdr-field">' + E(f.Label) + req;
+        if (f.Type === "textarea") return lbl + '<textarea id="' + id + '" class="mdr-input" rows="3" maxlength="2000">' + E(val) + "</textarea></label>";
+        if (f.Type === "select") return lbl + '<select id="' + id + '" class="glass-select-search"><option value=""></option>' + (f.Options || []).map(function (o) { return '<option' + (o === val ? " selected" : "") + ">" + E(o) + "</option>"; }).join("") + "</select></label>";
+        if (f.Type === "date") return lbl + mdr.jd.html(id, val, "mdr-input") + "</label>";
+        var type = f.Type === "number" ? "number" : "text";
+        return lbl + '<input id="' + id + '" type="' + type + '" step="any" class="mdr-input" maxlength="2000" value="' + E(val) + '"></label>';
+    }
+    function collect(fields) { var o = {}; fields.forEach(function (f) { o[f.Key] = f.Type === "date" ? mdr.jd.get("fd-" + f.Key) : $("fd-" + f.Key).value; }); return o; }
+
+    function requestForm(type, req) {
+        var isNew = !req, fields = type.Fields || [], data = req ? req.Data : {};
+        $("dbody").innerHTML = "<h3>" + E(type.Name || req.TypeName) + "</h3>" +
+            '<label class="mdr-field">' + E(L.f.title) + ' *<input id="rq-title" class="mdr-input" maxlength="300" value="' + E(req ? req.Title : "") + '"></label>' +
+            fields.map(function (f) { return fieldInput(f, data[f.Key]); }).join("") +
+            '<div class="mdr-actions"><button class="mdr-btn" id="rq-save">' + E(L.act.saveDraft) + '</button> <button class="mdr-btn mdr-primary" id="rq-submit">' + E(L.act.submit) + "</button></div>";
+        $("drawer").hidden = false; toast("");
+        function save() {
+            return mdr.post(u.save, { id: isNew ? 0 : req.RequestID, typeId: type.TypeID || req.TypeID, title: $("rq-title").value, data: JSON.stringify(collect(fields)), rowVer: isNew ? null : req.RowVer });
+        }
+        $("rq-save").onclick = function () { save().then(function (r) { if (!r.success) toast(r.message || L.error, true); else { loadList(); openRequest(r.id); } }); };
+        $("rq-submit").onclick = function () {
+            if (!confirm(L.confirmSubmit)) return;
+            save().then(function (r) {
+                if (!r.success) { toast(r.message || L.error, true); return; }
+                return mdr.get(u.get + "?id=" + r.id).then(function (g) {
+                    return mdr.post(u.submit, { id: r.id, rowVer: g.request.RowVer }).then(function (s) {
+                        if (!s.success) { toast(s.message || L.error, true); loadList(); return; }
+                        show("list"); loadList(); openRequest(r.id);
+                    });
+                });
+            });
+        };
+    }
+
+    $("cards").addEventListener("click", function (e) {
+        var ed = e.target.closest("button[data-edit]");
+        if (ed) { return typeForm(types.filter(function (t) { return t.TypeID == ed.getAttribute("data-edit"); })[0]); }
+        var c = e.target.closest("[data-t]"); if (!c) return;
+        var t = types.filter(function (x) { return x.TypeID == c.getAttribute("data-t"); })[0];
+        if (t && t.Ready && canInsert) requestForm(t, null);
+    });
+
+    // ---- فرم نوع (مدیر) ----
+    function typeForm(t) {
+        var v = t || { TypeID: 0, Code: "", Name: "", Description: "", WorkflowCode: "", FieldsJson: "[]", IsActive: true };
+        $("dbody").innerHTML = "<h3>" + E(t ? L.act.editType : L.act.newType) + "</h3>" +
+            '<label class="mdr-field">' + E(L.f.code) + '<input id="ty-code" class="mdr-input" maxlength="50" value="' + E(v.Code) + '"></label>' +
+            '<label class="mdr-field">' + E(L.f.name) + '<input id="ty-name" class="mdr-input" maxlength="200" value="' + E(v.Name) + '"></label>' +
+            '<label class="mdr-field">' + E(L.f.desc) + '<textarea id="ty-desc" class="mdr-input" rows="2" maxlength="1000">' + E(v.Description || "") + "</textarea></label>" +
+            '<label class="mdr-field">' + E(L.f.workflow) + '<input id="ty-wf" class="mdr-input" maxlength="50" value="' + E(v.WorkflowCode || "") + '"></label>' +
+            '<div class="box-glass-checkbox-ag" style="margin:.4rem 0 .6rem"><input type="checkbox" id="ty-active" class="glass-checkbox-ag"' + (v.IsActive ? " checked" : "") + '><label for="ty-active" class="glass-label-ag" style="margin-top:0">' + E(L.f.active) + "</label></div>" +
+            '<label class="mdr-field">' + E(L.f.fields) + '<textarea id="ty-fields" class="mdr-input mdr-mono" rows="9" dir="ltr">' + E(v.FieldsJson) + "</textarea><small>" + E(L.f.fieldsHelp) + "</small></label>" +
+            '<button class="mdr-btn mdr-primary" id="ty-save">' + E(L.act.save) + "</button>";
+        $("drawer").hidden = false; toast("");
+        $("ty-save").onclick = function () {
+            mdr.post(u.saveType, { id: v.TypeID, code: $("ty-code").value, name: $("ty-name").value, description: $("ty-desc").value, workflowCode: $("ty-wf").value,
+                fieldsJson: $("ty-fields").value, isActive: $("ty-active").checked }).then(function (r) {
+                if (!r.success) toast(r.message || L.error, true); else { $("drawer").hidden = true; loadTypes(); }
+            });
+        };
+    }
+    if ($("newtype")) $("newtype").onclick = function () { typeForm(null); };
+
+    // ---- فهرست ----
+    function loadList() {
+        mdr.get(u.list + "?status=" + encodeURIComponent($("status").value) + "&q=" + encodeURIComponent($("q").value)).then(function (d) {
+            if (!d.success) return;
+            $("list").innerHTML = d.items.length ? d.items.map(function (r) {
+                return '<tr data-id="' + r.RequestID + '"><td>' + E(r.Number) + "</td><td>" + E(r.Title) + "</td><td>" + E(r.Type) + "</td><td><span class='mdr-badge'>" + E(L.st[r.Status] || r.Status) +
+                    "</span></td><td>" + E(r.Requester || "") + "</td><td>" + E(r.CreatedAt) + "</td></tr>";
+            }).join("") : '<tr><td colspan="6" class="mdr-state">' + E(L.empty) + "</td></tr>";
+        });
+    }
+    $("list").addEventListener("click", function (e) { var r = e.target.closest("tr[data-id]"); if (r) openRequest(r.getAttribute("data-id")); });
+    $("status").onchange = loadList; var qt; $("q").oninput = function () { clearTimeout(qt); qt = setTimeout(loadList, 350); };
+
+    // ---- جزئیات ----
+    function openRequest(id) {
+        mdr.get(u.get + "?id=" + id).then(function (d) {
+            $("drawer").hidden = false;
+            if (!d.success) { toast(d.message || L.error, true); return; }
+            var r = d.request, f = d.flow; toast(""); location.hash = (tab === "list" ? "tab=list&" : "") + "id=" + id;
+            var rows = (r.Fields || []).map(function (x) { return "<dt>" + E(x.Label) + "</dt><dd>" + E((r.Data || {})[x.Key] || "—") + "</dd>"; }).join("");
+            var acts = "";
+            if (r.CanEdit) acts += '<button class="mdr-btn" data-a="edit">' + E(L.act.edit) + "</button> ";
+            if (r.CanCancel) acts += '<button class="mdr-btn" data-a="cancel">' + E(L.act.cancel) + "</button>";
+            $("dbody").innerHTML = "<h3>" + E(r.Number) + " — " + E(r.Title) + '</h3><p><span class="mdr-badge">' + E(L.st[r.Status] || r.Status) + "</span> " + E(r.TypeName) + "</p>" +
+                "<dl class='mdr-dl'><dt>" + E(L.requester) + "</dt><dd>" + E(r.Requester || "") + "</dd>" + rows + "</dl>" + '<div class="mdr-actions">' + acts + '</div><div id="att"></div>' +
+                (f ? "<h4>" + E(L.flow) + "</h4><p>" + E(L.step) + ": <b>" + E(f.CurrentStep || "—") + "</b>" + (f.DueAt ? " · " + E(L.due) + ": " + E(f.DueAt) : "") +
+                    (f.Overdue ? ' <span class="mdr-badge is-bad">!</span>' : "") + '</p><ol class="mdr-timeline">' + f.Timeline.map(function (s) {
+                        return "<li><b>" + E(s.ActionKey) + "</b> " + E(s.Step || "") + " <small>" + E(s.CreatedAt) + (s.Reason ? " — " + E(s.Reason) : "") + "</small></li>"; }).join("") + "</ol>" : "") +
+                "<h4>" + E(L.history) + '</h4><ol class="mdr-timeline">' + d.history.map(function (h) {
+                    return "<li><b>" + E(h.ActionKey) + "</b> " + E(h.Actor || "") + " <small>" + E(h.CreatedAt) + (h.Detail ? " — " + E(h.Detail) : "") + "<br>" + E(h.CorrelationID) + "</small></li>"; }).join("") + "</ol>";
+            mdr.attach($("att"), "MDR_Requests", r.RequestID);
+            $("dbody").onclick = function (e) {
+                var b = e.target.closest("button[data-a]"); if (!b) return;
+                if (b.getAttribute("data-a") === "edit") { var t = types.filter(function (x) { return x.TypeID === r.TypeID; })[0] || { TypeID: r.TypeID, Name: r.TypeName, Fields: r.Fields }; return requestForm(t, r); }
+                var reason = ""; if (r.Status === "Submitted") { reason = prompt(L.promptCancel); if (!reason) return; }
+                mdr.post(u.cancel, { id: r.RequestID, reason: reason, rowVer: r.RowVer }).then(function (x) { if (!x.success) toast(x.message || L.error, true); else { loadList(); openRequest(r.RequestID); } });
+            };
+        });
+    }
+
+    $("dclose").onclick = function () { $("drawer").hidden = true; history.replaceState(null, "", location.pathname + (tab === "list" ? "#tab=list" : "")); };
+    $("tcat").onclick = function () { show("catalog"); }; $("tlist").onclick = function () { show("list"); loadList(); };
+    var h = location.hash, m = /id=(\d+)/.exec(h);
+    loadTypes().then(function () { if (/tab=list/.test(h) || m) { show("list"); loadList(); } else show("catalog"); if (m) openRequest(m[1]); });
+})();
+</script>
+}

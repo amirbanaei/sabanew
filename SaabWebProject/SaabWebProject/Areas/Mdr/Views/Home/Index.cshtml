@@ -1,0 +1,39 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@model IEnumerable<MdrModuleInfo>
+@{
+    ViewBag.Title = MdrText.T("app.title");
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-kanban", MdrText.T("app.title"), MdrText.T("app.subtitle") })
+
+    <section class="mdr-grid">
+        @foreach (var m in Model)
+        {
+            if (m.Available)
+            {
+                <a class="mdr-card is-available" href="@Url.Content(m.Url)">
+                    <span class="mdr-card-no">@m.Number</span>
+                    <span class="mdr-card-title">@MdrText.T(m.TitleKey)</span>
+                    <span class="mdr-badge">@MdrText.T("status.available")</span>
+                </a>
+            }
+            else
+            {
+                <div class="mdr-card is-planned">
+                    <span class="mdr-card-no">@m.Number</span>
+                    <span class="mdr-card-title">@MdrText.T(m.TitleKey)</span>
+                    <span class="mdr-badge">@MdrText.T("status.planned")</span>
+                </div>
+            }
+        }
+    </section>
+</div>
+
+@section scripts {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+}

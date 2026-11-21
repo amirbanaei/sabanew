@@ -1,0 +1,204 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("train.title");
+    bool isManager = ViewBag.IsManager == true;
+    bool canSkills = ViewBag.CanSkills == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-mortarboard", MdrText.T("train.title"), MdrText.T("train.hdr.sub") })
+
+    <div class="glass-field-ag"><div class="glass-field-body">
+        <div class="row row-input-AG">
+            <div class="col-xl-3 col-md-4"><label class="glass-label-ag">@MdrText.T("train.f.scope")</label>
+                <select id="scope" class="glass-select-search"><option value="open">@MdrText.T("train.scope.open")</option><option value="mine">@MdrText.T("train.scope.mine")</option>@if (isManager) { <option value="all">@MdrText.T("train.scope.all")</option> }</select></div>
+            <div class="col-xl-5 col-md-8"><label class="glass-label-ag">@MdrText.T("train.col.title")</label><input id="q" class="glass-input-ag" placeholder="@MdrText.T("train.f.q")" autocomplete="off" /></div>
+        </div>
+        <div class="row row-btn-AG row-ltr-AG">
+            <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("train.act.back")</p></a></div>
+            @if (canSkills) { <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Skills", "Training", new { area = "Mdr" })"><i class="bi bi-grid-3x3-gap"></i><p>@MdrText.T("train.act.skills")</p></a></div> }
+            <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="certs"><i class="bi bi-award"></i><p>@MdrText.T("train.act.certs")</p></button></div>
+            <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="vcal"><i class="bi bi-calendar3"></i><p>@MdrText.T("train.view.cal")</p></button></div>
+            <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag is-on" id="vlist"><i class="bi bi-table"></i><p>@MdrText.T("train.view.list")</p></button></div>
+            @if (isManager) { <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newcourse"><i class="bi bi-plus-lg"></i><p>@MdrText.T("train.act.new")</p></button></div> }
+        </div>
+    </div></div>
+
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+    <div id="listwrap" class="glass-field-ag" hidden><div class="glass-field-body">
+        <table class="glass-table-ag"><thead><tr><th>@MdrText.T("train.col.code")</th><th>@MdrText.T("train.col.title")</th><th>@MdrText.T("train.col.start")</th><th>@MdrText.T("train.col.seats")</th><th>@MdrText.T("train.col.skill")</th><th>@MdrText.T("train.col.status")</th><th>@MdrText.T("train.col.mine")</th></tr></thead><tbody id="list" class="scrollbar"></tbody></table>
+    </div></div>
+    <div id="calwrap" hidden></div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-mortarboard", MdrText.T("train.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var isManager = @(isManager ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("wf.empty"),
+        st = new { Draft = MdrText.T("train.st.Draft"), Open = MdrText.T("train.st.Open"), Closed = MdrText.T("train.st.Closed"), Cancelled = MdrText.T("train.st.Cancelled") },
+        en = new { Enrolled = MdrText.T("train.en.Enrolled"), Waitlisted = MdrText.T("train.en.Waitlisted"), Cancelled = MdrText.T("train.en.Cancelled"), Completed = MdrText.T("train.en.Completed"), Failed = MdrText.T("train.en.Failed") },
+        f = new { code = MdrText.T("train.f.code"), title = MdrText.T("train.f.title"), desc = MdrText.T("train.f.desc"), skill = MdrText.T("train.f.skill"), target = MdrText.T("train.f.target"), startAt = MdrText.T("train.f.startat"), endAt = MdrText.T("train.f.endat"),
+                  capacity = MdrText.T("train.f.capacity"), prereq = MdrText.T("train.f.prereq"), instructor = MdrText.T("train.f.instructor"), location = MdrText.T("train.f.location"), none = MdrText.T("train.f.none") },
+        col = new { name = MdrText.T("train.col.name"), score = MdrText.T("train.col.score"), cert = MdrText.T("train.col.cert"), att = MdrText.T("train.col.att"), status = MdrText.T("train.col.status"), start = MdrText.T("train.col.start"), end = MdrText.T("train.col.end"),
+                    capacity = MdrText.T("train.col.capacity"), seats = MdrText.T("train.col.seats"), loc = MdrText.T("train.col.loc"), skill = MdrText.T("train.col.skill") },
+        act = new { save = MdrText.T("train.act.save"), edit = MdrText.T("train.act.edit"), publish = MdrText.T("train.act.publish"), close = MdrText.T("train.act.close"), cancel = MdrText.T("train.act.cancel"), enroll = MdrText.T("train.act.enroll"),
+                    cancelEnroll = MdrText.T("train.act.cancelenroll"), enrollOther = MdrText.T("train.act.enrollother"), pass = MdrText.T("train.act.pass"), fail = MdrText.T("train.act.fail"), newCourse = MdrText.T("train.act.new") },
+        sec = new { info = MdrText.T("train.sec.info"), people = MdrText.T("train.sec.people"), certs = MdrText.T("train.sec.certs") },
+        warnWait = MdrText.T("train.warn.waitlisted"), reasonPrompt = MdrText.T("train.prompt.reason"), scorePrompt = MdrText.T("train.prompt.score"), confirmCancel = MdrText.T("train.confirm.cancel"), confirmCancelEnroll = MdrText.T("train.confirm.cancelenroll"), userHint = MdrText.T("skill.f.user") }));
+    var u = @Html.Raw(Json.Encode(new {
+        list = Url.Action("GetCourses", "Training", new { area = "Mdr" }), get = Url.Action("GetCourse", "Training", new { area = "Mdr" }), certs = Url.Action("GetCertificates", "Training", new { area = "Mdr" }),
+        look = Url.Action("GetLookups", "Training", new { area = "Mdr" }), save = Url.Action("SaveCourse", "Training", new { area = "Mdr" }), publish = Url.Action("Publish", "Training", new { area = "Mdr" }),
+        closeEnroll = Url.Action("CloseEnrollment", "Training", new { area = "Mdr" }), cancelCourse = Url.Action("CancelCourse", "Training", new { area = "Mdr" }), enroll = Url.Action("Enroll", "Training", new { area = "Mdr" }),
+        cancelEnroll = Url.Action("CancelEnrollment", "Training", new { area = "Mdr" }), attendance = Url.Action("Attendance", "Training", new { area = "Mdr" }), complete = Url.Action("Complete", "Training", new { area = "Mdr" }),
+        users = Url.Action("SearchUsers", "Training", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc, view = "list", cur = null, curCourse = null, items = [], look = { skills: [], courses: [] };
+    var ST_CLS = { Draft: "glass-status-info", Open: "glass-status-success", Closed: "glass-status-warning", Cancelled: "glass-status-danger" };
+    var EN_CLS = { Enrolled: "glass-status-success", Waitlisted: "glass-status-warning", Completed: "glass-status-success", Failed: "glass-status-danger", Cancelled: "glass-status-info" };
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function setHash() { history.replaceState(null, "", location.pathname + (cur ? "#c=" + cur : "")); }
+    function field(icon, title, body) { return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) + '</div></div></div><div class="glass-field-body">' + body + "</div></div>"; }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + (attrs || "") + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function badge(cls, t) { return '<span class="mdr-ag-badge ' + cls + '">' + E(t) + "</span>"; }
+    function post(url, p, then) { mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); then(r); }); }
+    function num(v) { return Number(v).toLocaleString("fa-IR"); }
+
+    // ---------- فهرست / تقویم ----------
+    function load() {
+        $("state").hidden = false; $("state").textContent = L.loading; $("listwrap").hidden = true; $("calwrap").hidden = true;
+        mdr.get(u.list + "?scope=" + $("scope").value + "&q=" + encodeURIComponent($("q").value)).then(function (r) {
+            if (!r.success) { $("state").textContent = L.error; return; }
+            items = r.items;
+            if (!items.length) { $("state").textContent = L.empty; return; }
+            $("state").hidden = true;
+            if (view === "list") {
+                $("listwrap").hidden = false;
+                $("list").innerHTML = items.map(function (c) {
+                    return '<tr data-id="' + c.CourseID + '"><td>' + E(c.Code) + "</td><td>" + E(c.Title) + "</td><td>" + E(c.StartAt) + "</td><td>" + num(c.SeatsLeft) + " / " + num(c.Capacity) + (c.Waitlisted ? " (+" + c.Waitlisted + ")" : "") + "</td><td>" + E(c.Skill || "—") +
+                        '</td><td><span class="meeting-status ' + (ST_CLS[c.Status] || "") + '">' + E(L.st[c.Status]) + '</span></td><td>' + (c.MyStatus ? '<span class="meeting-status ' + (EN_CLS[c.MyStatus] || "") + '">' + E(L.en[c.MyStatus]) + "</span>" : "—") + "</td></tr>"; }).join("");
+            } else {
+                var groups = {}; items.forEach(function (c) { var k = c.StartAt.slice(0, 7); (groups[k] = groups[k] || []).push(c); });
+                $("calwrap").hidden = false;
+                $("calwrap").innerHTML = Object.keys(groups).sort().map(function (k) {
+                    return field("bi-calendar3", k, '<ul class="mdr-ag-list">' + groups[k].map(function (c) {
+                        return '<li class="mdr-clickable" data-id="' + c.CourseID + '"><b>' + E(c.StartAt.slice(5, 16)) + " → " + E(c.EndAt.slice(5, 16)) + "</b> " + E(c.Title) + " " + badge(ST_CLS[c.Status] || "", L.st[c.Status]) + (c.MyStatus ? " " + badge(EN_CLS[c.MyStatus] || "", L.en[c.MyStatus]) : "") + " <small>" + E(c.Location || "") + "</small></li>"; }).join("") + "</ul>");
+                }).join("");
+            }
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    function latin(s) { return String(s == null ? "" : s).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }); }
+    function lookups() { return mdr.get(u.look).then(function (r) { if (r.success) look = r; }); }
+
+    // ---------- فرم دوره ----------
+    function form(d) {
+        lookups().then(function () {
+            var c = d ? d.Course : null, isNew = !d;
+            function dt(s) { return s ? s.replace(" ", "T") : ""; }
+            $("mtitle").textContent = isNew ? L.act.newCourse : L.act.edit; $("msub").textContent = isNew ? "" : c.Code; toast("");
+            var skillOpts = '<option value="">' + E(L.f.none) + "</option>" + look.skills.map(function (s) { return '<option value="' + s.SkillID + '"' + (d && d.SkillID === s.SkillID ? " selected" : "") + ">" + E(s.Name) + "</option>"; }).join("");
+            var preOpts = '<option value="">' + E(L.f.none) + "</option>" + look.courses.filter(function (x) { return !c || x.CourseID !== c.CourseID; }).map(function (x) { return '<option value="' + x.CourseID + '"' + (d && d.PrereqCourseID === x.CourseID ? " selected" : "") + ">" + E(x.Code + " — " + x.Title) + "</option>"; }).join("");
+            $("dbody").innerHTML = field("bi-mortarboard", L.sec.info,
+                '<div class="row row-input-AG"><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.code) + ' *</label><input id="c-code" class="glass-input-ag" maxlength="30" value="' + E(c ? c.Code : "") + '"></div><div class="col-xl-9 col-md-6"><label class="glass-label-ag">' + E(L.f.title) + ' *</label><input id="c-title" class="glass-input-ag" maxlength="200" value="' + E(c ? c.Title : "") + '"></div></div>' +
+                '<div class="row row-input-AG"><div class="col-12"><label class="glass-label-ag">' + E(L.f.desc) + '</label><textarea id="c-desc" class="glass-textarea-ag" rows="2" maxlength="1000" style="height:4rem">' + E(d ? d.Description || "" : "") + "</textarea></div></div>" +
+                '<div class="row row-input-AG"><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.startAt) + ' *</label>' + mdr.jd.html("c-start", c ? dt(c.StartAt) : "") + '</div><div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + mdr.jd.L.time + ' *</label>' + mdr.jd.timeHtml("c-start-t", c ? dt(c.StartAt) : "") + '</div><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.endAt) + ' *</label>' + mdr.jd.html("c-end", c ? dt(c.EndAt) : "") + '</div><div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + mdr.jd.L.time + ' *</label>' + mdr.jd.timeHtml("c-end-t", c ? dt(c.EndAt) : "") + '</div><div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + E(L.f.capacity) + ' *</label><input id="c-cap" class="glass-input-ag" inputmode="numeric" value="' + E(c ? c.Capacity : 20) + '"></div></div>' +
+                '<div class="row row-input-AG"><div class="col-xl-5 col-md-6"><label class="glass-label-ag">' + E(L.f.skill) + '</label><select id="c-skill" class="glass-select-search">' + skillOpts + '</select></div><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.target) + '</label><input id="c-level" class="glass-input-ag" inputmode="numeric" value="' + E(c && c.TargetLevel ? c.TargetLevel : "") + '"></div><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.prereq) + '</label><select id="c-pre" class="glass-select-search">' + preOpts + "</select></div></div>" +
+                '<div class="row row-input-AG"><div class="col-xl-6 col-md-6"><label class="glass-label-ag">' + E(L.f.instructor) + '</label><input id="c-inst" class="glass-input-ag" maxlength="150" value="' + E(c ? c.Instructor || "" : "") + '"></div><div class="col-xl-6 col-md-6"><label class="glass-label-ag">' + E(L.f.location) + '</label><input id="c-loc" class="glass-input-ag" maxlength="200" value="' + E(c ? c.Location || "" : "") + "\"></div></div>" +
+                '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="c-go"') + "</div>");
+            $("c-go").onclick = function () {
+                post(u.save, { id: isNew ? 0 : c.CourseID, code: $("c-code").value, title: $("c-title").value, description: $("c-desc").value, skillId: $("c-skill").value, targetLevel: latin($("c-level").value), startAt: mdr.jd.getDT("c-start", "c-start-t"), endAt: mdr.jd.getDT("c-end", "c-end-t"),
+                    capacity: latin($("c-cap").value), prereqCourseId: $("c-pre").value, instructor: $("c-inst").value, location: $("c-loc").value, rowVer: isNew ? null : d.RowVer }, function (r) { load(); openCourse(r.id); });
+            };
+            showModal(true);
+        });
+    }
+
+    // ---------- جزئیات ----------
+    function openCourse(id) {
+        cur = id;
+        mdr.get(u.get + "?id=" + id).then(function (r) {
+            showModal(true);
+            if (!r.success) { cur = null; setHash(); toast(E(r.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            var d = r.course, c = d.Course; curCourse = d; setHash(); toast("");
+            $("mtitle").textContent = c.Code + " — " + c.Title; $("msub").textContent = c.StartAt + " → " + c.EndAt;
+            var acts = (d.CanEnroll ? btn("glass-btn-ag-primary", "bi-person-plus", L.act.enroll, 'data-a="enroll"') : "") + (d.CanCancelMine ? btn("glass-btn-text-reject", "bi-person-dash", L.act.cancelEnroll, 'data-a="cancelmine"') : "") +
+                (d.CanEdit ? btn("", "bi-pencil", L.act.edit, 'data-a="edit"') : "") + (d.CanPublish ? btn("glass-btn-ag-primary", "bi-megaphone", L.act.publish, 'data-a="publish"') : "") + (d.CanClose ? btn("", "bi-lock", L.act.close, 'data-a="closeenroll"') : "") +
+                (d.CanCancelCourse ? btn("glass-btn-text-reject", "bi-x-circle", L.act.cancel, 'data-a="cancelcourse"') : "");
+            var info = '<div style="margin-bottom:.6rem">' + badge(ST_CLS[c.Status] || "", L.st[c.Status]) + (c.MyStatus ? badge(EN_CLS[c.MyStatus] || "", L.en[c.MyStatus]) : "") + "</div>" + (d.Description ? '<div class="mdr-ag-text">' + E(d.Description) + "</div>" : "") +
+                '<dl class="mdr-ag-dl" style="margin-top:.6rem"><dt>' + E(L.col.capacity) + "</dt><dd>" + num(c.Enrolled) + " / " + num(c.Capacity) + (c.Waitlisted ? " (+" + c.Waitlisted + ")" : "") + "</dd><dt>" + E(L.col.seats) + "</dt><dd>" + num(c.SeatsLeft) + "</dd>" +
+                (c.Skill ? "<dt>" + E(L.col.skill) + "</dt><dd>" + E(c.Skill) + (c.TargetLevel ? " (" + c.TargetLevel + ")" : "") + "</dd>" : "") + (c.Prereq ? "<dt>" + E(L.f.prereq) + "</dt><dd>" + E(c.Prereq) + "</dd>" : "") +
+                (c.Instructor ? "<dt>" + E(L.f.instructor) + "</dt><dd>" + E(c.Instructor) + "</dd>" : "") + (c.Location ? "<dt>" + E(L.col.loc) + "</dt><dd>" + E(c.Location) + "</dd>" : "") +
+                (d.MyCertificate ? "<dt>" + E(L.col.cert) + "</dt><dd>" + E(d.MyCertificate) + (d.MyScore !== null ? " · " + E(L.col.score) + ": " + d.MyScore : "") + "</dd>" : "") + "</dl>" +
+                (acts ? '<div class="row row-btn-AG row-ltr-AG">' + acts + "</div>" : "") + '<div id="pick"></div>';
+            var html = field("bi-info-circle", L.sec.info, info);
+            if (isManager) {
+                var sess = d.SessionDates.length ? '<select id="sess" class="glass-select-search" style="width:auto;display:inline-block">' + d.SessionDates.map(function (s) { return "<option>" + s + "</option>"; }).join("") + "</select>" : "";
+                var people = d.Enrollments.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.name) + "</th><th>" + E(L.col.status) + "</th><th>" + E(L.col.att) + "</th><th>" + E(L.col.score) + "</th><th></th></tr></thead><tbody>" + d.Enrollments.map(function (e) {
+                    var a = e.Status === "Enrolled" && sess ? '<button type="button" class="mdr-btn" data-att="1" data-u="' + e.UserID + '">✓</button> <button type="button" class="mdr-btn" data-att="0" data-u="' + e.UserID + '">✗</button> ' : "";
+                    var cmp = e.Status === "Enrolled" && d.CanComplete ? '<button type="button" class="mdr-btn" data-done="1" data-u="' + e.UserID + '">' + E(L.act.pass) + '</button> <button type="button" class="mdr-btn" data-done="0" data-u="' + e.UserID + '">' + E(L.act.fail) + "</button> " : "";
+                    var cn = e.Status === "Enrolled" || e.Status === "Waitlisted" ? '<button type="button" class="mdr-btn" data-cn="' + e.EnrollmentID + '">' + E(L.act.cancelEnroll) + "</button>" : "";
+                    return "<tr><td>" + E(e.Name) + '</td><td><span class="meeting-status ' + (EN_CLS[e.Status] || "") + '">' + E(L.en[e.Status]) + "</span></td><td>" + e.Present + "/" + e.Sessions + "</td><td>" + (e.Score === null ? "—" : e.Score) + (e.CertificateNo ? " · " + E(e.CertificateNo) : "") + "</td><td>" + a + cmp + cn + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+                html += field("bi-people", L.sec.people, (sess ? '<div style="margin-bottom:.5rem">' + sess + "</div>" : "") + people + (c.Status === "Open" || c.Status === "Closed" ? '<div class="row row-btn-AG row-ltr-AG">' + btn("", "bi-person-plus", L.act.enrollOther, 'data-a="enrollother"') + "</div>" : ""));
+            }
+            $("dbody").innerHTML = html;
+        });
+    }
+
+    function userPick(then) {
+        $("pick").innerHTML = '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-12"><input id="pu-q" class="glass-input-ag" placeholder="' + E(L.userHint) + '" autocomplete="off"><div id="pu-r" class="mdr-ag-picks"></div></div></div>';
+        var t; $("pu-q").oninput = function () { clearTimeout(t); var q = this.value.trim(); t = setTimeout(function () { if (q.length < 2) { $("pu-r").innerHTML = ""; return; } mdr.get(u.users + "?q=" + encodeURIComponent(q)).then(function (x) { $("pu-r").innerHTML = x.items.map(function (i) { return '<button type="button" class="glass-btn-ag" data-u="' + i.Id + '">' + E(i.Name) + "</button>"; }).join(""); }); }, 300); };
+        $("pu-r").onclick = function (e) { var b = e.target.closest("button[data-u]"); if (b) then(+b.getAttribute("data-u")); };
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        if (!curCourse) return;
+        var d = curCourse, c = d.Course, after = function () { load(); openCourse(c.CourseID); };
+        var b = e.target.closest("button[data-a]");
+        if (b) {
+            var a = b.getAttribute("data-a");
+            if (a === "enroll") return post(u.enroll, { courseId: c.CourseID }, function (r) { if (r.warning === "waitlisted") alert(L.warnWait); after(); });
+            if (a === "cancelmine") { if (!confirm(L.confirmCancelEnroll)) return; return post(u.cancelEnroll, { id: d.MyEnrollmentID, reason: "" }, after); }
+            if (a === "edit") return form(d);
+            if (a === "publish") return post(u.publish, { id: c.CourseID }, after);
+            if (a === "closeenroll") return post(u.closeEnroll, { id: c.CourseID }, after);
+            if (a === "cancelcourse") { if (!confirm(L.confirmCancel)) return; var rs = prompt(L.reasonPrompt); if (!rs) return; return post(u.cancelCourse, { id: c.CourseID, reason: rs }, after); }
+            if (a === "enrollother") return userPick(function (uid) { post(u.enroll, { courseId: c.CourseID, userId: uid }, function (r) { if (r.warning === "waitlisted") alert(L.warnWait); after(); }); });
+        }
+        var at = e.target.closest("button[data-att]");
+        if (at) return post(u.attendance, { courseId: c.CourseID, userId: at.getAttribute("data-u"), date: $("sess").value, present: at.getAttribute("data-att") === "1" }, after);
+        var dn = e.target.closest("button[data-done]");
+        if (dn) { var sc = prompt(L.scorePrompt); if (sc === null) return; return post(u.complete, { courseId: c.CourseID, userId: dn.getAttribute("data-u"), passed: dn.getAttribute("data-done") === "1", score: sc }, after); }
+        var cn = e.target.closest("button[data-cn]");
+        if (cn) { var r2 = prompt(L.reasonPrompt); if (!r2) return; post(u.cancelEnroll, { id: cn.getAttribute("data-cn"), reason: r2 }, after); }
+    });
+
+    function certs() {
+        mdr.get(u.certs).then(function (r) {
+            showModal(true); $("mtitle").textContent = L.sec.certs; $("msub").textContent = ""; toast(""); curCourse = null;
+            $("dbody").innerHTML = r.items.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.name) + "</th><th>" + E(L.col.cert) + "</th><th>" + E(L.col.score) + "</th><th>" + E(L.col.end) + "</th></tr></thead><tbody>" +
+                r.items.map(function (x) { return "<tr><td>" + E(x.Name) + "</td><td>" + E(x.CertificateNo || "") + "</td><td>" + (x.Score === null ? "—" : x.Score) + "</td><td>" + E(x.EnrolledAt || "") + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+        });
+    }
+
+    function setView(v) { view = v; $("vlist").classList.toggle("is-on", v === "list"); $("vcal").classList.toggle("is-on", v === "cal"); load(); }
+    $("vlist").onclick = function () { setView("list"); }; $("vcal").onclick = function () { setView("cal"); };
+    $("certs").onclick = certs; if ($("newcourse")) $("newcourse").onclick = function () { cur = null; setHash(); curCourse = null; form(null); };
+    $("scope").onchange = load; var qt; $("q").oninput = function () { clearTimeout(qt); qt = setTimeout(load, 350); };
+    $("list").addEventListener("click", function (e) { var r = e.target.closest("tr[data-id]"); if (r) openCourse(r.getAttribute("data-id")); });
+    $("calwrap").addEventListener("click", function (e) { var r = e.target.closest("[data-id]"); if (r) openCourse(r.getAttribute("data-id")); });
+    $("dclose").onclick = function () { showModal(false); cur = null; setHash(); }; $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) $("dclose").onclick(); });
+    var m = /c=(\d+)/.exec(location.hash); load(); if (m) openCourse(m[1]);
+})();
+</script>
+}

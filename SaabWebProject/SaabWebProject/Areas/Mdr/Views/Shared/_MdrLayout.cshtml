@@ -1,0 +1,81 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    string theme = (ViewBag.Theme as string) == "light" ? "light" : "dark";
+}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="@theme">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@MdrText.T("app.title")</title>
+    <link href="@Url.Content("~/Areas/Mdr/Content/mdr-tokens.css")" rel="stylesheet" />
+</head>
+<body>
+    <header class="mdr-header">
+        <div>
+            <h1 class="mdr-title">@MdrText.T("app.title")</h1>
+            <p class="mdr-subtitle">@MdrText.T("app.subtitle")</p>
+        </div>
+        <form id="mdr-theme-form" method="post" action="@Url.Action("SetTheme", "Home", new { area = "Mdr" })">
+            @Html.AntiForgeryToken()
+            <button type="button" id="mdr-theme-toggle" class="mdr-btn" title="@MdrText.T("theme.toggle")" aria-label="@MdrText.T("theme.toggle")">&#9680;</button>
+        </form>
+    </header>
+    <main class="mdr-main">
+        @RenderBody()
+    </main>
+    <script>
+        window.mdr = {
+            esc: function (s) {
+                return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+                    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+                });
+            },
+            token: function () { return document.querySelector("input[name=__RequestVerificationToken]").value; },
+            get: function (url) {
+                return fetch(url, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+                    .then(function (r) { return r.json(); });
+            },
+            post: function (url, data) {
+                var b = new URLSearchParams();
+                b.append("__RequestVerificationToken", mdr.token());
+                Object.keys(data).forEach(function (k) { if (data[k] != null) b.append(k, data[k]); });
+                return fetch(url, {
+                    method: "POST", credentials: "same-origin",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" },
+                    body: b.toString()
+                }).then(function (r) { return r.json(); });
+            }
+        };
+    </script>
+    <script>
+        window.mdrText = { attach: @Html.Raw(Json.Encode(new {
+            title = MdrText.T("att.title"), add = MdrText.T("att.add"), remove = MdrText.T("wf.act.remove"), none = MdrText.T("att.none"),
+            max = MdrText.T("att.max"), confirmDelete = MdrText.T("att.confirmdelete"), nofile = MdrText.T("att.err.nofile"),
+            uploading = MdrText.T("att.uploading"), error = MdrText.T("wf.error") })) };
+    </script>
+    <script src="@Url.Content("~/Areas/Mdr/Content/mdr-attach.js")"></script>
+    @RenderSection("scripts", required: false)
+    <script>
+        (function () {
+            var btn = document.getElementById('mdr-theme-toggle');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                var root = document.documentElement;
+                var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                root.setAttribute('data-theme', next);
+                var form = document.getElementById('mdr-theme-form');
+                var body = new URLSearchParams();
+                body.append('theme', next);
+                body.append('__RequestVerificationToken', form.querySelector('input[name=__RequestVerificationToken]').value);
+                fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: body.toString(),
+                    credentials: 'same-origin'
+                }).catch(function () { /* ترجیح ذخیره نشد؛ تم همین صفحه تغییر کرده است */ });
+            });
+        })();
+    </script>
+</body>
+</html>

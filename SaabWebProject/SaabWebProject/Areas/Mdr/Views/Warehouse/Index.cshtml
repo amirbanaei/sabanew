@@ -1,0 +1,240 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("wh.title");
+    bool isManager = ViewBag.IsManager == true;
+    bool canInsert = ViewBag.CanInsert == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-box-seam", MdrText.T("wh.title"), MdrText.T("wh.hdr.sub") })
+
+    <div class="row row-btn-AG" style="margin-top:0 !important;margin-bottom:.6rem">
+        <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag is-on" id="tstock"><i class="bi bi-boxes"></i><p>@MdrText.T("wh.tab.stock")</p></button></div>
+        <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="treq"><i class="bi bi-cart-check"></i><p>@MdrText.T("wh.tab.requests")</p></button></div>
+        <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("wh.act.back")</p></a></div>
+    </div>
+
+    <div id="alerts" class="mdr-ag-msg" style="margin-bottom:.8rem" hidden></div>
+
+    <div id="pstock">
+        <div class="glass-field-ag"><div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-5 col-md-6"><label class="glass-label-ag">@MdrText.T("wh.col.name")</label><input id="q" class="glass-input-ag" placeholder="@MdrText.T("wh.f.q")" autocomplete="off" /></div>
+                <div class="col-xl-3 col-md-6"><div class="box-glass-checkbox-ag" style="margin-top:1rem"><input id="low" type="checkbox" class="glass-checkbox-ag" /><label for="low" class="glass-label-ag" style="margin-top:0">@MdrText.T("wh.f.low")</label></div></div>
+            </div>
+            @if (isManager)
+            {
+                <div class="row row-btn-AG row-ltr-AG">
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="newitem"><i class="bi bi-plus-square"></i><p>@MdrText.T("wh.act.newitem")</p></button></div>
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="newstore"><i class="bi bi-building"></i><p>@MdrText.T("wh.act.newstore")</p></button></div>
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" data-op="Receipt"><i class="bi bi-box-arrow-in-down"></i><p>@MdrText.T("wh.act.receipt")</p></button></div>
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" data-op="Issue"><i class="bi bi-box-arrow-up"></i><p>@MdrText.T("wh.act.issue")</p></button></div>
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" data-op="Transfer"><i class="bi bi-arrow-left-right"></i><p>@MdrText.T("wh.act.transfer")</p></button></div>
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" data-op="Adjust"><i class="bi bi-sliders"></i><p>@MdrText.T("wh.act.adjust")</p></button></div>
+                </div>
+            }
+        </div></div>
+        <div id="sstate" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+        <div id="stockwrap" class="glass-field-ag" hidden><div class="glass-field-body">
+            <table class="glass-table-ag"><thead><tr><th>@MdrText.T("wh.col.code")</th><th>@MdrText.T("wh.col.name")</th><th>@MdrText.T("wh.col.unit")</th><th>@MdrText.T("wh.col.total")</th><th>@MdrText.T("wh.col.reorder")</th><th>@MdrText.T("wh.col.stores")</th></tr></thead><tbody id="stock" class="scrollbar"></tbody></table>
+        </div></div>
+    </div>
+
+    <div id="preq" hidden>
+        <div class="glass-field-ag"><div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-4 col-md-6"><label class="glass-label-ag">@MdrText.T("wh.f.scope")</label>
+                    <select id="scope" class="glass-select-search"><option value="mine">@MdrText.T("wh.scope.mine")</option>@if (isManager) { <option value="todo">@MdrText.T("wh.scope.todo")</option><option value="all">@MdrText.T("wh.scope.all")</option> }</select></div>
+            </div>
+            @if (canInsert)
+            {
+                <div class="row row-btn-AG row-ltr-AG"><div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newreq"><i class="bi bi-plus-lg"></i><p>@MdrText.T("wh.act.newreq")</p></button></div></div>
+            }
+        </div></div>
+        <div id="rstate" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+        <div id="reqwrap" class="glass-field-ag" hidden><div class="glass-field-body">
+            <table class="glass-table-ag"><thead><tr><th>@MdrText.T("wh.col.number")</th><th>@MdrText.T("wh.col.store")</th><th>@MdrText.T("wh.col.requester")</th><th>@MdrText.T("wh.col.lines")</th><th>@MdrText.T("wh.col.status")</th><th>@MdrText.T("wh.col.date")</th></tr></thead><tbody id="reqs" class="scrollbar"></tbody></table>
+        </div></div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-box-seam", MdrText.T("wh.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var isManager = @(isManager ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("wf.empty"),
+        kind = new { Receipt = MdrText.T("wh.kind.Receipt"), Issue = MdrText.T("wh.kind.Issue"), TransferOut = MdrText.T("wh.kind.TransferOut"), TransferIn = MdrText.T("wh.kind.TransferIn"), Adjust = MdrText.T("wh.kind.Adjust") },
+        st = new { Draft = MdrText.T("wh.st.Draft"), Submitted = MdrText.T("wh.st.Submitted"), Issued = MdrText.T("wh.st.Issued"), Rejected = MdrText.T("wh.st.Rejected"), Cancelled = MdrText.T("wh.st.Cancelled") },
+        f = new { store = MdrText.T("wh.f.store"), item = MdrText.T("wh.f.item"), qty = MdrText.T("wh.f.qty"), ref_ = MdrText.T("wh.f.ref"), note = MdrText.T("wh.f.note"), from = MdrText.T("wh.f.from"), to = MdrText.T("wh.f.to"),
+                  delta = MdrText.T("wh.f.delta"), reason = MdrText.T("wh.f.reason"), code = MdrText.T("wh.f.code"), name = MdrText.T("wh.f.name"), unit = MdrText.T("wh.f.unit"), reorder = MdrText.T("wh.f.reorder"), storeName = MdrText.T("wh.f.storename") },
+        col = new { doc = MdrText.T("wh.col.doc"), kind = MdrText.T("wh.col.kind"), store = MdrText.T("wh.col.store"), qty = MdrText.T("wh.col.qty"), ref_ = MdrText.T("wh.col.ref"), note = MdrText.T("wh.col.note"), by = MdrText.T("wh.col.by"), date = MdrText.T("wh.col.date"),
+                    code = MdrText.T("wh.col.code"), name = MdrText.T("wh.col.name"), unit = MdrText.T("wh.col.unit"), available = MdrText.T("wh.col.available") },
+        act = new { newItem = MdrText.T("wh.act.newitem"), newStore = MdrText.T("wh.act.newstore"), receipt = MdrText.T("wh.act.receipt"), issue = MdrText.T("wh.act.issue"), transfer = MdrText.T("wh.act.transfer"), adjust = MdrText.T("wh.act.adjust"),
+                    newReq = MdrText.T("wh.act.newreq"), save = MdrText.T("wh.act.save"), submit = MdrText.T("wh.act.submit"), cancel = MdrText.T("wh.act.cancel"), issueReq = MdrText.T("wh.act.issuereq"), reject = MdrText.T("wh.act.reject"),
+                    addLine = MdrText.T("wh.act.addline"), remove = MdrText.T("wh.act.remove"), create = MdrText.T("wh.act.create") },
+        low = MdrText.T("wh.low"), alertLow = MdrText.T("wh.alert.low"), secLedger = MdrText.T("wh.sec.ledger"), secRequest = MdrText.T("wh.sec.request"), secLines = MdrText.T("wh.sec.lines"),
+        dupName = MdrText.T("wh.warn.dupname"), reasonPrompt = MdrText.T("wh.prompt.reason"), confirmCancel = MdrText.T("wh.confirm.cancel") }));
+    var u = @Html.Raw(Json.Encode(new {
+        look = Url.Action("GetLookups", "Warehouse", new { area = "Mdr" }), stock = Url.Action("GetStock", "Warehouse", new { area = "Mdr" }), ledger = Url.Action("GetLedger", "Warehouse", new { area = "Mdr" }),
+        reqs = Url.Action("GetRequests", "Warehouse", new { area = "Mdr" }), req = Url.Action("GetRequest", "Warehouse", new { area = "Mdr" }), newStore = Url.Action("CreateStore", "Warehouse", new { area = "Mdr" }),
+        newItem = Url.Action("CreateItem", "Warehouse", new { area = "Mdr" }), receipt = Url.Action("Receipt", "Warehouse", new { area = "Mdr" }), issue = Url.Action("Issue", "Warehouse", new { area = "Mdr" }),
+        transfer = Url.Action("Transfer", "Warehouse", new { area = "Mdr" }), adjust = Url.Action("Adjust", "Warehouse", new { area = "Mdr" }), saveReq = Url.Action("SaveRequest", "Warehouse", new { area = "Mdr" }),
+        submitReq = Url.Action("SubmitRequest", "Warehouse", new { area = "Mdr" }), cancelReq = Url.Action("CancelRequest", "Warehouse", new { area = "Mdr" }), issueReq = Url.Action("IssueRequest", "Warehouse", new { area = "Mdr" }),
+        rejectReq = Url.Action("RejectRequest", "Warehouse", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc, look = { Stores: [], Items: [] }, curReq = null;
+    var ST_CLS = { Draft: "glass-status-info", Submitted: "glass-status-warning", Issued: "glass-status-success", Rejected: "glass-status-danger", Cancelled: "glass-status-info" };
+
+    function num(v) { return v === null || v === undefined ? "—" : Number(v).toLocaleString("fa-IR", { maximumFractionDigits: 3 }); }
+    function latin(s) { return String(s == null ? "" : s).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/[٬,\s]/g, "").replace(/٫/g, "."); }
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function field(icon, title, body) { return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) + '</div></div></div><div class="glass-field-body">' + body + "</div></div>"; }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + (attrs || "") + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function post(url, p, then) { mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); then(r); }); }
+    function storeOpts(sel) { return look.Stores.map(function (s) { return '<option value="' + s.Id + '"' + (s.Id === sel ? " selected" : "") + ">" + E(s.Name) + "</option>"; }).join(""); }
+    function itemOpts(sel) { return look.Items.map(function (i) { return '<option value="' + i.Id + '"' + (i.Id === sel ? " selected" : "") + ">" + E(i.Code + " — " + i.Name + " (" + i.Unit + ")") + "</option>"; }).join(""); }
+    function lookups() { return mdr.get(u.look).then(function (r) { if (r.success) look = r.data; }); }
+
+    // ---------- موجودی ----------
+    function loadStock() {
+        $("sstate").hidden = false; $("sstate").textContent = L.loading; $("stockwrap").hidden = true;
+        mdr.get(u.stock + "?q=" + encodeURIComponent($("q").value) + "&low=" + $("low").checked).then(function (r) {
+            if (!r.success) { $("sstate").textContent = L.error; return; }
+            var lows = r.items.filter(function (x) { return x.Low; }).length;
+            $("alerts").hidden = !lows || $("low").checked; $("alerts").textContent = lows + " " + L.alertLow;
+            if (!r.items.length) { $("sstate").textContent = L.empty; return; }
+            $("sstate").hidden = true; $("stockwrap").hidden = false;
+            $("stock").innerHTML = r.items.map(function (i) {
+                return '<tr data-item="' + i.ItemID + '"><td>' + E(i.Code) + "</td><td>" + E(i.Name) + (i.Low ? ' <span class="mdr-ag-badge glass-status-danger">' + E(L.low) + "</span>" : "") + "</td><td>" + E(i.Unit) + "</td><td><b>" + num(i.Total) + "</b></td><td>" + num(i.ReorderPoint) + "</td><td>" +
+                    E(i.Stores.map(function (s) { return s.Name + ": " + Number(s.Qty).toLocaleString("fa-IR", { maximumFractionDigits: 3 }); }).join("، ")) + "</td></tr>";
+            }).join("");
+        }).catch(function () { $("sstate").textContent = L.error; });
+    }
+
+    function ledger(itemId, title) {
+        if (!isManager) return;
+        mdr.get(u.ledger + "?itemId=" + itemId).then(function (r) {
+            showModal(true); $("mtitle").textContent = L.secLedger; $("msub").textContent = title; toast("");
+            if (!r.success) { toast(E(r.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            $("dbody").innerHTML = r.items.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.doc) + "</th><th>" + E(L.col.kind) + "</th><th>" + E(L.col.store) + "</th><th>" + E(L.col.qty) + "</th><th>" + E(L.col.ref_) + "</th><th>" + E(L.col.by) + "</th><th>" + E(L.col.date) + "</th></tr></thead><tbody>" +
+                r.items.map(function (m) { return "<tr><td>" + E(m.DocNo || "") + "</td><td>" + E(L.kind[m.Kind]) + "</td><td>" + E(m.Store || "") + "</td><td>" + num(m.Qty) + "</td><td>" + E(m.Reference || m.Note || "") + "</td><td>" + E(m.By || "") + "</td><td>" + E(m.At) + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+        });
+    }
+
+    function opForm(kind) {
+        lookups().then(function () {
+            var t = { Receipt: L.act.receipt, Issue: L.act.issue, Transfer: L.act.transfer, Adjust: L.act.adjust }[kind];
+            $("mtitle").textContent = t; $("msub").textContent = ""; toast("");
+            var body = '<div class="row row-input-AG"><div class="col-xl-6 col-md-12"><label class="glass-label-ag">' + E(L.f.item) + '</label><select id="o-item" class="glass-select-search">' + itemOpts() + "</select></div>";
+            if (kind === "Transfer") body += '<div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.from) + '</label><select id="o-from" class="glass-select-search">' + storeOpts() + '</select></div><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.to) + '</label><select id="o-to" class="glass-select-search">' + storeOpts() + "</select></div>";
+            else body += '<div class="col-xl-6 col-md-12"><label class="glass-label-ag">' + E(L.f.store) + '</label><select id="o-store" class="glass-select-search">' + storeOpts() + "</select></div>";
+            body += '</div><div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(kind === "Adjust" ? L.f.delta : L.f.qty) + '</label><input id="o-qty" class="glass-input-ag" inputmode="decimal"></div>';
+            body += kind === "Receipt" || kind === "Issue" ? '<div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.ref_) + '</label><input id="o-ref" class="glass-input-ag" maxlength="100"></div>' : "";
+            body += '<div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(kind === "Adjust" ? L.f.reason : L.f.note) + '</label><input id="o-note" class="glass-input-ag" maxlength="500"></div></div>' +
+                '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="o-go"') + "</div>";
+            $("dbody").innerHTML = field("bi-box-seam", t, body);
+            $("o-go").onclick = function () {
+                var item = $("o-item").value, qty = latin($("o-qty").value);
+                if (kind === "Receipt") post(u.receipt, { storeId: $("o-store").value, itemId: item, qty: qty, reference: $("o-ref").value, note: $("o-note").value }, done);
+                else if (kind === "Issue") post(u.issue, { storeId: $("o-store").value, itemId: item, qty: qty, reference: $("o-ref").value, note: $("o-note").value }, done);
+                else if (kind === "Transfer") post(u.transfer, { fromStore: $("o-from").value, toStore: $("o-to").value, itemId: item, qty: qty, note: $("o-note").value }, done);
+                else post(u.adjust, { storeId: $("o-store").value, itemId: item, delta: qty, reason: $("o-note").value }, done);
+            };
+            showModal(true);
+        });
+        function done() { showModal(false); loadStock(); }
+    }
+
+    function simpleForm(title, html, go) { $("mtitle").textContent = title; $("msub").textContent = ""; toast(""); $("dbody").innerHTML = field("bi-plus-square", title, html + '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.create, 'id="s-go"') + "</div>"); $("s-go").onclick = go; showModal(true); }
+    function newItem() {
+        simpleForm(L.act.newItem, '<div class="row row-input-AG"><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.code) + ' *</label><input id="i-code" class="glass-input-ag" maxlength="40"></div><div class="col-xl-5 col-md-6"><label class="glass-label-ag">' + E(L.f.name) + ' *</label><input id="i-name" class="glass-input-ag" maxlength="200"></div>' +
+            '<div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + E(L.f.unit) + ' *</label><input id="i-unit" class="glass-input-ag" maxlength="20"></div><div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + E(L.f.reorder) + '</label><input id="i-re" class="glass-input-ag" inputmode="decimal"></div></div>',
+            function () {
+                var p = { code: $("i-code").value, name: $("i-name").value, unit: $("i-unit").value, reorderPoint: latin($("i-re").value) };
+                mdr.post(u.newItem, p).then(function (r) {
+                    if (r.error === "wh.err.dupname") { if (!confirm(L.dupName)) return; p.confirmDuplicate = true; return mdr.post(u.newItem, p).then(function (r2) { if (!r2.success) toast(E(r2.message || L.error), true); else { showModal(false); loadStock(); } }); }
+                    if (!r.success) toast(E(r.message || L.error), true); else { showModal(false); loadStock(); }
+                });
+            });
+    }
+    function newStore() {
+        simpleForm(L.act.newStore, '<div class="row row-input-AG"><div class="col-12"><label class="glass-label-ag">' + E(L.f.storeName) + ' *</label><input id="st-name" class="glass-input-ag" maxlength="150"></div></div>',
+            function () { post(u.newStore, { name: $("st-name").value }, function () { showModal(false); }); });
+    }
+
+    // ---------- درخواست کالا ----------
+    function loadReqs() {
+        $("rstate").hidden = false; $("rstate").textContent = L.loading; $("reqwrap").hidden = true;
+        mdr.get(u.reqs + "?scope=" + $("scope").value).then(function (r) {
+            if (!r.success) { $("rstate").textContent = L.error; return; }
+            if (!r.items.length) { $("rstate").textContent = L.empty; return; }
+            $("rstate").hidden = true; $("reqwrap").hidden = false;
+            $("reqs").innerHTML = r.items.map(function (x) { return '<tr data-r="' + x.RequestID + '"><td>' + E(x.Number) + "</td><td>" + E(x.Store || "") + "</td><td>" + E(x.Requester || "") + "</td><td>" + x.Lines + '</td><td><span class="meeting-status ' + (ST_CLS[x.Status] || "") + '">' + E(L.st[x.Status]) + "</span></td><td>" + E(x.At) + "</td></tr>"; }).join("");
+        });
+    }
+
+    function reqForm(d) {
+        lookups().then(function () {
+            var lines = d ? d.Lines.map(function (l) { return { ItemId: l.ItemID, Qty: l.Qty }; }) : [{ ItemId: look.Items.length ? look.Items[0].Id : 0, Qty: 1 }];
+            $("mtitle").textContent = L.act.newReq; $("msub").textContent = d ? d.Number : ""; toast("");
+            function paint() {
+                $("r-lines").innerHTML = lines.map(function (l, i) { return '<div class="row row-input-AG" data-i="' + i + '"><div class="col-xl-7 col-md-7"><select class="glass-select-search" data-k="item">' + itemOpts(l.ItemId) + '</select></div><div class="col-xl-3 col-md-3"><input class="glass-input-ag" data-k="qty" inputmode="decimal" value="' + E(l.Qty) + '"></div><div class="col-xl-2 col-md-2"><button type="button" class="mdr-btn" data-rm="' + i + '">' + E(L.act.remove) + "</button></div></div>"; }).join("");
+            }
+            $("dbody").innerHTML = field("bi-cart-check", L.secRequest, '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.store) + '</label><select id="r-store" class="glass-select-search">' + storeOpts(d ? d.StoreID : null) + '</select></div><div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.note) + '</label><input id="r-note" class="glass-input-ag" maxlength="500" value="' + E(d ? d.Note || "" : "") + '"></div></div>' +
+                '<h4>' + E(L.secLines) + '</h4><div id="r-lines"></div><div class="row row-btn-AG row-ltr-AG">' + btn("", "bi-plus", L.act.addLine, 'id="r-add"') + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="r-go"') + "</div>");
+            paint();
+            $("r-add").onclick = function () { sync(); lines.push({ ItemId: look.Items.length ? look.Items[0].Id : 0, Qty: 1 }); paint(); };
+            function sync() { [].forEach.call($("r-lines").children, function (row) { var i = +row.getAttribute("data-i"); lines[i] = { ItemId: +row.querySelector('[data-k="item"]').value, Qty: latin(row.querySelector('[data-k="qty"]').value) }; }); }
+            $("r-lines").onclick = function (e) { var b = e.target.closest("[data-rm]"); if (b) { sync(); lines.splice(+b.getAttribute("data-rm"), 1); paint(); } };
+            $("r-go").onclick = function () { sync(); post(u.saveReq, { id: d ? d.RequestID : 0, storeId: $("r-store").value, note: $("r-note").value, lines: JSON.stringify(lines.map(function (l) { return { ItemId: l.ItemId, Qty: Number(l.Qty) }; })) }, function (r) { loadReqs(); openReq(r.id); }); };
+            showModal(true);
+        });
+    }
+
+    function openReq(id) {
+        mdr.get(u.req + "?id=" + id).then(function (r) {
+            showModal(true);
+            if (!r.success) { toast(E(r.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            var d = r.request; curReq = d; toast(""); $("mtitle").textContent = d.Number; $("msub").textContent = (d.Requester || "") + " · " + (d.Store || "");
+            var lines = '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.code) + "</th><th>" + E(L.col.name) + "</th><th>" + E(L.col.qty) + "</th>" + (d.Lines.some(function (l) { return l.Available !== null; }) ? "<th>" + E(L.col.available) + "</th>" : "") + "</tr></thead><tbody>" +
+                d.Lines.map(function (l) { return "<tr><td>" + E(l.Code) + "</td><td>" + E(l.Name) + "</td><td>" + num(l.Qty) + " " + E(l.Unit) + "</td>" + (l.Available !== null ? '<td style="' + (l.Available < l.Qty ? "color:#ff9c94" : "") + '">' + num(l.Available) + "</td>" : "") + "</tr>"; }).join("") + "</tbody></table>";
+            var acts = (d.CanEdit ? btn("", "bi-pencil", L.act.save + "…", 'data-a="edit"') + btn("glass-btn-ag-primary", "bi-send", L.act.submit, 'data-a="submit"') : "") + (d.CanIssue ? btn("glass-btn-ag-primary", "bi-box-arrow-up", L.act.issueReq, 'data-a="issue"') + btn("glass-btn-text-reject", "bi-x-circle", L.act.reject, 'data-a="reject"') : "") + (d.CanCancel ? btn("glass-btn-text-reject", "bi-slash-circle", L.act.cancel, 'data-a="cancel"') : "");
+            $("dbody").innerHTML = field("bi-cart-check", L.secRequest, '<div style="margin-bottom:.6rem"><span class="mdr-ag-badge ' + (ST_CLS[d.Status] || "") + '">' + E(L.st[d.Status]) + "</span></div>" + (d.Note ? '<div class="mdr-ag-text">' + E(d.Note) + "</div>" : "") + (d.DecisionNote ? '<div class="mdr-ag-msg is-bad" style="margin:.5rem 0">' + E(d.DecisionNote) + "</div>" : "") + lines + (acts ? '<div class="row row-btn-AG row-ltr-AG">' + acts + "</div>" : ""));
+        });
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-a]"); if (!b || !curReq) return;
+        var a = b.getAttribute("data-a"), d = curReq, after = function () { loadReqs(); openReq(d.RequestID); };
+        if (a === "edit") return reqForm(d);
+        if (a === "submit") return post(u.submitReq, { id: d.RequestID }, after);
+        if (a === "cancel") { if (!confirm(L.confirmCancel)) return; return post(u.cancelReq, { id: d.RequestID }, after); }
+        if (a === "issue") return post(u.issueReq, { id: d.RequestID, rowVer: d.RowVer }, after);
+        if (a === "reject") { var rs = prompt(L.reasonPrompt); if (!rs) return; post(u.rejectReq, { id: d.RequestID, reason: rs }, after); }
+    });
+
+    function tab(t) { $("pstock").hidden = t !== "stock"; $("preq").hidden = t !== "req"; $("tstock").classList.toggle("is-on", t === "stock"); $("treq").classList.toggle("is-on", t === "req"); $("alerts").hidden = t !== "stock" || $("alerts").hidden; if (t === "req") loadReqs(); else loadStock(); history.replaceState(null, "", location.pathname + "#tab=" + t); }
+    $("tstock").onclick = function () { tab("stock"); }; $("treq").onclick = function () { tab("req"); };
+    $("q").oninput = (function () { var t; return function () { clearTimeout(t); t = setTimeout(loadStock, 350); }; })();
+    $("low").onchange = loadStock; $("scope").onchange = loadReqs;
+    $("stock").addEventListener("click", function (e) { var r = e.target.closest("tr[data-item]"); if (r) ledger(r.getAttribute("data-item"), r.cells[1].textContent); });
+    $("reqs").addEventListener("click", function (e) { var r = e.target.closest("tr[data-r]"); if (r) openReq(r.getAttribute("data-r")); });
+    document.querySelectorAll("[data-op]").forEach(function (b) { b.onclick = function () { opForm(b.getAttribute("data-op")); }; });
+    if ($("newitem")) $("newitem").onclick = newItem; if ($("newstore")) $("newstore").onclick = newStore;
+    if ($("newreq")) $("newreq").onclick = function () { reqForm(null); };
+    $("dclose").onclick = function () { showModal(false); }; $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) showModal(false); });
+
+    var m = /r=(\d+)/.exec(location.hash), t = /tab=(\w+)/.exec(location.hash);
+    if (m) { tab("req"); openReq(m[1]); } else tab(t && t[1] === "req" ? "req" : "stock");
+})();
+</script>
+}

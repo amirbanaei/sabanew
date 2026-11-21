@@ -1,0 +1,27 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("denied.title");
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    <section class="mdr-denied">
+        <div class="mdr-ag-header" style="justify-content:center">
+            <div class="mdr-ag-header-icon" style="color:#ff5a4f;border-color:rgba(255,90,79,.35);background:rgba(255,90,79,.08)"><i class="bi bi-shield-lock"></i></div>
+        </div>
+        <h2>@MdrText.T("denied.title")</h2>
+        <p>@MdrText.T("denied.body")</p>
+        <div class="row justify-content-center">
+            <div class="col-6">
+                <a class="glass-btn-ag" href="javascript:history.back()"><i class="bi bi-arrow-right"></i><p>@MdrText.T("denied.back")</p></a>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section scripts {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+}

@@ -1,0 +1,1727 @@
+﻿@* =========================================================
+    MDR
+    Phase 1    : زیرساخت مشترک
+    Step 1.5   : مدیریت فایل و پیوست
+
+    Part 1.5.5 : صفحه مدیریت فایل‌ها (برای مدیر سیستم)
+    - کارت‌های آمار (کلیک = فیلتر)
+    - حجم هر بخش
+    - فیلترها (تاریخ، بخش، جدول، کاربر، نوع، وضعیت، تکراری، جستجو)
+    - جدول گلس فایل‌ها
+    - مودال جزئیات: نسخه‌ها، فایل‌های هم‌محتوا، بازگردانی / حذف
+    ========================================================= *@
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "مدیریت فایل‌ها";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>FileManagement</title>
+
+    <style>
+
+        /* =========================================================
+            MDR 1.5.5
+            PAGE
+            ========================================================= */
+
+        .fm-page {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            direction: rtl;
+            color: rgba(255,255,255,.92);
+        }
+
+
+        /* =========================================================
+            HEADER (هم‌سبک صفحه ساختار سازمانی)
+            ========================================================= */
+
+        .fm-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .fm-header-icon {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            color: #00ffff;
+            font-size: 22px;
+            background: rgba(0,255,255,.08);
+            border: 1px solid rgba(0,255,255,.25);
+            box-shadow: 0 0 18px rgba(0,255,255,.08), inset 0 0 12px rgba(0,255,255,.03);
+        }
+
+        .fm-header-text h4 {
+            margin: 0 0 4px 0;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .fm-header-text p {
+            margin: 0;
+            color: rgba(255,255,255,.52);
+            font-size: 11px;
+        }
+
+
+        /* =========================================================
+            STATS CARDS
+            ========================================================= */
+
+        .fm-stats {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: .6rem;
+            margin-bottom: 1rem;
+        }
+
+        .fm-stat {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .7rem .8rem;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: .55rem;
+            background: rgba(255,255,255,.035);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+        }
+
+        .fm-stat-icon {
+            width: 2.2rem;
+            height: 2.2rem;
+            flex: 0 0 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .6rem;
+            font-size: 1rem;
+            border: 1px solid currentColor;
+            background: rgba(255,255,255,.03);
+        }
+
+        .fm-stat-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .fm-stat-label {
+            font-size: .62rem;
+            color: rgba(255,255,255,.55);
+        }
+
+        .fm-stat-info .fm-stat-icon {
+            color: #00ffff;
+        }
+
+        .fm-stat-success .fm-stat-icon {
+            color: #32d583;
+        }
+
+        .fm-stat-warning .fm-stat-icon {
+            color: #ffc857;
+        }
+
+        .fm-stat-danger .fm-stat-icon {
+            color: #ff5a4f;
+        }
+
+        .fm-stat-users .fm-stat-icon {
+            color: #b692f6;
+        }
+
+
+        /* =========================================================
+            FILTERS
+            ========================================================= */
+
+        .fm-filters {
+            margin-bottom: 1rem;
+        }
+
+            .fm-filters .glass-field-body {
+                padding: .7rem;
+            }
+
+            .fm-filters .row > div {
+                margin-bottom: .45rem;
+            }
+
+            .fm-filters .glass-input-ag,
+            .fm-filters .glass-select-ag {
+                width: 100%;
+                margin-bottom: 0 !important;
+            }
+
+        .fm-filter-actions {
+            display: flex;
+            gap: .4rem;
+            align-items: flex-end;
+            height: 100%;
+        }
+
+            .fm-filter-actions button {
+                flex: 1;
+                margin: 0 !important;
+            }
+
+
+        /* =========================================================
+            TABLE (glass-table-ag از Layout)
+            عرض ستون‌ها باید در thead و tbody یکی باشد
+            ========================================================= */
+
+        .fm-table-wrap .glass-table-ag tbody {
+            max-height: calc(100vh - 25rem);
+            min-height: 8rem;
+        }
+
+        /* ستون‌ها: فایل، بخش، رکورد، نسخه، حجم، تاریخ، آپلودکننده، وضعیت، عملیات */
+        .fm-table-wrap .glass-table-ag th:nth-child(1),
+        .fm-table-wrap .glass-table-ag td:nth-child(1) { width: 25%; text-align: right; padding-right: .6rem; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(2),
+        .fm-table-wrap .glass-table-ag td:nth-child(2) { width: 11%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(3),
+        .fm-table-wrap .glass-table-ag td:nth-child(3) { width: 14%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(4),
+        .fm-table-wrap .glass-table-ag td:nth-child(4) { width: 6%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(5),
+        .fm-table-wrap .glass-table-ag td:nth-child(5) { width: 8%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(6),
+        .fm-table-wrap .glass-table-ag td:nth-child(6) { width: 9%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(7),
+        .fm-table-wrap .glass-table-ag td:nth-child(7) { width: 11%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(8),
+        .fm-table-wrap .glass-table-ag td:nth-child(8) { width: 8%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(9),
+        .fm-table-wrap .glass-table-ag td:nth-child(9) { width: 8%; }
+
+        .fm-table-wrap .glass-table-ag th:nth-child(1) { text-align: center; }
+
+        .fm-table-wrap .glass-table-ag tbody tr {
+            cursor: pointer;
+        }
+
+        .fm-date-cell {
+            line-height: 1.35;
+        }
+
+            .fm-date-cell small {
+                display: block;
+                color: rgba(255,255,255,.45);
+                font-size: .58rem;
+            }
+
+        .fm-muted {
+            color: rgba(255,255,255,.45);
+            font-size: .58rem;
+        }
+
+        .fm-table-wrap .glass-table-ag td.fm-empty,
+        .fm-diff-wrap .glass-table-ag td.fm-empty,
+        .fm-empty {
+            width: 100% !important;
+            text-align: center !important;
+            padding: 2rem 0 !important;
+            color: rgba(255,255,255,.45) !important;
+            font-size: .7rem;
+            white-space: normal !important;
+        }
+
+        .fm-source-badge {
+            display: inline-block;
+            margin-left: .25rem;
+            padding: 0 .35rem;
+            border-radius: .3rem;
+            font-size: .52rem;
+            color: #b692f6;
+            border: 1px solid rgba(182,146,246,.45);
+            background: rgba(182,146,246,.06);
+        }
+
+        .fm-source-badge-manual {
+            color: #00ffff;
+            border-color: rgba(0,255,255,.4);
+            background: rgba(0,255,255,.05);
+        }
+
+
+        /* =========================================================
+            PAGINATION
+            ========================================================= */
+
+        .fm-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .6rem;
+            flex-wrap: wrap;
+            margin-top: .75rem;
+            font-size: .65rem;
+            color: rgba(255,255,255,.6);
+        }
+
+        .fm-pages {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+            .fm-pages .glass-btn-icon {
+                width: 2rem;
+                height: 2rem;
+            }
+
+        .fm-page-number {
+            min-width: 5.5rem;
+            text-align: center;
+        }
+
+
+        /* =========================================================
+            MODAL (ModalAG از Layout)
+            ========================================================= */
+
+        /* مقادیر فقط‌خواندنی، هم‌شکل glass-input-ag */
+        #FileModalAG .fm-readonly {
+            min-height: 2.1rem;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: default;
+        }
+
+            #FileModalAG .fm-readonly:hover,
+            #FileModalAG .fm-readonly:focus {
+                transform: none !important;
+            }
+
+            #FileModalAG .fm-readonly.fm-ltr {
+                direction: ltr;
+                justify-content: flex-end;
+                font-size: 11px !important;
+                color: rgba(255,255,255,.7) !important;
+            }
+
+            #FileModalAG .fm-readonly .meeting-status {
+                height: 1.4rem;
+                min-width: 3.5rem;
+                padding: 0 .55rem;
+                border-radius: .4rem;
+                font-size: .65rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+        .fm-diff-wrap {
+            margin-top: .35rem;
+        }
+
+        .fm-diff-wrap .glass-table-ag tbody {
+            max-height: 18rem;
+        }
+
+        .fm-diff-wrap .glass-table-ag th:nth-child(1),
+        .fm-diff-wrap .glass-table-ag td:nth-child(1) {
+            width: 24%;
+        }
+
+        .fm-diff-wrap .glass-table-ag th:nth-child(2),
+        .fm-diff-wrap .glass-table-ag td:nth-child(2),
+        .fm-diff-wrap .glass-table-ag th:nth-child(3),
+        .fm-diff-wrap .glass-table-ag td:nth-child(3) {
+            width: 38%;
+        }
+
+        .fm-diff-wrap .glass-table-ag td {
+            white-space: normal !important;
+            word-break: break-word;
+            height: auto !important;
+            padding: .45rem .5rem;
+        }
+
+        .fm-diff-changed td {
+            background: rgba(255,200,87,.05) !important;
+        }
+
+            .fm-diff-changed td:first-child {
+                color: #ffc857 !important;
+                font-weight: 700;
+            }
+
+        .fm-diff-old {
+            color: #ff8a80;
+        }
+
+        .fm-diff-new {
+            color: #6ee7b7;
+        }
+
+        .fm-null {
+            color: rgba(255,255,255,.3);
+            font-style: italic;
+        }
+
+
+
+        /* =========================================================
+            MDR 1.5.5 — اختصاصی مدیریت فایل‌ها
+            ========================================================= */
+
+        .fm-stat-click {
+            cursor: pointer;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+            .fm-stat-click:hover {
+                border-color: rgba(0,255,255,.35);
+                box-shadow: 0 0 14px rgba(0,255,255,.10), inset 0 1px 0 rgba(255,255,255,.12);
+            }
+
+        /* حجم هر بخش */
+        .fm-modules {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+            gap: .5rem;
+            margin-bottom: 1rem;
+        }
+
+            .fm-modules:empty {
+                display: none;
+            }
+
+        .fm-module {
+            padding: .5rem .65rem;
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: .55rem;
+            background: rgba(255,255,255,.025);
+            font-size: .65rem;
+        }
+
+        .fm-module-top {
+            display: flex;
+            justify-content: space-between;
+            gap: .4rem;
+            margin-bottom: .35rem;
+        }
+
+        .fm-module-bar {
+            height: 4px;
+            border-radius: 4px;
+            background: rgba(255,255,255,.08);
+            overflow: hidden;
+        }
+
+            .fm-module-bar span {
+                display: block;
+                height: 100%;
+                background: #00ffff;
+                box-shadow: 0 0 8px rgba(0,255,255,.5);
+            }
+
+        /* ستون فایل */
+        /* flex روی div داخلی؛ خود td باید table-cell بماند تا عرضش با th یکی باشد */
+        .fm-file-cell {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .fm-icon {
+            font-size: 1.15rem;
+            color: #00ffff;
+        }
+
+            .fm-icon.pdf { color: #ff6b6b; }
+            .fm-icon.word { color: #4ea1ff; }
+            .fm-icon.excel { color: #2ecc71; }
+            .fm-icon.ppt { color: #ff9f43; }
+            .fm-icon.image { color: #c08cff; }
+            .fm-icon.zip { color: #f1c40f; }
+
+        .fm-file-text {
+            min-width: 0;
+            line-height: 1.4;
+        }
+
+        .fm-file-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+            .fm-file-text .fm-muted {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: right;
+            }
+
+        .fm-dup-badge {
+            display: inline-block;
+            padding: 0 .3rem;
+            border-radius: .3rem;
+            font-size: .52rem;
+            color: #ffc857;
+            border: 1px solid rgba(255,200,87,.45);
+            background: rgba(255,200,87,.06);
+        }
+
+        .fm-row-deleted td {
+            opacity: .6;
+        }
+
+            .fm-row-deleted td:last-child,
+            .fm-row-deleted td:nth-child(8) {
+                opacity: 1;
+            }
+
+        .fm-current {
+            color: #32d583;
+            font-size: .58rem;
+        }
+
+        /* جدول نسخه‌ها در مودال */
+        .fm-versions-wrap .glass-table-ag th,
+        .fm-versions-wrap .glass-table-ag td {
+            width: auto !important;
+        }
+
+        .fm-versions-wrap .glass-table-ag th:nth-child(1),
+        .fm-versions-wrap .glass-table-ag td:nth-child(1) { width: 10% !important; }
+
+        .fm-versions-wrap .glass-table-ag th:nth-child(2),
+        .fm-versions-wrap .glass-table-ag td:nth-child(2) { width: 24% !important; }
+
+        .fm-versions-wrap .glass-table-ag th:nth-child(3),
+        .fm-versions-wrap .glass-table-ag td:nth-child(3) { width: 10% !important; }
+
+        .fm-versions-wrap .glass-table-ag th:nth-child(4),
+        .fm-versions-wrap .glass-table-ag td:nth-child(4) { width: 15% !important; }
+
+        .fm-versions-wrap .glass-table-ag th:nth-child(5),
+        .fm-versions-wrap .glass-table-ag td:nth-child(5) { width: 14% !important; }
+
+        .fm-versions-wrap .glass-table-ag th:nth-child(6),
+        .fm-versions-wrap .glass-table-ag td:nth-child(6) { width: 19% !important; }
+
+        .fm-versions-wrap .glass-table-ag th:nth-child(7),
+        .fm-versions-wrap .glass-table-ag td:nth-child(7) { width: 8% !important; }
+
+        /* پیوست‌های هم‌محتوا */
+        .fm-same {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem;
+            margin-top: .35rem;
+        }
+
+        .fm-same-item {
+            padding: .3rem .55rem;
+            border: 1px solid rgba(255,200,87,.35);
+            border-radius: .45rem;
+            background: rgba(255,200,87,.05);
+            color: #ffc857;
+            font-size: .62rem;
+            cursor: pointer;
+        }
+
+            .fm-same-item:hover {
+                background: rgba(255,200,87,.12);
+            }
+
+        #btnMdlDelete.fm-confirm {
+            box-shadow: 0 0 12px rgba(255,90,79,.45);
+        }
+
+
+        /* =========================================================
+            MOBILE
+            ========================================================= */
+
+        @@media (max-width: 992px) {
+
+            .fm-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+
+    @* =============================================================
+        GLOBAL ALERTS (استایل در Layout)
+        ============================================================= *@
+
+    <div class="global-alert-container">
+
+        <div class="global-alert global-alert-success" id="GlobalAlertSuccess">
+            <div class="global-alert-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="global-alert-content">
+                <div class="global-alert-title">عملیات موفق</div>
+                <div class="global-alert-message">-</div>
+            </div>
+            <button type="button" class="global-alert-close action-reject" aria-label="بستن">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="global-alert global-alert-error" id="GlobalAlertError">
+            <div class="global-alert-icon"><i class="bi bi-x-circle-fill"></i></div>
+            <div class="global-alert-content">
+                <div class="global-alert-title">عملیات ناموفق</div>
+                <div class="global-alert-message">-</div>
+            </div>
+            <button type="button" class="global-alert-close action-reject" aria-label="بستن">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+    </div>
+
+
+    <div class="tab-content tab-AG">
+
+
+        @* =====================================================
+            MDR 1.5.5 — HEADER
+            ===================================================== *@
+
+        <div class="fm-header">
+
+            <div class="fm-header-icon">
+                <i class="bi bi-folder2-open"></i>
+            </div>
+
+            <div class="fm-header-text">
+                <h4>مدیریت فایل‌ها</h4>
+                <p>همه پیوست‌های سامانه؛ حجم، نسخه‌ها، فایل‌های حذف‌شده و تکراری</p>
+            </div>
+
+        </div>
+
+
+        @* =====================================================
+            MDR 1.5.5 — STATS (کل سامانه — کلیک = فیلتر)
+            ===================================================== *@
+
+        <div class="fm-stats">
+
+            <div class="fm-stat fm-stat-success fm-stat-click" data-filter="active" title="نمایش پیوست‌های فعال">
+                <div class="fm-stat-icon"><i class="bi bi-file-earmark-check"></i></div>
+                <div>
+                    <div class="fm-stat-value" id="statActive">-</div>
+                    <div class="fm-stat-label">پیوست فعال</div>
+                </div>
+            </div>
+
+            <div class="fm-stat fm-stat-danger fm-stat-click" data-filter="deleted" title="نمایش پیوست‌های حذف‌شده">
+                <div class="fm-stat-icon"><i class="bi bi-trash"></i></div>
+                <div>
+                    <div class="fm-stat-value" id="statDeleted">-</div>
+                    <div class="fm-stat-label">حذف‌شده (قابل بازگردانی)</div>
+                </div>
+            </div>
+
+            <div class="fm-stat fm-stat-info">
+                <div class="fm-stat-icon"><i class="bi bi-hdd"></i></div>
+                <div>
+                    <div class="fm-stat-value" id="statSize">-</div>
+                    <div class="fm-stat-label">حجم کل روی سرور</div>
+                </div>
+            </div>
+
+            <div class="fm-stat fm-stat-users">
+                <div class="fm-stat-icon"><i class="bi bi-layers"></i></div>
+                <div>
+                    <div class="fm-stat-value" id="statVersions">-</div>
+                    <div class="fm-stat-label">تعداد کل نسخه‌ها</div>
+                </div>
+            </div>
+
+            <div class="fm-stat fm-stat-warning fm-stat-click" data-filter="duplicate" title="نمایش فایل‌های تکراری">
+                <div class="fm-stat-icon"><i class="bi bi-files"></i></div>
+                <div>
+                    <div class="fm-stat-value" id="statDuplicates">-</div>
+                    <div class="fm-stat-label">محتوای تکراری</div>
+                </div>
+            </div>
+
+        </div>
+
+
+        @* MDR 1.5.5 — حجم هر بخش *@
+        <div class="fm-modules" id="fmModules"></div>
+
+
+        @* =====================================================
+            MDR 1.5.5 — FILTERS
+            ===================================================== *@
+
+        <div class="glass-field-ag fm-filters">
+
+            <div class="glass-field-header">
+
+                <div class="glass-field-icon">
+                    <i class="bi bi-funnel"></i>
+                </div>
+
+                <div class="glass-field-heading">
+                    <div class="glass-field-title">فیلترها</div>
+                    <div class="glass-field-subtitle">بازه زمانی، بخش، کاربر، نوع فایل و وضعیت</div>
+                </div>
+
+            </div>
+
+            <div class="glass-field-body">
+
+                <div class="row row-input-AG">
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">از تاریخ</label>
+                        <input id="fltFromDate" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" />
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">تا تاریخ</label>
+                        <input id="fltToDate" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" />
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">بخش</label>
+                        <select id="fltModule" class="glass-select-search" data-search="true">
+                            <option value="">همه بخش‌ها</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">جدول</label>
+                        <select id="fltEntity" class="glass-select-search" data-search="true">
+                            <option value="">همه جدول‌ها</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">آپلودکننده</label>
+                        <select id="fltUser" class="glass-select-search" data-search="true">
+                            <option value="">همه کاربران</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">نوع فایل</label>
+                        <select id="fltExtension" class="glass-select-search" data-search="true">
+                            <option value="">همه</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="row row-input-AG">
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">وضعیت</label>
+                        <select id="fltStatus" class="glass-select-search">
+                            <option value="">همه</option>
+                            <option value="active">فعال</option>
+                            <option value="deleted">حذف‌شده</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">تکراری</label>
+                        <select id="fltDuplicate" class="glass-select-search">
+                            <option value="">همه</option>
+                            <option value="true">فقط محتوای تکراری</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-4">
+                        <label class="glass-label-ag">جستجو</label>
+                        <input id="fltSearch"
+                               class="glass-input-ag"
+                               placeholder="عنوان، نام فایل، آپلودکننده یا شناسه رکورد..."
+                               autocomplete="off" />
+                    </div>
+
+                    <div class="col-xl-2">
+                        <button type="button" id="btnFmSearch" class="glass-btn-ag glass-btn-text-confirm">
+                            <i class="bi bi-search"></i>
+                            اعمال فیلتر
+                        </button>
+                    </div>
+
+                    <div class="col-xl-2">
+                        <button type="button" id="btnFmReset" class="glass-btn-ag glass-btn-text-reject">
+                            <i class="bi bi-trash"></i>
+                            پاک کردن
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        @* =====================================================
+            MDR 1.5.5 — TABLE
+            ===================================================== *@
+
+        <div class="fm-table-wrap">
+
+            <table class="glass-table-ag">
+
+                <thead>
+                    <tr>
+                        <th>فایل</th>
+                        <th>بخش</th>
+                        <th>جدول / رکورد</th>
+                        <th>نسخه</th>
+                        <th>حجم</th>
+                        <th>تاریخ</th>
+                        <th>آپلودکننده</th>
+                        <th>وضعیت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+
+                <tbody id="fmTableBody" class="scrollbar">
+                    <tr>
+                        <td colspan="9" class="fm-empty">در حال بارگذاری...</td>
+                    </tr>
+                </tbody>
+
+            </table>
+
+
+            @* PAGINATION *@
+            <div class="fm-pagination">
+
+                <div id="fmTotalText">-</div>
+
+                <div class="fm-pages">
+
+                    <button type="button" id="btnFmPrev" class="glass-btn-icon" title="صفحه قبل">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+
+                    <span class="fm-page-number" id="fmPageText">-</span>
+
+                    <button type="button" id="btnFmNext" class="glass-btn-icon" title="صفحه بعد">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+
+                    <select id="fmPageSize"
+                            data-search="false"
+                            class="glass-select-search"
+                            style="width:5.5rem !important; margin-bottom:0 !important;">
+                        <option value="20">۲۰ ردیف</option>
+                        <option value="50">۵۰ ردیف</option>
+                        <option value="100">۱۰۰ ردیف</option>
+                    </select>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    @* =============================================================
+        MDR 1.5.5 — DETAIL MODAL (ModalAG از Layout)
+        ============================================================= *@
+
+    <div id="FileModalAG" class="ModalAG">
+
+        <div class="ContentModalAG">
+
+            <div class="BtnCloseAG action-reject" id="btnCloseFileModal">
+                <i class="bi bi-x"></i>
+            </div>
+
+            <div id="BodyModalAG">
+
+                <div class="tab-content scrollbar">
+
+                    <div class="glass-field-ag">
+
+                        <div class="glass-field-header">
+
+                            <div class="glass-field-icon">
+                                <i class="bi bi-file-earmark" id="mdlIcon"></i>
+                            </div>
+
+                            <div class="glass-field-heading">
+                                <div class="glass-field-title" id="mdlTitle">جزئیات پیوست</div>
+                                <div class="glass-field-subtitle" id="mdlSubtitle">-</div>
+                            </div>
+
+                        </div>
+
+                        <div class="glass-field-body">
+
+                            <div class="row row-input-AG">
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">بخش</label>
+                                    <div class="glass-input-ag fm-readonly" id="mdlModule">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">جدول / رکورد</label>
+                                    <div class="glass-input-ag fm-readonly" id="mdlEntity">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">وضعیت</label>
+                                    <div class="glass-input-ag fm-readonly" id="mdlStatus">-</div>
+                                </div>
+                            </div>
+
+                            <div class="row row-input-AG">
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">آپلودکننده اول</label>
+                                    <div class="glass-input-ag fm-readonly" id="mdlCreated">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">آخرین تغییر توسط</label>
+                                    <div class="glass-input-ag fm-readonly" id="mdlUpdated">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">دسته / توضیح</label>
+                                    <div class="glass-input-ag fm-readonly" id="mdlCategory">-</div>
+                                </div>
+                            </div>
+
+                            <div class="row row-input-AG">
+                                <div class="col-xl-12">
+                                    <label class="glass-label-ag">نسخه‌ها</label>
+                                    <div class="fm-diff-wrap fm-versions-wrap">
+                                        <table class="glass-table-ag">
+                                            <thead>
+                                                <tr>
+                                                    <th>نسخه</th>
+                                                    <th>نام فایل</th>
+                                                    <th>حجم</th>
+                                                    <th>تاریخ</th>
+                                                    <th>آپلودکننده</th>
+                                                    <th>توضیح</th>
+                                                    <th>دانلود</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="mdlVersionsBody" class="scrollbar"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row row-input-AG" id="mdlSameWrap">
+                                <div class="col-xl-12">
+                                    <label class="glass-label-ag">
+                                        پیوست‌های هم‌محتوا
+                                        <span class="fm-muted">(همین فایل در جای دیگری هم آپلود شده)</span>
+                                    </label>
+                                    <div class="fm-same" id="mdlSame"></div>
+                                </div>
+                            </div>
+
+                            <div class="row row-btn-AG row-ltr-AG">
+                                <div class="col-xl-2">
+                                    <button type="button" id="btnCloseFileModal2" class="glass-btn-ag glass-btn-text-reject">
+                                        <i class="bi bi-x-circle"></i>
+                                        بستن
+                                    </button>
+                                </div>
+                                <div class="col-xl-2">
+                                    <button type="button" id="btnMdlRestore" class="glass-btn-ag glass-btn-text-confirm">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        بازگردانی
+                                    </button>
+                                </div>
+                                <div class="col-xl-2">
+                                    <button type="button" id="btnMdlDelete" class="glass-btn-ag glass-btn-text-reject">
+                                        <i class="bi bi-trash"></i>
+                                        حذف
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    @* =============================================================
+        MDR 1.5.5 — تقویم جلالی (همان قالب صفحه تاریخچه رویدادها)
+        ============================================================= *@
+
+    <link href="~/Assets/css/jalalidatepicker.min.css" rel="stylesheet" />
+    <link href="~/MyStyles/jalalidatepicker.css" rel="stylesheet" />
+    <script data-cfasync="false" src="~/Assets/js/jalalidatepicker.min.js"></script>
+
+    <script data-cfasync="false">
+
+        if (!window.__mdrFmJdpInit) {
+
+            window.__mdrFmJdpInit = true;
+
+            jalaliDatepicker.startWatch({
+                time: false,
+                days: ["شنبه", "1شنبه", "2شنبه", "3شنبه", "4شنبه", "5شنبه", "جمعه"],
+                persianDigits: true,
+                autoClose: true,
+                autocomplete: true,
+                showEmptyBtn: false,
+                showCloseBtn: true,
+                zIndex: 100000
+            });
+        }
+
+    </script>
+
+
+    <script data-cfasync="false">
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        // =====================================================
+        // MDR — جلوگیری از اجرای دوباره (Rocket Loader)
+        // =====================================================
+
+        if (window.__mdrFmInit) {
+            return;
+        }
+
+        window.__mdrFmInit = true;
+
+
+        // =====================================================
+        // URLs
+        // =====================================================
+
+        var urls = {
+            filters: '@Url.Action("GetFileManagementFilters", "AG", new { area = "Mdr" })',
+            list: '@Url.Action("GetFileManagementList", "AG", new { area = "Mdr" })',
+            detail: '@Url.Action("GetFileManagementDetail", "AG", new { area = "Mdr" })',
+            download: '@Url.Action("DownloadFileAdmin", "AG", new { area = "Mdr" })',
+            restore: '@Url.Action("RestoreFile", "AG", new { area = "Mdr" })',
+            remove: '@Url.Action("DeleteFile", "AG", new { area = "Mdr" })'
+        };
+
+        var state = {
+            page: 1,
+            totalPages: 1,
+            currentGuid: null
+        };
+
+        var $ = function (id) {
+            return document.getElementById(id);
+        };
+
+
+        // =====================================================
+        // Helpers
+        // =====================================================
+
+        function esc(value) {
+
+            if (value === null || value === undefined) {
+                return "";
+            }
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function fa(value) {
+
+            return String(value === null || value === undefined ? "" : value)
+                .replace(/\d/g, function (d) { return "۰۱۲۳۴۵۶۷۸۹"[d]; });
+        }
+
+        function toLatinDigits(value) {
+
+            return String(value || "")
+                .replace(/[۰-۹]/g, function (d) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(d); })
+                .replace(/[٠-٩]/g, function (d) { return "٠١٢٣٤٥٦٧٨٩".indexOf(d); });
+        }
+
+        var alertTimer = null;
+
+        function notify(type, message) {
+
+            var box = $(type === "success" ? "GlobalAlertSuccess" : "GlobalAlertError");
+
+            document.querySelectorAll(".global-alert").forEach(function (a) {
+                a.classList.remove("show");
+            });
+
+            box.querySelector(".global-alert-message").textContent = message;
+            box.classList.add("show");
+
+            clearTimeout(alertTimer);
+            alertTimer = setTimeout(function () {
+                box.classList.remove("show");
+            }, 4500);
+        }
+
+        document.addEventListener("click", function (e) {
+
+            var closeButton = e.target.closest(".global-alert-close");
+
+            if (closeButton) {
+                closeButton.closest(".global-alert").classList.remove("show");
+            }
+        });
+
+
+        // نام خوانای بخش (هم‌نام صفحه تاریخچه رویدادها)
+        var moduleNames = {
+            OrganizationStructure: "ساختار سازمانی",
+            Users: "کاربران",
+            Roles: "نقش‌ها",
+            Meetings: "جلسات",
+            Tasks: "وظایف",
+            Requests: "درخواست‌ها"
+        };
+
+        function moduleName(module) {
+            return moduleNames[module] || module || "-";
+        }
+
+        function iconOf(extension) {
+
+            var ext = (extension || "").toLowerCase();
+
+            if (ext === ".pdf") return { icon: "bi-file-earmark-pdf", css: "pdf" };
+            if (ext === ".doc" || ext === ".docx") return { icon: "bi-file-earmark-word", css: "word" };
+            if (ext === ".xls" || ext === ".xlsx" || ext === ".csv") return { icon: "bi-file-earmark-excel", css: "excel" };
+            if (ext === ".ppt" || ext === ".pptx") return { icon: "bi-file-earmark-ppt", css: "ppt" };
+            if ([".jpg", ".jpeg", ".png", ".gif", ".bmp"].indexOf(ext) >= 0) return { icon: "bi-file-earmark-image", css: "image" };
+            if (ext === ".zip" || ext === ".rar") return { icon: "bi-file-earmark-zip", css: "zip" };
+
+            return { icon: "bi-file-earmark-text", css: "" };
+        }
+
+        function downloadUrl(guid, versionNo) {
+
+            return urls.download + "?id=" + encodeURIComponent(guid) +
+                (versionNo ? "&version=" + versionNo : "");
+        }
+
+        function statusBadge(isDeleted) {
+
+            return isDeleted
+                ? '<span class="meeting-status glass-status-danger">حذف‌شده</span>'
+                : '<span class="meeting-status glass-status-success">فعال</span>';
+        }
+
+
+        // =====================================================
+        // MDR 1.5.5.2 — FILTER OPTIONS
+        // =====================================================
+
+        function fillSelect(id, items, valueOf, textOf) {
+
+            var select = $(id);
+
+            items.forEach(function (item) {
+
+                var option = document.createElement("option");
+                option.value = valueOf(item);
+                option.textContent = textOf(item);
+                select.appendChild(option);
+            });
+        }
+
+        function loadFilters() {
+
+            fetch(urls.filters)
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        return;
+                    }
+
+                    fillSelect("fltModule", result.modules,
+                        function (x) { return x; },
+                        function (x) { return moduleName(x); });
+
+                    fillSelect("fltEntity", result.entities,
+                        function (x) { return x; },
+                        function (x) { return x; });
+
+                    fillSelect("fltUser", result.users,
+                        function (x) { return x.id; },
+                        function (x) { return x.name || ("کاربر " + x.id); });
+
+                    fillSelect("fltExtension", result.extensions,
+                        function (x) { return x; },
+                        function (x) { return x; });
+                })
+                .catch(function (error) {
+                    console.error("MDR FileManagement Filters Error:", error);
+                });
+        }
+
+
+        // =====================================================
+        // MDR 1.5.5.3 — LOAD LIST
+        // =====================================================
+
+        function buildQuery() {
+
+            var params = new URLSearchParams();
+
+            params.append("page", state.page);
+            params.append("pageSize", $("fmPageSize").value);
+
+            var fields = {
+                fromDate: toLatinDigits($("fltFromDate").value.trim()),
+                toDate: toLatinDigits($("fltToDate").value.trim()),
+                moduleName: $("fltModule").value,
+                entityName: $("fltEntity").value,
+                userId: $("fltUser").value,
+                extension: $("fltExtension").value,
+                status: $("fltStatus").value,
+                duplicate: $("fltDuplicate").value,
+                search: $("fltSearch").value.trim()
+            };
+
+            Object.keys(fields).forEach(function (key) {
+
+                if (fields[key]) {
+                    params.append(key, fields[key]);
+                }
+            });
+
+            return params.toString();
+        }
+
+
+        function loadFiles() {
+
+            var body = $("fmTableBody");
+
+            body.innerHTML =
+                '<tr><td colspan="9" class="fm-empty">در حال بارگذاری...</td></tr>';
+
+            fetch(urls.list + "?" + buildQuery())
+                .then(function (r) {
+
+                    if (!r.ok) {
+                        throw new Error("خطا در ارتباط با سرور");
+                    }
+
+                    return r.json();
+                })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        notify("error", result.message);
+                        body.innerHTML =
+                            '<tr><td colspan="9" class="fm-empty">خطا در دریافت اطلاعات</td></tr>';
+                        return;
+                    }
+
+                    renderStats(result.stats);
+                    renderModules(result.moduleSizes);
+                    renderRows(result.items);
+                    renderPagination(result);
+                })
+                .catch(function (error) {
+
+                    console.error("MDR FileManagement List Error:", error);
+                    notify("error", "در دریافت فایل‌ها خطایی رخ داد.");
+
+                    body.innerHTML =
+                        '<tr><td colspan="9" class="fm-empty">خطا در دریافت اطلاعات</td></tr>';
+                });
+        }
+
+
+        function renderStats(stats) {
+
+            if (!stats) {
+                return;
+            }
+
+            $("statActive").textContent = fa(stats.active);
+            $("statDeleted").textContent = fa(stats.deleted);
+            $("statSize").textContent = fa(stats.totalSizeText);
+            $("statVersions").textContent = fa(stats.versions);
+            $("statDuplicates").textContent = fa(stats.duplicates);
+        }
+
+
+        function renderModules(items) {
+
+            var box = $("fmModules");
+
+            if (!items || !items.length) {
+                box.innerHTML = "";
+                return;
+            }
+
+            box.innerHTML = items.map(function (x) {
+
+                return '' +
+                    '<div class="fm-module">' +
+                        '<div class="fm-module-top">' +
+                            '<span>' + esc(moduleName(x.module)) + '</span>' +
+                            '<span class="fm-muted">' + fa(x.files) + ' فایل · ' + esc(fa(x.sizeText)) + '</span>' +
+                        '</div>' +
+                        '<div class="fm-module-bar"><span style="width:' + Math.max(x.percent, 2) + '%"></span></div>' +
+                    '</div>';
+
+            }).join("");
+        }
+
+
+        function renderRows(items) {
+
+            var body = $("fmTableBody");
+
+            if (!items || items.length === 0) {
+
+                body.innerHTML =
+                    '<tr><td colspan="9" class="fm-empty">' +
+                    '<i class="bi bi-inbox"></i> فایلی با این فیلترها پیدا نشد' +
+                    '</td></tr>';
+
+                return;
+            }
+
+            body.innerHTML = items.map(function (x) {
+
+                var icon = iconOf(x.extension);
+
+                var actions =
+                    '<a class="glass-btn-icon" href="' + downloadUrl(x.fileGuid) + '" title="دانلود">' +
+                        '<i class="bi bi-download"></i></a>' +
+                    (x.isDeleted
+                        ? '<button type="button" class="glass-btn-icon glass-btn-icon-confirm" data-act="restore" ' +
+                              'data-guid="' + esc(x.fileGuid) + '" title="بازگردانی">' +
+                              '<i class="bi bi-arrow-counterclockwise"></i></button>'
+                        : '');
+
+                return '' +
+                    '<tr data-guid="' + esc(x.fileGuid) + '" class="' + (x.isDeleted ? "fm-row-deleted" : "") + '">' +
+                        '<td><div class="fm-file-cell">' +
+                            '<i class="bi ' + icon.icon + ' fm-icon ' + icon.css + '"></i>' +
+                            '<div class="fm-file-text">' +
+                                '<div class="fm-file-title">' + esc(x.title) +
+                                    (x.isDuplicate ? ' <span class="fm-dup-badge" title="این محتوا در پیوست دیگری هم هست">تکراری</span>' : '') +
+                                '</div>' +
+                                '<div class="fm-muted" dir="ltr">' + esc(x.fileName) + '</div>' +
+                            '</div>' +
+                        '</div></td>' +
+                        '<td>' + esc(moduleName(x.module)) + '</td>' +
+                        '<td>' + esc(x.entity) + '<div class="fm-muted">رکورد ' + esc(fa(x.entityId)) + '</div></td>' +
+                        '<td>' + fa(x.versionNo) +
+                            (x.versionsCount > 1 ? '<div class="fm-muted">از ' + fa(x.versionsCount) + '</div>' : '') +
+                        '</td>' +
+                        '<td>' + esc(fa(x.sizeText)) + '</td>' +
+                        '<td>' + esc(fa(x.date || "-")) + '</td>' +
+                        '<td>' + esc(x.createdBy || "نامشخص") + '</td>' +
+                        '<td>' + statusBadge(x.isDeleted) + '</td>' +
+                        '<td><div class="meeting-actions">' + actions + '</div></td>' +
+                    '</tr>';
+
+            }).join("");
+        }
+
+
+        function renderPagination(result) {
+
+            state.page = result.page;
+            state.totalPages = Math.max(result.totalPages, 1);
+
+            $("fmTotalText").textContent =
+                "مجموع: " + fa(result.total) + " فایل";
+
+            $("fmPageText").textContent =
+                "صفحه " + fa(state.page) + " از " + fa(state.totalPages);
+
+            $("btnFmPrev").disabled = state.page <= 1;
+            $("btnFmNext").disabled = state.page >= state.totalPages;
+        }
+
+
+        // =====================================================
+        // MDR 1.5.5.4 — DETAIL MODAL
+        // =====================================================
+
+        function openDetail(guid) {
+
+            fetch(urls.detail + "?fileGuid=" + encodeURIComponent(guid))
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        notify("error", result.message);
+                        return;
+                    }
+
+                    var f = result.file;
+                    state.currentGuid = f.fileGuid;
+
+                    var current = (result.versions || []).filter(function (v) { return v.isCurrent; })[0];
+                    var icon = iconOf(current ? current.fileName.substring(current.fileName.lastIndexOf(".")) : "");
+
+                    $("mdlIcon").className = "bi " + icon.icon;
+                    $("mdlTitle").textContent = f.title;
+                    $("mdlSubtitle").textContent =
+                        (current ? current.fileName : "") + " — نسخه فعلی " + fa(f.versionNo);
+
+                    $("mdlModule").textContent = moduleName(f.module);
+                    $("mdlEntity").textContent = f.entity + " — رکورد " + fa(f.entityId);
+                    $("mdlStatus").innerHTML = statusBadge(f.isDeleted) +
+                        (f.isDeleted && f.deletedBy
+                            ? '<span class="fm-muted" style="margin-right:.4rem">توسط ' + esc(f.deletedBy) + '</span>'
+                            : '');
+
+                    $("mdlCreated").textContent = (f.createdBy || "نامشخص") + " — " + fa(f.date || "");
+                    $("mdlUpdated").textContent = f.updatedBy || "-";
+                    $("mdlCategory").textContent =
+                        [f.category, f.description].filter(Boolean).join(" — ") || "-";
+
+                    // نسخه‌ها
+                    $("mdlVersionsBody").innerHTML = (result.versions || []).map(function (v) {
+
+                        return '' +
+                            '<tr>' +
+                                '<td>' + fa(v.versionNo) +
+                                    (v.isCurrent ? ' <span class="fm-current">فعلی</span>' : '') + '</td>' +
+                                '<td dir="ltr" title="' + esc(v.fileName) + '">' + esc(v.fileName) + '</td>' +
+                                '<td>' + esc(fa(v.sizeText)) + '</td>' +
+                                '<td>' + esc(fa((v.date || "") + " " + (v.time || ""))) + '</td>' +
+                                '<td>' + esc(v.uploadedBy || "نامشخص") + '</td>' +
+                                '<td title="' + esc(v.changeNote) + '">' + esc(v.changeNote || "-") + '</td>' +
+                                '<td><a class="glass-btn-icon" href="' + downloadUrl(f.fileGuid, v.versionNo) + '" title="دانلود این نسخه">' +
+                                    '<i class="bi bi-download"></i></a></td>' +
+                            '</tr>';
+
+                    }).join("");
+
+                    // هم‌محتوا
+                    var same = result.sameContent || [];
+
+                    $("mdlSameWrap").style.display = same.length ? "" : "none";
+
+                    $("mdlSame").innerHTML = same.map(function (s) {
+
+                        return '' +
+                            '<button type="button" class="fm-same-item" data-open="' + esc(s.fileGuid) + '">' +
+                                '<i class="bi bi-files"></i> ' + esc(s.title) +
+                                '<span class="fm-muted"> — ' + esc(moduleName(s.module)) + ' / ' +
+                                    esc(s.entity) + ' #' + esc(fa(s.entityId)) +
+                                    (s.isDeleted ? ' (حذف‌شده)' : '') + '</span>' +
+                            '</button>';
+
+                    }).join("");
+
+                    // دکمه‌ها
+                    $("btnMdlRestore").parentNode.style.display = f.isDeleted ? "" : "none";
+                    $("btnMdlDelete").parentNode.style.display = f.isDeleted ? "none" : "";
+                    resetDeleteButton();
+
+                    var modal = $("FileModalAG");
+                    modal.classList.add("fade-in");
+                    modal.style.display = "flex";
+                })
+                .catch(function (error) {
+                    console.error("MDR FileManagement Detail Error:", error);
+                    notify("error", "در دریافت جزئیات خطایی رخ داد.");
+                });
+        }
+
+
+        function closeDetail() {
+
+            var modal = $("FileModalAG");
+            modal.style.display = "none";
+            modal.classList.remove("fade-in");
+            state.currentGuid = null;
+        }
+
+
+        // =====================================================
+        // MDR 1.5.5.6 — RESTORE / DELETE
+        // =====================================================
+
+        function postAction(url, guid, done) {
+
+            var formData = new FormData();
+            formData.append("fileGuid", guid);
+
+            fetch(url, { method: "POST", body: formData })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        notify("error", result.message);
+                        return;
+                    }
+
+                    notify("success", result.message);
+                    done();
+                })
+                .catch(function () {
+                    notify("error", "خطا در ارتباط با سرور");
+                });
+        }
+
+        function restore(guid) {
+
+            postAction(urls.restore, guid, function () {
+                closeDetail();
+                loadFiles();
+            });
+        }
+
+
+        // حذف دومرحله‌ای: کلیک اول «مطمئنید؟»، کلیک دوم ظرف ۳ ثانیه حذف
+        var deleteTimer = null;
+
+        function resetDeleteButton() {
+
+            clearTimeout(deleteTimer);
+
+            var button = $("btnMdlDelete");
+            button.classList.remove("fm-confirm");
+            button.innerHTML = '<i class="bi bi-trash"></i> حذف';
+        }
+
+        $("btnMdlDelete").addEventListener("click", function () {
+
+            var button = this;
+
+            if (!button.classList.contains("fm-confirm")) {
+
+                button.classList.add("fm-confirm");
+                button.innerHTML = '<i class="bi bi-exclamation-triangle"></i> مطمئنید؟';
+                deleteTimer = setTimeout(resetDeleteButton, 3000);
+                return;
+            }
+
+            resetDeleteButton();
+
+            postAction(urls.remove, state.currentGuid, function () {
+                closeDetail();
+                loadFiles();
+            });
+        });
+
+        $("btnMdlRestore").addEventListener("click", function () {
+            restore(state.currentGuid);
+        });
+
+
+        // =====================================================
+        // EVENTS
+        // =====================================================
+
+        // جدول: دکمه بازگردانی، لینک دانلود، یا کلیک روی ردیف = جزئیات
+        $("fmTableBody").addEventListener("click", function (e) {
+
+            if (e.target.closest("a")) {
+                return;
+            }
+
+            var button = e.target.closest("[data-act='restore']");
+
+            if (button) {
+                restore(button.getAttribute("data-guid"));
+                return;
+            }
+
+            var row = e.target.closest("tr[data-guid]");
+
+            if (row) {
+                openDetail(row.getAttribute("data-guid"));
+            }
+        });
+
+        // پیوست هم‌محتوا → باز کردن جزئیات همان پیوست
+        $("mdlSame").addEventListener("click", function (e) {
+
+            var item = e.target.closest("[data-open]");
+
+            if (item) {
+                openDetail(item.getAttribute("data-open"));
+            }
+        });
+
+        // بستن مودال
+        $("btnCloseFileModal").addEventListener("click", closeDetail);
+        $("btnCloseFileModal2").addEventListener("click", closeDetail);
+
+        $("FileModalAG").addEventListener("click", function (e) {
+
+            if (e.target === this) {
+                closeDetail();
+            }
+        });
+
+        document.addEventListener("keydown", function (e) {
+
+            if (e.key === "Escape") {
+                closeDetail();
+            }
+        });
+
+        // کارت‌های آمار = فیلتر سریع
+        document.querySelectorAll(".fm-stat-click").forEach(function (card) {
+
+            card.addEventListener("click", function () {
+
+                var filter = card.getAttribute("data-filter");
+
+                if (filter === "duplicate") {
+                    $("fltDuplicate").value = "true";
+                    $("fltStatus").value = "";
+                }
+                else {
+                    $("fltStatus").value = filter;
+                    $("fltDuplicate").value = "";
+                }
+
+                ["fltStatus", "fltDuplicate"].forEach(function (id) {
+                    $(id).dispatchEvent(new Event("change"));
+                });
+            });
+        });
+
+        // فیلترها
+        $("btnFmSearch").addEventListener("click", function () {
+            state.page = 1;
+            loadFiles();
+        });
+
+        $("fltSearch").addEventListener("keydown", function (e) {
+
+            if (e.key === "Enter") {
+                state.page = 1;
+                loadFiles();
+            }
+        });
+
+        ["fltFromDate", "fltToDate"].forEach(function (id) {
+
+            $(id).addEventListener("jdp:change", function () {
+                state.page = 1;
+                loadFiles();
+            });
+        });
+
+        var reloadTimer = null;
+
+        ["fltModule", "fltEntity", "fltUser", "fltExtension", "fltStatus", "fltDuplicate", "fmPageSize"]
+            .forEach(function (id) {
+
+                $(id).addEventListener("change", function () {
+
+                    // چند change پشت‌سرهم (مثل کلیک روی کارت آمار) = یک بار بارگذاری
+                    clearTimeout(reloadTimer);
+                    reloadTimer = setTimeout(function () {
+                        state.page = 1;
+                        loadFiles();
+                    }, 50);
+                });
+            });
+
+        $("btnFmReset").addEventListener("click", function () {
+
+            ["fltFromDate", "fltToDate", "fltSearch"].forEach(function (id) {
+                $(id).value = "";
+            });
+
+            ["fltModule", "fltEntity", "fltUser", "fltExtension", "fltStatus", "fltDuplicate"].forEach(function (id) {
+                $(id).value = "";
+            });
+
+            state.page = 1;
+            loadFiles();
+        });
+
+        // صفحه‌بندی
+        $("btnFmPrev").addEventListener("click", function () {
+
+            if (state.page > 1) {
+                state.page--;
+                loadFiles();
+            }
+        });
+
+        $("btnFmNext").addEventListener("click", function () {
+
+            if (state.page < state.totalPages) {
+                state.page++;
+                loadFiles();
+            }
+        });
+
+
+        // =====================================================
+        // INITIAL LOAD
+        // =====================================================
+
+        loadFilters();
+        loadFiles();
+
+    }
+);
+
+    </script>
+
+</body>
+</html>

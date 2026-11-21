@@ -1,0 +1,124 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("wf.list.title");
+    bool canEdit = ViewBag.CanEdit == true;
+    bool canInsert = ViewBag.CanInsert == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-diagram-3", MdrText.T("wf.list.title"), MdrText.T("wf.list.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-lightning-charge"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("mdr.panel.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-btn-AG row-ltr-AG" style="margin-top:0 !important">
+                <div class="col-xl-2 col-md-4">
+                    <a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("wf.act.back")</p></a>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <a class="glass-btn-ag" href="@Url.Action("Monitor", "Workflow", new { area = "Mdr" })"><i class="bi bi-activity"></i><p>@MdrText.T("wf.monitor.title")</p></a>
+                </div>
+                @if (canInsert)
+                {
+                    <div class="col-xl-2 col-md-4">
+                        <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newdef"><i class="bi bi-plus-lg"></i><p>@MdrText.T("wf.act.create")</p></button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-state">@MdrText.T("wf.loading")</div>
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-diagram-3"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("wf.panel.defs")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <table class="glass-table-ag" id="grid" hidden>
+                <thead><tr>
+                    <th>@MdrText.T("wf.col.code")</th><th>@MdrText.T("wf.col.name")</th><th>@MdrText.T("wf.col.version")</th>
+                    <th>@MdrText.T("wf.col.status")</th><th>@MdrText.T("wf.col.active")</th><th></th>
+                </tr></thead>
+                <tbody class="scrollbar"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canEdit = @(canEdit ? "true" : "false"), canInsert = @(canInsert ? "true" : "false");
+    var T = @Html.Raw(Json.Encode(new {
+        publish = MdrText.T("wf.act.publish"), start = MdrText.T("wf.act.start"), confirmPublish = MdrText.T("wf.confirm.publish"),
+        promptSubject = MdrText.T("wf.prompt.subject"), empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"),
+        design = MdrText.T("wf.act.design"), clone = MdrText.T("wf.act.clone"),
+        promptCode = MdrText.T("wf.prompt.code"), promptName = MdrText.T("wf.prompt.name") }));
+    var u = @Html.Raw(Json.Encode(new {
+        designer = Url.Action("Designer", "Workflow", new { area = "Mdr" }),
+        create = Url.Action("Create", "Workflow", new { area = "Mdr" }),
+        clone = Url.Action("Clone", "Workflow", new { area = "Mdr" }),
+        list = Url.Action("GetDefinitions", "Workflow", new { area = "Mdr" }),
+        publish = Url.Action("Publish", "Workflow", new { area = "Mdr" }),
+        start = Url.Action("Start", "Workflow", new { area = "Mdr" }) }));
+    var state = document.getElementById("state"), grid = document.getElementById("grid");
+
+    function load() {
+        mdr.get(u.list).then(function (d) {
+            if (!d.success) { state.hidden = false; state.textContent = T.error; return; }
+            var body = grid.querySelector("tbody"); body.innerHTML = "";
+            if (!d.items.length) { state.hidden = false; state.textContent = T.empty; grid.hidden = true; return; }
+            state.hidden = true; grid.hidden = false;
+            d.items.forEach(function (w) {
+                var tr = document.createElement("tr"), btns = "";
+                btns += '<a class="mdr-btn" href="' + u.designer + '/' + w.WorkflowID + '">' + T.design + '</a> ';
+                if (canInsert && w.Status !== "Draft") btns += '<button class="mdr-btn" data-act="clone" data-id="' + w.WorkflowID + '">' + T.clone + '</button> ';
+                if (canEdit && w.Status === "Draft") btns +='<button class="mdr-btn" data-act="publish" data-id="' + w.WorkflowID + '">' + T.publish + '</button> ';
+                if (canInsert && w.Status === "Published") btns += '<button class="mdr-btn" data-act="start" data-id="' + w.WorkflowID + '">' + T.start + '</button>';
+                tr.innerHTML = "<td>" + mdr.esc(w.Code) + "</td><td>" + mdr.esc(w.Name) + "</td><td>" + w.Version +
+                    "</td><td><span class='mdr-badge'>" + mdr.esc(w.Status) + "</span></td><td>" + w.ActiveInstances + "</td><td>" + btns + "</td>";
+                body.appendChild(tr);
+            });
+        }).catch(function () { state.hidden = false; state.textContent = T.error; });
+    }
+
+    grid.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-act]"); if (!b) return;
+        var id = b.getAttribute("data-id"), p;
+        if (b.getAttribute("data-act") === "clone") {
+            mdr.post(u.clone, { id: id }).then(function (r) {
+                if (r.success) location.href = u.designer + "/" + r.id; else { alert(r.message || T.error); }
+            });
+            return;
+        }
+        if (b.getAttribute("data-act") === "publish") {
+            if (!confirm(T.confirmPublish)) return;
+            p = mdr.post(u.publish, { id: id });
+        } else {
+            var s = prompt(T.promptSubject); if (!s) return;
+            p = mdr.post(u.start, { id: id, subject: s });
+        }
+        p.then(function (r) { if (!r.success) alert(r.message || T.error); load(); });
+    });
+    var nb = document.getElementById("newdef");
+    if (nb) nb.onclick = function () {
+        var code = prompt(T.promptCode); if (!code) return;
+        var name = prompt(T.promptName); if (!name) return;
+        mdr.post(u.create, { code: code, name: name }).then(function (r) {
+            if (r.success) location.href = u.designer + "/" + r.id; else alert(r.message || T.error);
+        });
+    };
+    load();
+})();
+</script>
+}

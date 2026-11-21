@@ -1,0 +1,242 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("doc.title");
+    bool canInsert = ViewBag.CanInsert == true;
+    bool isManager = ViewBag.IsManager == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-folder2-open", MdrText.T("doc.title"), MdrText.T("doc.hdr.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("mdr.panel.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-2 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("tsk.f.scope")</label>
+                    <select id="scope" class="glass-select-search">
+                        <option value="mine">@MdrText.T("doc.scope.mine")</option>
+                        <option value="shared">@MdrText.T("doc.scope.shared")</option>
+                        @if (isManager) { <option value="all">@MdrText.T("doc.scope.all")</option> }
+                    </select>
+                </div>
+                <div class="col-xl-4 col-md-8">
+                    <label class="glass-label-ag">@MdrText.T("tsk.f.q")</label>
+                    <input id="q" class="glass-input-ag" placeholder="@MdrText.T("doc.search")" autocomplete="off" />
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <div class="box-glass-checkbox-ag"><input id="archived" type="checkbox" class="glass-checkbox-ag" /><label for="archived" class="glass-label-ag" style="margin-top:0">@MdrText.T("doc.f.archived")</label></div>
+                </div>
+                <div class="col-xl-4 col-md-8 d-flex align-items-end gap-2">
+                    <a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("wf.act.back")</p></a>
+                    @if (canInsert)
+                    {
+                        <button type="button" class="glass-btn-ag" id="newfolder"><i class="bi bi-folder-plus"></i><p>@MdrText.T("doc.act.newfolder")</p></button>
+                        <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newdoc"><i class="bi bi-cloud-arrow-up"></i><p>@MdrText.T("doc.act.upload")</p></button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mdr-split">
+        <aside class="mdr-tree" id="tree" aria-label="folders"></aside>
+        <section>
+            <div id="state" class="mdr-state">@MdrText.T("wf.loading")</div>
+            <div id="listwrap" class="glass-field-ag" hidden>
+                <div class="glass-field-body">
+                    <table class="glass-table-ag">
+                        <thead><tr>
+                            <th>@MdrText.T("doc.f.title")</th><th>@MdrText.T("doc.f.class")</th><th>@MdrText.T("doc.f.tags")</th><th>@MdrText.T("doc.f.owner")</th><th>@MdrText.T("ltr.col.date")</th>
+                        </tr></thead>
+                        <tbody id="list" class="scrollbar"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-folder2-open", MdrText.T("doc.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canInsert = @(canInsert ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"),
+        cls = new { Normal = MdrText.T("doc.cls.Normal"), Confidential = MdrText.T("doc.cls.Confidential"), Secret = MdrText.T("doc.cls.Secret") },
+        perm = new { View = MdrText.T("doc.perm.View"), Edit = MdrText.T("doc.perm.Edit") },
+        ent = new { MDR_Requests = MdrText.T("doc.link.MDR_Requests"), MDR_Tasks = MdrText.T("doc.link.MDR_Tasks"), MDR_Letters = MdrText.T("doc.link.MDR_Letters") },
+        folderAll = MdrText.T("doc.folder.all"), folderRoot = MdrText.T("doc.folder.root"), noFolder = MdrText.T("doc.nofolder"),
+        act = new { upload = MdrText.T("doc.act.upload"), save = MdrText.T("doc.act.save"), download = MdrText.T("doc.act.download"), newVersion = MdrText.T("doc.act.newversion"),
+                    archive = MdrText.T("doc.act.archive"), restore = MdrText.T("doc.act.restore"), add = MdrText.T("doc.act.add"), setTags = MdrText.T("doc.act.settags"),
+                    deleteFolder = MdrText.T("doc.act.deletefolder"), remove = MdrText.T("wf.act.remove"), link = MdrText.T("doc.act.link") },
+        f = new { title = MdrText.T("doc.f.title"), desc = MdrText.T("doc.f.desc"), cls = MdrText.T("doc.f.class"), folder = MdrText.T("doc.f.folder"), tags = MdrText.T("doc.f.tags"),
+                  file = MdrText.T("doc.f.file"), note = MdrText.T("doc.f.note"), owner = MdrText.T("doc.f.owner"), entity = MdrText.T("doc.f.entity"), entityId = MdrText.T("doc.f.entityid"),
+                  searchUser = MdrText.T("tsk.f.searchuser") },
+        sec = new { versions = MdrText.T("doc.sec.versions"), sharing = MdrText.T("doc.sec.sharing"), links = MdrText.T("doc.sec.links"), history = MdrText.T("doc.sec.history") },
+        current = MdrText.T("doc.current"), promptFolder = MdrText.T("doc.prompt.foldername"), confirmArchive = MdrText.T("doc.confirm.archive"), confirmDeleteFolder = MdrText.T("doc.confirm.deletefolder") }));
+    var u = @Html.Raw(Json.Encode(new {
+        folders = Url.Action("GetFolders", "Documents", new { area = "Mdr" }), list = Url.Action("GetList", "Documents", new { area = "Mdr" }),
+        get = Url.Action("GetDocument", "Documents", new { area = "Mdr" }), create = Url.Action("Create", "Documents", new { area = "Mdr" }),
+        newVersion = Url.Action("NewVersion", "Documents", new { area = "Mdr" }), meta = Url.Action("UpdateMeta", "Documents", new { area = "Mdr" }),
+        tags = Url.Action("SetTags", "Documents", new { area = "Mdr" }), share = Url.Action("Share", "Documents", new { area = "Mdr" }),
+        unshare = Url.Action("Unshare", "Documents", new { area = "Mdr" }), link = Url.Action("Link", "Documents", new { area = "Mdr" }),
+        unlink = Url.Action("Unlink", "Documents", new { area = "Mdr" }), archive = Url.Action("Archive", "Documents", new { area = "Mdr" }),
+        newFolder = Url.Action("CreateFolder", "Documents", new { area = "Mdr" }), delFolder = Url.Action("DeleteFolder", "Documents", new { area = "Mdr" }),
+        users = Url.Action("SearchUsers", "Documents", new { area = "Mdr" }), download = Url.Content("~/Mdr/Files/Download") }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var folders = [], folder = "", tagFilter = "", cur = null;
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.textContent = m || ""; d.className = "mdr-msg" + (bad ? " is-bad" : ""); }
+    function size(n) { return n < 1024 ? n + " B" : n < 1048576 ? (n / 1024).toFixed(1) + " KB" : (n / 1048576).toFixed(1) + " MB"; }
+    function opts(map, sel) { return Object.keys(map).map(function (k) { return '<option value="' + k + '"' + (k === sel ? " selected" : "") + ">" + E(map[k]) + "</option>"; }).join(""); }
+    function folderOptions(sel) {
+        var out = '<option value="">' + E(L.noFolder) + "</option>";
+        (function walk(parent, depth) {
+            folders.filter(function (f) { return (f.ParentFolderID || null) === parent; }).forEach(function (f) {
+                out += '<option value="' + f.FolderID + '"' + (String(f.FolderID) === String(sel) ? " selected" : "") + ">" + new Array(depth + 1).join(" ") + E(f.Name) + "</option>"; walk(f.FolderID, depth + 1);
+            });
+        })(null, 0);
+        return out;
+    }
+
+    // ---- درخت پوشه‌ها ----
+    function loadFolders() {
+        return mdr.get(u.folders).then(function (d) {
+            folders = d.items || []; var html = '<button class="mdr-node' + (folder === "" ? " is-sel" : "") + '" data-f="">' + E(L.folderAll) + "</button>" +
+                '<button class="mdr-node' + (folder === "-1" ? " is-sel" : "") + '" data-f="-1">' + E(L.folderRoot) + "</button>";
+            (function walk(parent, depth) {
+                folders.filter(function (f) { return (f.ParentFolderID || null) === parent; }).forEach(function (f) {
+                    html += '<button class="mdr-node' + (String(f.FolderID) === folder ? " is-sel" : "") + '" style="padding-inline-start:' + (12 + depth * 14) + 'px" data-f="' + f.FolderID + '">' + E(f.Name) + "</button>"; walk(f.FolderID, depth + 1);
+                });
+            })(null, 0);
+            $("tree").innerHTML = html;
+        });
+    }
+    $("tree").addEventListener("click", function (e) { var b = e.target.closest("button[data-f]"); if (!b) return; folder = b.getAttribute("data-f"); loadFolders(); load(); });
+
+    // ---- فهرست ----
+    function load() {
+        $("state").hidden = false; $("state").textContent = L.loading; $("listwrap").hidden = true;
+        var qs = "?scope=" + $("scope").value + "&archived=" + $("archived").checked + "&q=" + encodeURIComponent($("q").value) + "&tag=" + encodeURIComponent(tagFilter) + (folder !== "" ? "&folderId=" + folder : "");
+        mdr.get(u.list + qs).then(function (d) {
+            if (!d.success) { $("state").textContent = L.error; return; }
+            if (!d.items.length) { $("state").textContent = L.empty; return; }
+            $("state").hidden = true; $("listwrap").hidden = false;
+            $("list").innerHTML = d.items.map(function (x) {
+                return '<tr data-id="' + x.DocumentID + '"><td>' + E(x.Title) + "</td><td>" + (x.Classification !== "Normal" ? '<span class="mdr-badge is-bad">' + E(L.cls[x.Classification]) + "</span>" : E(L.cls.Normal)) +
+                    "</td><td>" + x.Tags.map(function (t) { return '<span class="mdr-chip" data-tag="' + E(t) + '">' + E(t) + "</span>"; }).join(" ") + "</td><td>" + E(x.Owner || "") + "</td><td>" + E(x.CreatedAt) + "</td></tr>";
+            }).join("");
+        }).catch(function () { $("state").hidden = false; $("state").textContent = L.error; });
+    }
+    $("list").addEventListener("click", function (e) {
+        var t = e.target.closest("[data-tag]"); if (t) { tagFilter = t.getAttribute("data-tag"); $("q").value = ""; load(); return; }
+        var r = e.target.closest("tr[data-id]"); if (r) open(r.getAttribute("data-id"));
+    });
+
+    // ---- سند جدید (multipart) ----
+    function createForm() {
+        $("dbody").innerHTML = "<h3>" + E(L.act.upload) + "</h3>" +
+            '<label class="mdr-field">' + E(L.f.file) + ' *<input type="file" id="n-file" class="mdr-input"></label>' +
+            '<label class="mdr-field">' + E(L.f.title) + ' *<input id="n-title" class="mdr-input" maxlength="300"></label>' +
+            '<label class="mdr-field">' + E(L.f.desc) + '<textarea id="n-desc" class="mdr-input" rows="3" maxlength="1000"></textarea></label>' +
+            '<label class="mdr-field">' + E(L.f.folder) + '<select id="n-folder" class="glass-select-search">' + folderOptions(folder > 0 ? folder : "") + "</select></label>" +
+            '<label class="mdr-field">' + E(L.f.cls) + '<select id="n-cls" class="glass-select-search">' + opts(L.cls, "Normal") + "</select></label>" +
+            '<label class="mdr-field">' + E(L.f.tags) + '<input id="n-tags" class="mdr-input"></label>' +
+            '<button class="mdr-btn mdr-primary" id="n-save">' + E(L.act.save) + "</button>";
+        $("drawer").hidden = false; toast("");
+        $("n-file").onchange = function () { if (!$("n-title").value && this.files.length) $("n-title").value = this.files[0].name.replace(/\.[^.]+$/, ""); };
+        $("n-save").onclick = function () {
+            var inp = $("n-file"); if (!inp.files.length) { toast(window.mdrText.attach.nofile, true); return; }
+            var fd = new FormData(); fd.append("__RequestVerificationToken", mdr.token()); fd.append("file", inp.files[0]);
+            fd.append("title", $("n-title").value); fd.append("description", $("n-desc").value); fd.append("folderId", $("n-folder").value);
+            fd.append("classification", $("n-cls").value); fd.append("tags", $("n-tags").value);
+            toast(window.mdrText.attach.uploading);
+            fetch(u.create, { method: "POST", credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" }, body: fd }).then(function (r) { return r.json(); })
+                .then(function (r) { if (!r.success) toast(r.message || L.error, true); else { load(); open(r.id); } }).catch(function () { toast(L.error, true); });
+        };
+    }
+
+    // ---- جزئیات ----
+    function open(id) {
+        mdr.get(u.get + "?id=" + id).then(function (d) {
+            $("drawer").hidden = false;
+            if (!d.success) { toast(d.message || L.error, true); $("dbody").innerHTML = ""; return; }
+            var x = d.document; cur = d; toast(""); location.hash = "id=" + id;
+            var ro = !x.CanEdit;
+            var inp = function (idn, v, extra) { return '<input id="' + idn + '" class="mdr-input" value="' + E(v || "") + '"' + (ro ? " disabled" : "") + (extra || "") + ">"; };
+            $("dbody").innerHTML = "<h3>" + E(x.Title) + '</h3><p><span class="mdr-badge' + (x.Classification !== "Normal" ? " is-bad" : "") + '">' + E(L.cls[x.Classification]) + '</span> <small>' + E(L.f.owner) + ": " + E(x.Owner || "") + "</small></p>" +
+                '<div class="mdr-actions">' + (x.FileGuid ? '<a class="mdr-btn mdr-primary" href="' + u.download + "?id=" + x.FileGuid + '">' + E(L.act.download) + "</a>" : "") +
+                (x.CanArchive ? '<button class="mdr-btn" data-a="archive">' + E(x.Status === "Active" ? L.act.archive : L.act.restore) + "</button>" : "") + "</div>" +
+                '<label class="mdr-field">' + E(L.f.title) + inp("m-title", x.Title, ' maxlength="300"') + "</label>" +
+                '<label class="mdr-field">' + E(L.f.desc) + '<textarea id="m-desc" class="mdr-input" rows="3" maxlength="1000"' + (ro ? " disabled" : "") + ">" + E(x.Description || "") + "</textarea></label>" +
+                '<label class="mdr-field">' + E(L.f.folder) + '<select id="m-folder" class="glass-select-search"' + (ro ? " disabled" : "") + ">" + folderOptions(x.FolderID) + "</select></label>" +
+                '<label class="mdr-field">' + E(L.f.cls) + '<select id="m-cls" class="glass-select-search"' + (x.IsOwner && !ro ? "" : " disabled") + ">" + opts(L.cls, x.Classification) + "</select></label>" +
+                (ro ? "" : '<button class="mdr-btn" data-a="meta">' + E(L.act.save) + "</button>") +
+                '<label class="mdr-field">' + E(L.f.tags) + inp("t-tags", d.tags.join("، ")) + "</label>" + (ro ? "" : '<button class="mdr-btn" data-a="tags">' + E(L.act.setTags) + "</button>") +
+                "<h4>" + E(L.sec.versions) + '</h4><ul>' + d.versions.map(function (v) {
+                    return "<li><a href=\"" + u.download + "?id=" + x.FileGuid + "&version=" + v.VersionNo + '">v' + v.VersionNo + "</a> " + E(v.OriginalFileName) + " <small>" + size(v.FileSize) + " · " + E(v.UploadedByName || "") + " · " + E(v.PersianDate || "") +
+                        (v.IsCurrent ? " · " + E(L.current) : "") + (v.ChangeNote ? " — " + E(v.ChangeNote) : "") + "</small></li>"; }).join("") + "</ul>" +
+                (x.CanEdit ? '<div class="mdr-field"><input type="file" id="v-file" class="mdr-input"><input id="v-note" class="mdr-input" placeholder="' + E(L.f.note) + '" maxlength="500"><button class="mdr-btn" data-a="version">' + E(L.act.newVersion) + "</button></div>" : "") +
+                "<h4>" + E(L.sec.sharing) + "</h4><ul>" + d.shares.map(function (s) { return "<li><b>" + E(s.Name || "") + "</b> (" + E(L.perm[s.Permission]) + ")" +
+                    (s.CanRemove ? ' <button class="mdr-btn" data-unshare="' + s.UserID + '">' + E(L.act.remove) + "</button>" : "") + "</li>"; }).join("") + "</ul>" +
+                (x.CanShare ? '<div class="mdr-field"><input id="s-q" class="mdr-input" placeholder="' + E(L.f.searchUser) + '"><div id="s-r"></div><select id="s-perm" class="glass-select-search">' + opts(L.perm, "View") + "</select></div>" : "") +
+                "<h4>" + E(L.sec.links) + "</h4><ul>" + d.links.map(function (l) { return "<li>" + E(L.ent[l.EntityName] || l.EntityName) + ' <a href="' + E(l.Url || "#") + '">#' + E(l.EntityID) + "</a>" +
+                    (x.CanEdit ? ' <button class="mdr-btn" data-unlink="' + l.LinkID + '">' + E(L.act.remove) + "</button>" : "") + "</li>"; }).join("") + "</ul>" +
+                (x.CanEdit ? '<div class="mdr-field"><select id="l-ent" class="glass-select-search">' + opts(L.ent, "MDR_Requests") + '</select><input id="l-id" class="mdr-input" type="number" min="1" placeholder="' + E(L.f.entityId) + '"><button class="mdr-btn" data-a="link">' + E(L.act.link) + "</button></div>" : "") +
+                "<h4>" + E(L.sec.history) + '</h4><ol class="mdr-timeline">' + d.history.map(function (h) {
+                    return "<li><b>" + E(h.ActionKey) + "</b> " + E(h.Actor || "") + " <small>" + E(h.CreatedAt) + (h.Detail ? " — " + E(h.Detail) : "") + "<br>" + E(h.CorrelationID) + "</small></li>"; }).join("") + "</ol>";
+
+            if (x.CanShare) {
+                var timer, q = $("s-q"), res = $("s-r");
+                q.oninput = function () { clearTimeout(timer); timer = setTimeout(function () {
+                    if (q.value.trim().length < 2) { res.innerHTML = ""; return; }
+                    mdr.get(u.users + "?q=" + encodeURIComponent(q.value.trim())).then(function (r) { res.innerHTML = r.items.map(function (p) { return '<button type="button" class="mdr-btn" data-share="' + p.Id + '">' + E(p.Name) + "</button>"; }).join(" "); });
+                }, 300); };
+            }
+        });
+    }
+
+    function done(r) { if (!r.success) toast(r.message || L.error, true); else { load(); open(cur.document.DocumentID); } }
+    $("dbody").addEventListener("click", function (e) {
+        if (!cur) return; var x = cur.document, id = x.DocumentID;
+        var s = e.target.closest("button[data-share]"); if (s) return mdr.post(u.share, { id: id, userId: s.getAttribute("data-share"), permission: $("s-perm").value }).then(done);
+        var us = e.target.closest("button[data-unshare]"); if (us) return mdr.post(u.unshare, { id: id, userId: us.getAttribute("data-unshare") }).then(done);
+        var ul = e.target.closest("button[data-unlink]"); if (ul) return mdr.post(u.unlink, { id: id, linkId: ul.getAttribute("data-unlink") }).then(done);
+        var b = e.target.closest("button[data-a]"); if (!b) return; var a = b.getAttribute("data-a");
+        if (a === "meta") return mdr.post(u.meta, { id: id, title: $("m-title").value, description: $("m-desc").value, classification: $("m-cls").value, folderId: $("m-folder").value, rowVer: x.RowVer }).then(done);
+        if (a === "tags") return mdr.post(u.tags, { id: id, tags: $("t-tags").value }).then(done);
+        if (a === "link") return mdr.post(u.link, { id: id, entityName: $("l-ent").value, entityId: $("l-id").value }).then(done);
+        if (a === "archive") { if (x.Status === "Active" && !confirm(L.confirmArchive)) return; return mdr.post(u.archive, { id: id, archive: x.Status === "Active" }).then(done); }
+        if (a === "version") {
+            var f = $("v-file"); if (!f.files.length) { toast(window.mdrText.attach.nofile, true); return; }
+            var fd = new FormData(); fd.append("__RequestVerificationToken", mdr.token()); fd.append("id", id); fd.append("note", $("v-note").value); fd.append("file", f.files[0]);
+            toast(window.mdrText.attach.uploading);
+            fetch(u.newVersion, { method: "POST", credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" }, body: fd }).then(function (r) { return r.json(); }).then(done);
+        }
+    });
+
+    function folderAction(add) {
+        if (add) { var n = prompt(L.promptFolder); if (!n) return; mdr.post(u.newFolder, { parentId: folder > 0 ? folder : null, name: n }).then(function (r) { if (!r.success) alert(r.message || L.error); loadFolders(); }); }
+    }
+    if ($("newfolder")) $("newfolder").onclick = function () { folderAction(true); };
+    if ($("newdoc")) $("newdoc").onclick = function () { cur = null; createForm(); };
+    $("dclose").onclick = function () { $("drawer").hidden = true; history.replaceState(null, "", location.pathname); };
+    ["scope", "archived"].forEach(function (x) { $(x).onchange = function () { tagFilter = ""; load(); }; });
+    var qt; $("q").oninput = function () { clearTimeout(qt); tagFilter = ""; qt = setTimeout(load, 350); };
+    var m = /id=(\d+)/.exec(location.hash);
+    loadFolders().then(function () { load(); if (m) open(m[1]); });
+})();
+</script>
+}

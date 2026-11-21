@@ -1,0 +1,144 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("rep.proc.title");
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-diagram-3", MdrText.T("rep.proc.title"), MdrText.T("rep.proc.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("rep.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-6 col-md-12">
+                    <label class="glass-label-ag">@MdrText.T("rep.p.def")</label>
+                    <select id="def" class="glass-select-search"><option value="">@MdrText.T("rep.p.pick")</option></select>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <label class="glass-label-ag">@MdrText.T("rep.f.from")</label>
+                    <input id="from" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" />
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <label class="glass-label-ag">@MdrText.T("rep.f.to")</label>
+                    <input id="to" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" />
+                </div>
+            </div>
+            <div class="row row-btn-AG row-ltr-AG">
+                <div class="col-xl-2 col-md-4">
+                    <a class="glass-btn-ag" href="@Url.Action("Index", "Reports", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("rep.act.operational")</p></a>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="run"><i class="bi bi-graph-up"></i><p>@MdrText.T("rep.p.run")</p></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="warn" class="mdr-ag-msg" style="margin-bottom:1rem" hidden></div>
+    <div id="state" class="mdr-ag-state">@MdrText.T("rep.p.pick")</div>
+    <div id="out"></div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-diagram-3", MdrText.T("rep.p.stepdetail") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("rep.p.empty"), pick = MdrText.T("rep.p.pick"), h = MdrText.T("rep.p.hours"),
+        p = new { total = MdrText.T("rep.p.total"), completed = MdrText.T("rep.p.completed"), running = MdrText.T("rep.p.running"), terminated = MdrText.T("rep.p.terminated"),
+                  avgtotal = MdrText.T("rep.p.avgtotal"), funnel = MdrText.T("rep.p.funnel"), duration = MdrText.T("rep.p.duration"), instance = MdrText.T("rep.p.instance"),
+                  ongoing = MdrText.T("rep.p.ongoing"), breach = MdrText.T("rep.p.breach") },
+        col = new { step = MdrText.T("rep.col.step"), reached = MdrText.T("rep.col.reached"), visits = MdrText.T("rep.col.visits"), ongoing = MdrText.T("rep.col.ongoing"),
+                    avg = MdrText.T("rep.col.avg"), median = MdrText.T("rep.col.median"), p90 = MdrText.T("rep.col.p90"), max = MdrText.T("rep.col.max"), sla = MdrText.T("rep.col.sla"), breach = MdrText.T("rep.col.breach"), title = MdrText.T("rep.col.title") },
+        badge = new { bottleneck = MdrText.T("rep.badge.bottleneck"), small = MdrText.T("rep.badge.small"), outlier = MdrText.T("rep.badge.outlier") },
+        warn = new { small = MdrText.T("rep.warn.small"), capped = MdrText.T("rep.warn.capped"), incomplete = MdrText.T("rep.warn.incomplete"), outliers = MdrText.T("rep.warn.outliers") } }));
+    var u = @Html.Raw(Json.Encode(new {
+        defs = Url.Action("GetDefs", "Reports", new { area = "Mdr" }), proc = Url.Action("GetProcess", "Reports", new { area = "Mdr" }), step = Url.Action("GetStep", "Reports", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc, cur = { wf: "", from: "", to: "" };
+
+    function today(d) { var x = new Date(); x.setDate(x.getDate() - (d || 0)); return x.getFullYear() + "-" + ("0" + (x.getMonth() + 1)).slice(-2) + "-" + ("0" + x.getDate()).slice(-2); }
+    function qs() { return "workflowId=" + cur.wf + "&from=" + cur.from + "&to=" + cur.to; }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function f(v) { return v === null || v === undefined ? "—" : v; }
+
+    function render(d) {
+        var stats = [["bi-collection", L.p.total, d.Total, "info"], ["bi-check2-circle", L.p.completed, d.Completed, "success"], ["bi-hourglass-split", L.p.running, d.Running, "warning"],
+                     ["bi-x-circle", L.p.terminated, d.Terminated, "danger"], ["bi-stopwatch", L.p.avgtotal, f(d.AvgTotalH), "info"]];
+        var html = '<div class="mdr-ag-stats" style="grid-template-columns:repeat(auto-fill,minmax(10rem,1fr))">' + stats.map(function (s) {
+            return '<div class="mdr-ag-stat mdr-ag-stat-' + s[3] + '"><div class="mdr-ag-stat-icon"><i class="bi ' + s[0] + '"></i></div><div><div class="mdr-ag-stat-value">' + E(s[2]) + '</div><div class="mdr-ag-stat-label">' + E(s[1]) + "</div></div></div>"; }).join("") + "</div>";
+
+        var steps = d.Steps, maxAvg = Math.max.apply(null, steps.map(function (s) { return s.AvgH || 0; })) || 1;
+        var funnel = '<ul class="mdr-ag-bars">' + steps.map(function (s) {
+            var pct = d.Total ? Math.round(100 * s.Reached / d.Total) : 0;
+            return '<li><span class="mdr-ag-bars-name">' + E(s.Name) + '</span><span class="mdr-ag-bars-track"><i style="width:' + pct + '%"></i></span><b>' + s.Reached + " (" + pct + "٪)</b></li>"; }).join("") + "</ul>";
+        html += '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi bi-funnel"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(L.p.funnel) + '</div></div></div><div class="glass-field-body">' + funnel + "</div></div>";
+
+        var rows = steps.map(function (s) {
+            var badges = (s.Bottleneck ? '<span class="mdr-ag-badge glass-status-danger">' + E(L.badge.bottleneck) + "</span>" : "") +
+                (s.SmallSample && (s.Visits || s.Ongoing) ? '<span class="mdr-ag-badge glass-status-warning">' + E(L.badge.small) + "</span>" : "") +
+                (s.Outliers ? '<span class="mdr-ag-badge glass-status-warning">' + E(L.badge.outlier) + " " + s.Outliers + "</span>" : "");
+            var bar = s.AvgH ? '<span class="mdr-ag-bars-track" style="display:inline-block;width:6rem;vertical-align:middle"><i style="width:' + Math.round(100 * s.AvgH / maxAvg) + '%"></i></span> ' : "";
+            return '<tr data-step="' + s.StepID + '" class="' + (s.Breaches ? "is-overdue" : "") + '"><td>' + E(s.Name) + " " + badges + "</td><td>" + s.Reached + "</td><td>" + s.Visits + "</td><td>" + s.Ongoing + "</td><td>" + bar + f(s.AvgH) +
+                "</td><td>" + f(s.MedianH) + "</td><td>" + f(s.P90H) + "</td><td>" + f(s.MaxH) + "</td><td>" + (s.SlaHours || "—") + "</td><td>" + s.Breaches + "</td></tr>";
+        }).join("");
+        html += '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi bi-stopwatch"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(L.p.duration) + '</div></div></div><div class="glass-field-body">' +
+            '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.step) + "</th><th>" + E(L.col.reached) + "</th><th>" + E(L.col.visits) + "</th><th>" + E(L.col.ongoing) + "</th><th>" + E(L.col.avg) + "</th><th>" + E(L.col.median) +
+            "</th><th>" + E(L.col.p90) + "</th><th>" + E(L.col.max) + "</th><th>" + E(L.col.sla) + "</th><th>" + E(L.col.breach) + '</th></tr></thead><tbody class="scrollbar">' + rows + "</tbody></table></div></div>";
+        $("out").innerHTML = html;
+
+        var w = d.Warnings.map(function (x) { return L.warn[x] || x; });
+        $("warn").hidden = !w.length; $("warn").innerHTML = w.map(E).join("<br>");
+    }
+
+    function run() {
+        cur.wf = $("def").value; cur.from = mdr.jd.get("from") || today(29); cur.to = mdr.jd.get("to") || today(0);
+        if (!cur.wf) { $("state").hidden = false; $("state").textContent = L.pick; $("out").innerHTML = ""; return; }
+        history.replaceState(null, "", location.pathname + "#wf=" + cur.wf + "&from=" + cur.from + "&to=" + cur.to);
+        $("state").hidden = false; $("state").textContent = L.loading; $("out").innerHTML = ""; $("warn").hidden = true;
+        mdr.get(u.proc + "?" + qs()).then(function (r) {
+            if (!r.success) { $("state").textContent = r.message || L.error; return; }
+            if (!r.data.Total) { $("state").textContent = L.empty; render(r.data); $("state").hidden = false; return; }
+            $("state").hidden = true; render(r.data);
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    function stepDetail(stepId) {
+        mdr.get(u.step + "?" + qs() + "&stepId=" + stepId).then(function (r) {
+            showModal(true);
+            if (!r.success) { $("dmsg").hidden = false; $("dmsg").className = "mdr-ag-msg is-bad"; $("dmsg").textContent = r.message || L.error; $("dbody").innerHTML = ""; return; }
+            $("dmsg").hidden = true; $("mtitle").textContent = r.step; $("msub").textContent = r.sla ? "SLA: " + r.sla + " " + L.h : "";
+            $("dbody").innerHTML = r.items.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.p.instance) + "</th><th>" + E(L.col.title) + "</th><th>" + E(L.h) + "</th><th></th></tr></thead><tbody>" +
+                r.items.map(function (x) {
+                    var b = (x.Ongoing ? '<span class="mdr-ag-badge glass-status-info">' + E(L.p.ongoing) + "</span>" : "") + (x.Breach ? '<span class="mdr-ag-badge glass-status-danger">' + E(L.p.breach) + "</span>" : "") +
+                        (x.Outlier ? '<span class="mdr-ag-badge glass-status-warning">' + E(L.badge.outlier) + "</span>" : "");
+                    return "<tr><td>#" + x.InstanceID + "</td><td>" + (x.Url ? '<a href="' + E(x.Url) + '" style="color:#00ffff">' + E(x.Subject || "") + "</a>" : "—") + "</td><td>" + x.DurationH + "</td><td>" + b + "</td></tr>"; }).join("") + "</tbody></table>"
+                : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+        });
+    }
+
+    $("out").addEventListener("click", function (e) { var r = e.target.closest("tr[data-step]"); if (r) stepDetail(r.getAttribute("data-step")); });
+    $("run").onclick = run;
+    $("dclose").onclick = function () { showModal(false); };
+    $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) showModal(false); });
+
+    var h = {}; (location.hash || "").replace(/^#/, "").split("&").forEach(function (p) { var kv = p.split("="); if (kv[0]) h[kv[0]] = decodeURIComponent(kv[1] || ""); });
+    mdr.jd.set("from", /^\d{4}-\d{2}-\d{2}$/.test(h.from || "") ? h.from : today(29));
+    mdr.jd.set("to", /^\d{4}-\d{2}-\d{2}$/.test(h.to || "") ? h.to : today(0));
+    mdr.get(u.defs).then(function (r) {
+        $("def").innerHTML = '<option value="">' + E(L.pick) + "</option>" + r.items.map(function (d) {
+            return '<option value="' + d.WorkflowID + '">' + E(d.Code + " v" + d.Version + " (" + d.Status + ") — " + d.Name + " [" + d.Instances + "]") + "</option>"; }).join("");
+        if (h.wf) { $("def").value = h.wf; run(); }
+    });
+})();
+</script>
+}

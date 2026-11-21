@@ -1,0 +1,176 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("wb.title");
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-inbox", MdrText.T("wb.title"), MdrText.T("wb.hdr.sub") })
+
+    <div class="mdr-ag-stats" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="mdr-ag-stat mdr-ag-stat-info"><div class="mdr-ag-stat-icon"><i class="bi bi-inbox"></i></div><div><div class="mdr-ag-stat-value" id="k-open">–</div><div class="mdr-ag-stat-label">@MdrText.T("wb.kpi.open")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-danger"><div class="mdr-ag-stat-icon"><i class="bi bi-alarm"></i></div><div><div class="mdr-ag-stat-value" id="k-overdue">–</div><div class="mdr-ag-stat-label">@MdrText.T("wb.kpi.overdue")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-warning"><div class="mdr-ag-stat-icon"><i class="bi bi-hourglass-split"></i></div><div><div class="mdr-ag-stat-value" id="k-soon">–</div><div class="mdr-ag-stat-label">@MdrText.T("wb.kpi.soon")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-success"><div class="mdr-ag-stat-icon"><i class="bi bi-bell"></i></div><div><div class="mdr-ag-stat-value" id="k-unread">–</div><div class="mdr-ag-stat-label">@MdrText.T("wb.kpi.unread")</div></div></div>
+    </div>
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("mdr.panel.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-3 col-md-6">
+                    <label class="glass-label-ag">@MdrText.T("wb.col.source")</label>
+                    <select id="src" class="glass-select-search">
+                        <option value="">@MdrText.T("wb.src.all")</option>
+                        <option value="wf">@MdrText.T("wb.src.wf")</option>
+                        <option value="ntf">@MdrText.T("wb.src.ntf")</option>
+                        <option value="mtg">@MdrText.T("wb.src.mtg")</option>
+                        <option value="tsk">@MdrText.T("wb.src.tsk")</option>
+                        <option value="ltr">@MdrText.T("wb.src.ltr")</option>
+                    </select>
+                </div>
+                <div class="col-xl-2 col-md-4 d-flex align-items-end">
+                    <button type="button" class="glass-btn-ag" id="refresh"><i class="bi bi-arrow-repeat"></i><p>@MdrText.T("wb.refresh")</p></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="warn" class="mdr-msg is-bad" hidden></div>
+    <div id="state" class="mdr-state">@MdrText.T("wf.loading")</div>
+
+    <div id="batch" class="glass-field-ag" hidden>
+        <div class="glass-field-body">
+            <div class="row row-btn-AG row-ltr-AG" style="margin-top:0 !important">
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="batch-approve"><i class="bi bi-check2-all"></i><p>@MdrText.T("wf.act.Approve")</p></button></div>
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="batch-ack"><i class="bi bi-eye"></i><p>@MdrText.T("wb.act.Acknowledge")</p></button></div>
+                <div class="col-xl-4 col-md-4 d-flex align-items-center"><span id="selcount"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-list-check"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("wb.kpi.open")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <table class="glass-table-ag" id="grid" hidden>
+                <thead><tr>
+                    <th><input type="checkbox" id="all" class="glass-checkbox-ag" aria-label="select all" /></th>
+                    <th>@MdrText.T("wb.col.source")</th><th>@MdrText.T("wb.col.title")</th><th>@MdrText.T("wf.col.subject")</th>
+                    <th>@MdrText.T("wb.col.priority")</th><th>@MdrText.T("wf.col.due")</th><th></th>
+                </tr></thead>
+                <tbody class="scrollbar"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var T = @Html.Raw(Json.Encode(new {
+        empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"), reason = MdrText.T("wf.prompt.reason"),
+        open = MdrText.T("wb.act.open"), failed = MdrText.T("wb.failed"), selected = MdrText.T("wb.selected"),
+        confirmBatch = MdrText.T("wb.confirm.batch"), batchResult = MdrText.T("wb.batch.result"),
+        src = new { wf = MdrText.T("wb.src.wf"), ntf = MdrText.T("wb.src.ntf"), mtg = MdrText.T("wb.src.mtg"), tsk = MdrText.T("wb.src.tsk"), ltr = MdrText.T("wb.src.ltr") },
+        createTask = MdrText.T("wb.act.CreateTask"), taskCreated = MdrText.T("wb.task.created"),
+        prio = new { High = MdrText.T("wb.prio.high"), Normal = MdrText.T("wb.prio.normal") },
+        act = new {
+            Start = MdrText.T("tsk.act.Start"), Complete = MdrText.T("tsk.act.Complete"),
+            Next = MdrText.T("wf.act.Next"), Approve = MdrText.T("wf.act.Approve"), Reject = MdrText.T("wf.act.Reject"),
+            Acknowledge = MdrText.T("wb.act.Acknowledge") } }));
+    var u = @Html.Raw(Json.Encode(new {
+        data = Url.Action("GetData", "Workbench", new { area = "Mdr" }),
+        act = Url.Action("Act", "Workbench", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); };
+    var items = [], canCreateTask = false, body = $("grid").querySelector("tbody");
+
+    // فیلتر منبع در hash نگه داشته می‌شود تا با برگشت از صفحه‌ی مقصد حفظ شود
+    function readHash() { var m = /src=(\w*)/.exec(location.hash); $("src").value = m ? m[1] : ""; }
+    function writeHash() { history.replaceState(null, "", "#src=" + $("src").value); }
+
+    function visible() { var s = $("src").value; return items.filter(function (i) { return !s || i.Source === s; }); }
+
+    function render() {
+        var list = visible(); body.innerHTML = "";
+        $("all").checked = false; updateBatch();
+        if (!list.length) { $("state").hidden = false; $("state").textContent = T.empty; $("grid").hidden = true; return; }
+        $("state").hidden = true; $("grid").hidden = false;
+        list.forEach(function (i) {
+            var tr = document.createElement("tr"); if (i.Overdue) tr.className = "is-overdue";
+            var b = i.Url ? '<a class="mdr-btn" href="' + mdr.esc(i.Url) + '">' + T.open + "</a> " : "";
+            (i.Actions || []).forEach(function (a) {
+                b += '<button class="mdr-btn" data-a="' + a + '" data-r="' + mdr.esc(i.Ref) + '">' + mdr.esc(T.act[a] || a) + "</button> ";
+            });
+            if (canCreateTask && i.Source !== "tsk") b += '<button class="mdr-btn" data-a="CreateTask" data-r="' + mdr.esc(i.Ref) + '">' + mdr.esc(T.createTask) + "</button>";
+            tr.innerHTML = '<td><input type="checkbox" class="glass-checkbox-ag sel" data-r="' + mdr.esc(i.Ref) + '"></td><td>' + mdr.esc(T.src[i.Source] || i.Source) +
+                "</td><td>" + mdr.esc(i.Title) + "</td><td>" + mdr.esc(i.Subject) + "</td><td><span class='mdr-badge'>" + mdr.esc(T.prio[i.Priority] || i.Priority) +
+                "</span></td><td>" + mdr.esc(i.DueAt) + "</td><td>" + b + "</td>";
+            body.appendChild(tr);
+        });
+    }
+
+    function load() {
+        $("state").hidden = false; $("state").textContent = "…";
+        mdr.get(u.data).then(function (d) {
+            if (!d.success) { $("state").textContent = T.error; return; }
+            items = d.items; canCreateTask = d.canCreateTask;
+            $("k-open").textContent = d.kpi.open; $("k-overdue").textContent = d.kpi.overdue;
+            $("k-soon").textContent = d.kpi.dueSoon; $("k-unread").textContent = d.kpi.unread;
+            var w = $("warn"); w.hidden = !d.failed.length;
+            w.textContent = d.failed.length ? T.failed + " " + d.failed.map(function (s) { return T.src[s] || s; }).join("، ") : "";
+            render();
+        }).catch(function () { $("state").hidden = false; $("state").textContent = T.error; });
+    }
+
+    function find(ref) { return items.filter(function (i) { return i.Ref === ref; })[0]; }
+    function act(item, a, reason) {
+        return mdr.post(u.act, { source: item.Source, id: item.Ref, action: a, reason: reason, rowVer: item.RowVer });
+    }
+
+    function selected() { return Array.prototype.map.call(document.querySelectorAll(".sel:checked"), function (c) { return find(c.getAttribute("data-r")); }); }
+    function updateBatch() { var n = selected().length; $("batch").hidden = !n; $("selcount").textContent = T.selected + " " + n; }
+
+    body.addEventListener("change", updateBatch);
+    $("all").onchange = function () { var c = this.checked; Array.prototype.forEach.call(document.querySelectorAll(".sel"), function (x) { x.checked = c; }); updateBatch(); };
+
+    body.addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-a]"); if (!b) return;
+        var item = find(b.getAttribute("data-r")), a = b.getAttribute("data-a"), reason = null;
+        if (a === "Reject" || (a === "Complete" && item.Source === "tsk")) { reason = prompt(T.reason); if (!reason) return; }
+        act(item, a, reason).then(function (r) {
+            if (!r.success) alert(r.message || T.error); else if (a === "CreateTask") alert(T.taskCreated);
+            load();
+        });
+    });
+
+    function batch(a) {
+        var list = selected().filter(function (i) { return i && (i.Actions || []).indexOf(a) >= 0; });
+        if (!list.length) return;
+        if (!confirm(T.confirmBatch + " " + list.length)) return;
+        var ok = 0, fail = [];
+        list.reduce(function (p, i) {
+            return p.then(function () { return act(i, a, null).then(function (r) { if (r.success) ok++; else fail.push(i.Title + ": " + (r.message || T.error)); }); });
+        }, Promise.resolve()).then(function () {
+            alert(T.batchResult + " " + ok + (fail.length ? "\n" + fail.join("\n") : "")); load();
+        });
+    }
+    $("batch-approve").onclick = function () { batch("Approve"); };
+    $("batch-ack").onclick = function () { batch("Acknowledge"); };
+
+    $("src").onchange = function () { writeHash(); render(); };
+    $("refresh").onclick = load;
+    readHash(); load();
+})();
+</script>
+}

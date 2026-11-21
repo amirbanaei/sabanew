@@ -1,0 +1,253 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("ltr.title");
+    bool canInsert = ViewBag.CanInsert == true;
+    bool isManager = ViewBag.IsManager == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-envelope", MdrText.T("ltr.title"), MdrText.T("ltr.hdr.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("mdr.panel.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-btn-AG row-ltr-AG" style="margin-top:0 !important">
+                <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("wf.act.back")</p></a></div>
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" data-box="inbox"><i class="bi bi-inbox"></i><p>@MdrText.T("ltr.box.inbox")</p></button></div>
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" data-box="sent"><i class="bi bi-send"></i><p>@MdrText.T("ltr.box.sent")</p></button></div>
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" data-box="drafts"><i class="bi bi-pencil-square"></i><p>@MdrText.T("ltr.box.drafts")</p></button></div>
+                @if (isManager)
+                {
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" data-box="all"><i class="bi bi-collection"></i><p>@MdrText.T("ltr.box.all")</p></button></div>
+                }
+                @if (canInsert)
+                {
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newletter"><i class="bi bi-plus-lg"></i><p>@MdrText.T("ltr.act.new")</p></button></div>
+                }
+            </div>
+            <div class="row row-input-AG">
+                <div class="col-xl-2 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("ltr.f.direction")</label>
+                    <select id="dir" class="glass-select-search">
+                        <option value="">@MdrText.T("ltr.dir.all")</option>
+                        <option value="Incoming">@MdrText.T("ltr.dir.Incoming")</option><option value="Outgoing">@MdrText.T("ltr.dir.Outgoing")</option><option value="Internal">@MdrText.T("ltr.dir.Internal")</option>
+                    </select>
+                </div>
+                <div class="col-xl-4 col-md-8">
+                    <label class="glass-label-ag">@MdrText.T("tsk.f.q")</label>
+                    <input id="q" class="glass-input-ag" placeholder="@MdrText.T("ltr.search")" autocomplete="off" />
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="box-glass-checkbox-ag"><input id="unread" type="checkbox" class="glass-checkbox-ag" /><label for="unread" class="glass-label-ag" style="margin-top:0">@MdrText.T("ltr.f.unread")</label></div>
+                </div>
+                <div class="col-xl-3 col-md-6">
+                    <div class="box-glass-checkbox-ag"><input id="overdue" type="checkbox" class="glass-checkbox-ag" /><label for="overdue" class="glass-label-ag" style="margin-top:0">@MdrText.T("ltr.f.overdue")</label></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-state">@MdrText.T("wf.loading")</div>
+    <div id="listwrap" class="glass-field-ag" hidden>
+        <div class="glass-field-body">
+            <table class="glass-table-ag">
+                <thead><tr>
+                    <th>@MdrText.T("ltr.col.number")</th><th>@MdrText.T("ltr.col.subject")</th><th>@MdrText.T("ltr.f.direction")</th><th>@MdrText.T("ltr.col.sender")</th>
+                    <th>@MdrText.T("wf.col.status")</th><th>@MdrText.T("ltr.f.due")</th><th>@MdrText.T("ltr.col.date")</th>
+                </tr></thead>
+                <tbody id="list" class="scrollbar"></tbody>
+            </table>
+        </div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-envelope", MdrText.T("ltr.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canInsert = @(canInsert ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"),
+        dir = new { Incoming = MdrText.T("ltr.dir.Incoming"), Outgoing = MdrText.T("ltr.dir.Outgoing"), Internal = MdrText.T("ltr.dir.Internal") },
+        st = new { Draft = MdrText.T("ltr.st.Draft"), Registered = MdrText.T("ltr.st.Registered"), Archived = MdrText.T("ltr.st.Archived"), Cancelled = MdrText.T("ltr.st.Cancelled") },
+        ug = new { Normal = MdrText.T("ltr.ug.Normal"), Urgent = MdrText.T("ltr.ug.Urgent"), Immediate = MdrText.T("ltr.ug.Immediate") },
+        cf = new { Normal = MdrText.T("ltr.cf.Normal"), Confidential = MdrText.T("ltr.cf.Confidential"), Secret = MdrText.T("ltr.cf.Secret") },
+        kind = new { To = MdrText.T("ltr.kind.To"), Cc = MdrText.T("ltr.kind.Cc"), Referral = MdrText.T("ltr.kind.Referral") },
+        act = new { save = MdrText.T("ltr.act.save"), register = MdrText.T("ltr.act.register"), edit = MdrText.T("ltr.act.edit"), refer = MdrText.T("ltr.act.refer"),
+                    reply = MdrText.T("ltr.act.reply"), archive = MdrText.T("ltr.act.archive"), cancel = MdrText.T("ltr.act.cancel"), newLetter = MdrText.T("ltr.act.new") },
+        f = new { direction = MdrText.T("ltr.f.direction"), subject = MdrText.T("ltr.f.subject"), body = MdrText.T("ltr.f.body"), urgency = MdrText.T("ltr.f.urgency"),
+                  conf = MdrText.T("ltr.f.conf"), external = MdrText.T("ltr.f.external"), due = MdrText.T("ltr.f.due"), to = MdrText.T("ltr.f.to"), cc = MdrText.T("ltr.f.cc"), addUser = MdrText.T("ltr.f.adduser") },
+        sec = new { recipients = MdrText.T("ltr.sec.recipients"), replies = MdrText.T("ltr.sec.replies"), parent = MdrText.T("ltr.sec.parent"), history = MdrText.T("ltr.sec.history") },
+        read = MdrText.T("ltr.read"), unread = MdrText.T("ltr.unread"), replied = MdrText.T("ltr.replied"), noreply = MdrText.T("ltr.noreply"),
+        confirmRegister = MdrText.T("ltr.confirm.register"), confirmArchive = MdrText.T("ltr.confirm.archive"), confirmCancel = MdrText.T("ltr.confirm.cancel"),
+        promptNote = MdrText.T("ltr.prompt.note"), referPick = MdrText.T("ltr.refer.pick"), overdue = MdrText.T("tsk.overdue"), creator = MdrText.T("tsk.f.creator") }));
+    var u = @Html.Raw(Json.Encode(new {
+        list = Url.Action("GetList", "Letters", new { area = "Mdr" }), get = Url.Action("GetLetter", "Letters", new { area = "Mdr" }),
+        save = Url.Action("Save", "Letters", new { area = "Mdr" }), register = Url.Action("Register", "Letters", new { area = "Mdr" }),
+        refer = Url.Action("Refer", "Letters", new { area = "Mdr" }), archive = Url.Action("Archive", "Letters", new { area = "Mdr" }),
+        cancel = Url.Action("CancelDraft", "Letters", new { area = "Mdr" }), users = Url.Action("SearchUsers", "Letters", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var box = "inbox", cur = null;
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.textContent = m || ""; d.className = "mdr-msg" + (bad ? " is-bad" : ""); }
+    function opts(map, sel) { return Object.keys(map).map(function (k) { return '<option value="' + k + '"' + (k === sel ? " selected" : "") + ">" + E(map[k]) + "</option>"; }).join(""); }
+
+    // ---- فهرست ----
+    function load() {
+        $("state").hidden = false; $("state").textContent = L.loading; $("listwrap").hidden = true;
+        Array.prototype.forEach.call(document.querySelectorAll("[data-box]"), function (b) { b.classList.toggle("mdr-primary", b.getAttribute("data-box") === box); });
+        mdr.get(u.list + "?box=" + box + "&direction=" + encodeURIComponent($("dir").value) + "&q=" + encodeURIComponent($("q").value) + "&unread=" + $("unread").checked + "&overdue=" + $("overdue").checked)
+            .then(function (d) {
+                if (!d.success) { $("state").textContent = L.error; return; }
+                if (!d.items.length) { $("state").textContent = L.empty; return; }
+                $("state").hidden = true; $("listwrap").hidden = false;
+                $("list").innerHTML = d.items.map(function (l) {
+                    return '<tr class="' + (l.Overdue ? "is-overdue" : "") + (l.Unread ? " is-unread" : "") + '" data-id="' + l.LetterID + '"><td>' + E(l.Number || "—") + "</td><td>" +
+                        (l.Confidentiality !== "Normal" ? '<span class="mdr-badge is-bad">' + E(L.cf[l.Confidentiality]) + "</span> " : "") +
+                        (l.Urgency !== "Normal" ? '<span class="mdr-badge is-bad">' + E(L.ug[l.Urgency]) + "</span> " : "") + E(l.Subject) + "</td><td>" + E(L.dir[l.Direction]) +
+                        "</td><td>" + E(l.Sender || "") + "</td><td><span class='mdr-badge'>" + E(L.st[l.Status]) + "</span></td><td>" + E(l.DueAt || "") + "</td><td>" + E(l.RegisteredAt) + "</td></tr>";
+                }).join("");
+            }).catch(function () { $("state").hidden = false; $("state").textContent = L.error; });
+    }
+
+    // ---- انتخاب کاربر (چندتایی) ----
+    function chips(id, initial) {
+        var sel = (initial || []).slice(), inp = $(id + "-q"), res = $(id + "-r"), list = $(id + "-c"), timer;
+        function draw() {
+            list.innerHTML = sel.map(function (x, i) { return '<span class="mdr-chip">' + E(x.Name) + ' <button type="button" data-rm="' + i + '" aria-label="remove">&#10005;</button></span>'; }).join("");
+        }
+        list.onclick = function (e) { var b = e.target.closest("button[data-rm]"); if (b) { sel.splice(+b.getAttribute("data-rm"), 1); draw(); } };
+        inp.oninput = function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                if (inp.value.trim().length < 2) { res.innerHTML = ""; return; }
+                mdr.get(u.users + "?q=" + encodeURIComponent(inp.value.trim())).then(function (d) {
+                    res.innerHTML = d.items.map(function (x) { return '<button type="button" class="mdr-btn" data-u="' + x.Id + '" data-n="' + E(x.Name) + '">' + E(x.Name) + "</button>"; }).join(" ");
+                });
+            }, 300);
+        };
+        res.onclick = function (e) {
+            var b = e.target.closest("button[data-u]"); if (!b) return;
+            var uid = +b.getAttribute("data-u"); if (!sel.some(function (x) { return x.Id === uid; })) sel.push({ Id: uid, Name: b.getAttribute("data-n") });
+            inp.value = ""; res.innerHTML = ""; draw();
+        };
+        draw();
+        return function () { return sel.map(function (x) { return x.Id; }).join(","); };
+    }
+
+    // ---- فرم نامه ----
+    function composer(l, defaults) {
+        var v = l || defaults || { Direction: "Internal", Subject: "", Body: "", Urgency: "Normal", Confidentiality: "Normal", ExternalParty: "", DueAt: "" };
+        var isNew = !l, parentId = (defaults && defaults.ParentId) || (l && l.Parent && l.Parent.LetterID) || null;
+        $("dbody").innerHTML = "<h3>" + E(isNew ? L.act.newLetter : L.act.edit) + "</h3>" +
+            '<label class="mdr-field">' + E(L.f.direction) + '<select id="c-dir" class="glass-select-search"' + (parentId ? " disabled" : "") + ">" + opts(L.dir, v.Direction) + "</select></label>" +
+            '<label class="mdr-field">' + E(L.f.subject) + ' *<input id="c-sub" class="mdr-input" maxlength="300" value="' + E(v.Subject) + '"></label>' +
+            '<label class="mdr-field">' + E(L.f.body) + ' *<textarea id="c-body" class="mdr-input" rows="7" maxlength="20000">' + E(v.Body || "") + "</textarea></label>" +
+            '<label class="mdr-field">' + E(L.f.urgency) + '<select id="c-ug" class="glass-select-search">' + opts(L.ug, v.Urgency) + "</select></label>" +
+            '<label class="mdr-field">' + E(L.f.conf) + '<select id="c-cf" class="glass-select-search">' + opts(L.cf, v.Confidentiality) + "</select></label>" +
+            '<label class="mdr-field">' + E(L.f.external) + '<input id="c-ext" class="mdr-input" maxlength="200" value="' + E(v.ExternalParty || "") + '"></label>' +
+            '<label class="mdr-field">' + E(L.f.due) + mdr.jd.html("c-due", v.DueAt, "mdr-input") + '</label>' + '<label class="mdr-field">' + mdr.jd.L.time + mdr.jd.timeHtml("c-due-t", v.DueAt, "mdr-input") + '</label>' +
+            '<div class="mdr-field">' + E(L.f.to) + '<div id="to-c" class="mdr-chips"></div><input id="to-q" class="mdr-input" placeholder="' + E(L.f.addUser) + '"><div id="to-r"></div></div>' +
+            '<div class="mdr-field">' + E(L.f.cc) + '<div id="cc-c" class="mdr-chips"></div><input id="cc-q" class="mdr-input" placeholder="' + E(L.f.addUser) + '"><div id="cc-r"></div></div>' +
+            '<div class="mdr-actions"><button class="mdr-btn" id="c-save">' + E(L.act.save) + '</button> <button class="mdr-btn mdr-primary" id="c-reg">' + E(L.act.register) + "</button></div>";
+        var getTo = chips("to", (l ? l.To : (defaults && defaults.To)) || []), getCc = chips("cc", (l ? l.Cc : null) || []);
+        $("drawer").hidden = false; toast("");
+        function save() {
+            return mdr.post(u.save, { id: isNew ? 0 : l.LetterID, direction: $("c-dir").value, subject: $("c-sub").value, body: $("c-body").value, urgency: $("c-ug").value,
+                confidentiality: $("c-cf").value, externalParty: $("c-ext").value, dueAt: mdr.jd.getDT("c-due", "c-due-t", "23:59"), parentId: parentId, to: getTo(), cc: getCc(), rowVer: isNew ? null : l.RowVer });
+        }
+        $("c-save").onclick = function () { save().then(function (r) { if (!r.success) toast(r.message || L.error, true); else { load(); open(r.id); } }); };
+        $("c-reg").onclick = function () {
+            if (!confirm(L.confirmRegister)) return;
+            save().then(function (r) {
+                if (!r.success) { toast(r.message || L.error, true); return; }
+                mdr.get(u.get + "?id=" + r.id).then(function (g) {
+                    mdr.post(u.register, { id: r.id, rowVer: g.letter.RowVer }).then(function (s) {
+                        if (!s.success) { toast(s.message || L.error, true); load(); return; }
+                        box = "sent"; load(); open(r.id);
+                    });
+                });
+            });
+        };
+    }
+
+    // ---- جزئیات ----
+    function open(id) {
+        mdr.get(u.get + "?id=" + id).then(function (d) {
+            $("drawer").hidden = false;
+            if (!d.success) { toast(d.message || L.error, true); $("dbody").innerHTML = ""; return; }
+            var l = d.letter; cur = d; toast(""); location.hash = "id=" + id;
+            var acts = "";
+            if (l.CanEdit) acts += '<button class="mdr-btn" data-a="edit">' + E(L.act.edit) + "</button> ";
+            if (l.CanCancel) acts += '<button class="mdr-btn" data-a="cancel">' + E(L.act.cancel) + "</button> ";
+            if (l.CanReply && canInsert) acts += '<button class="mdr-btn mdr-primary" data-a="reply">' + E(L.act.reply) + "</button> ";
+            if (l.CanArchive) acts += '<button class="mdr-btn" data-a="archive">' + E(L.act.archive) + "</button>";
+
+            $("dbody").innerHTML = "<h3>" + E(l.Number || "—") + " — " + E(l.Subject) + '</h3><p><span class="mdr-badge">' + E(L.st[l.Status]) + '</span> <span class="mdr-badge">' + E(L.dir[l.Direction]) +
+                '</span> <span class="mdr-badge' + (l.Urgency !== "Normal" ? " is-bad" : "") + '">' + E(L.ug[l.Urgency]) + '</span> <span class="mdr-badge' + (l.Confidentiality !== "Normal" ? " is-bad" : "") + '">' +
+                E(L.cf[l.Confidentiality]) + "</span>" + (l.Replied ? ' <span class="mdr-badge">' + E(L.replied) + "</span>" : "") + "</p>" +
+                (l.Parent ? "<p>" + E(L.sec.parent) + ': <a href="#id=' + l.Parent.LetterID + '" data-open="' + l.Parent.LetterID + '">' + E(l.Parent.Number || "") + " " + E(l.Parent.Subject) + "</a></p>" : "") +
+                "<dl class='mdr-dl'><dt>" + E(L.creator) + "</dt><dd>" + E(l.Creator || "") + "</dd>" + (l.ExternalParty ? "<dt>" + E(L.f.external) + "</dt><dd>" + E(l.ExternalParty) + "</dd>" : "") +
+                (l.DueAt ? "<dt>" + E(L.f.due) + "</dt><dd>" + E(l.DueAt.replace("T", " ")) + "</dd>" : "") + "</dl>" +
+                '<div class="mdr-body">' + E(l.Body || "") + "</div>" + '<div class="mdr-actions">' + acts + "</div>" + '<div id="att"></div>' +
+                "<h4>" + E(L.sec.recipients) + "</h4><ul>" + d.recipients.map(function (r) {
+                    return "<li><b>" + E(r.Name || "") + "</b> (" + E(L.kind[r.Kind]) + ")" + (r.From ? " ← " + E(r.From) : "") + (r.Note ? " — " + E(r.Note) : "") + " <small>" +
+                        (r.ReadAt ? E(L.read) + " " + E(r.ReadAt) : E(L.unread)) + (r.Kind !== "Cc" && l.Status !== "Draft" ? " · " + (r.RepliedAt ? E(L.replied) : E(L.noreply)) : "") + "</small></li>"; }).join("") + "</ul>" +
+                (l.CanRefer ? '<div class="mdr-field"><input id="rf-q" class="mdr-input" placeholder="' + E(L.referPick) + '"><div id="rf-r"></div></div>' : "") +
+                (d.replies.length ? "<h4>" + E(L.sec.replies) + "</h4><ul>" + d.replies.map(function (r) { return '<li><a href="#id=' + r.LetterID + '" data-open="' + r.LetterID + '">' + E(r.Number) + " " + E(r.Subject) + "</a></li>"; }).join("") + "</ul>" : "") +
+                "<h4>" + E(L.sec.history) + '</h4><ol class="mdr-timeline">' + d.history.map(function (h) {
+                    return "<li><b>" + E(h.ActionKey) + "</b> " + E(h.Actor || "") + " <small>" + E(h.CreatedAt) + (h.Detail ? " — " + E(h.Detail) : "") + "<br>" + E(h.CorrelationID) + "</small></li>"; }).join("") + "</ol>";
+            mdr.attach($("att"), "MDR_Letters", l.LetterID);
+
+            if (l.CanRefer) {
+                var timer, q = $("rf-q"), res = $("rf-r");
+                q.oninput = function () { clearTimeout(timer); timer = setTimeout(function () {
+                    if (q.value.trim().length < 2) { res.innerHTML = ""; return; }
+                    mdr.get(u.users + "?q=" + encodeURIComponent(q.value.trim())).then(function (x) {
+                        res.innerHTML = x.items.map(function (p) { return '<button type="button" class="mdr-btn" data-ref="' + p.Id + '">' + E(p.Name) + "</button>"; }).join(" "); });
+                }, 300); };
+                res.onclick = function (e) {
+                    var b = e.target.closest("button[data-ref]"); if (!b) return;
+                    var note = prompt(L.promptNote); if (note === null) return;
+                    mdr.post(u.refer, { id: l.LetterID, toUserId: b.getAttribute("data-ref"), note: note }).then(function (r) { if (!r.success) toast(r.message || L.error, true); else open(l.LetterID); });
+                };
+            }
+        });
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        var o = e.target.closest("a[data-open]"); if (o) { e.preventDefault(); open(o.getAttribute("data-open")); return; }
+        var b = e.target.closest("button[data-a]"); if (!b || !cur) return;
+        var a = b.getAttribute("data-a"), l = cur.letter;
+        if (a === "edit") return composer({ LetterID: l.LetterID, RowVer: l.RowVer, Direction: l.Direction, Subject: l.Subject, Body: l.Body, Urgency: l.Urgency, Confidentiality: l.Confidentiality,
+            ExternalParty: l.ExternalParty, DueAt: l.DueAt, Parent: l.Parent,
+            To: cur.recipients.filter(function (r) { return r.Kind === "To"; }).map(function (r) { return { Id: r.UserID, Name: r.Name }; }),
+            Cc: cur.recipients.filter(function (r) { return r.Kind === "Cc"; }).map(function (r) { return { Id: r.UserID, Name: r.Name }; }) });
+        if (a === "reply") { var rd = l.ReplyDefaults; return composer(null, { Direction: rd.Direction, Subject: rd.Subject, Body: "", Urgency: "Normal", Confidentiality: rd.Confidentiality, ExternalParty: rd.ExternalParty || "", DueAt: "", ParentId: l.LetterID, To: rd.To }); }
+        if (a === "archive" && !confirm(L.confirmArchive)) return;
+        if (a === "cancel" && !confirm(L.confirmCancel)) return;
+        mdr.post(a === "archive" ? u.archive : u.cancel, { id: l.LetterID }).then(function (r) {
+            if (!r.success) toast(r.message || L.error, true); else { load(); if (a === "archive") open(l.LetterID); else $("drawer").hidden = true; }
+        });
+    });
+
+    $("list").addEventListener("click", function (e) { var r = e.target.closest("tr[data-id]"); if (!r) return; if (box === "drafts") { open(r.getAttribute("data-id")); } else open(r.getAttribute("data-id")); });
+    $("dclose").onclick = function () { $("drawer").hidden = true; history.replaceState(null, "", location.pathname); load(); };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-box]"), function (b) { b.onclick = function () { box = b.getAttribute("data-box"); load(); }; });
+    ["dir", "unread", "overdue"].forEach(function (x) { $(x).onchange = load; });
+    var qt; $("q").oninput = function () { clearTimeout(qt); qt = setTimeout(load, 350); };
+    if ($("newletter")) $("newletter").onclick = function () { cur = null; composer(null, null); };
+    var m = /id=(\d+)/.exec(location.hash); load(); if (m) open(m[1]);
+})();
+</script>
+}

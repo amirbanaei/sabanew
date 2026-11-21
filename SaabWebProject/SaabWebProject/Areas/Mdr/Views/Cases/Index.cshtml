@@ -1,0 +1,426 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("case.title");
+    bool canInsert = ViewBag.CanInsert == true;
+    bool isManager = ViewBag.IsManager == true;
+    bool canTask = ViewBag.CanTask == true;
+    bool canChat = ViewBag.CanChat == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-folder2-open", MdrText.T("case.title"), MdrText.T("case.hdr.sub") })
+
+    <div class="mdr-ag-stats" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="mdr-ag-stat mdr-ag-stat-info"><div class="mdr-ag-stat-icon"><i class="bi bi-folder2"></i></div><div><div class="mdr-ag-stat-value" id="st-total">-</div><div class="mdr-ag-stat-label">@MdrText.T("case.stat.total")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-success"><div class="mdr-ag-stat-icon"><i class="bi bi-folder2-open"></i></div><div><div class="mdr-ag-stat-value" id="st-open">-</div><div class="mdr-ag-stat-label">@MdrText.T("case.stat.open")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-warning"><div class="mdr-ag-stat-icon"><i class="bi bi-lock"></i></div><div><div class="mdr-ag-stat-value" id="st-closed">-</div><div class="mdr-ag-stat-label">@MdrText.T("case.stat.closed")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-info"><div class="mdr-ag-stat-icon"><i class="bi bi-link-45deg"></i></div><div><div class="mdr-ag-stat-value" id="st-links">-</div><div class="mdr-ag-stat-label">@MdrText.T("case.stat.links")</div></div></div>
+    </div>
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading">
+                <div class="glass-field-title">@MdrText.T("case.filters")</div>
+                <div class="glass-field-subtitle">@MdrText.T("case.filters.sub")</div>
+            </div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("case.f.scope")</label>
+                    <select id="scope" class="glass-select-search">
+                        <option value="mine">@MdrText.T("case.scope.mine")</option>
+                        @if (isManager) { <option value="all">@MdrText.T("case.scope.all")</option> }
+                    </select>
+                </div>
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("case.f.status")</label>
+                    <select id="status" class="glass-select-search">
+                        <option value="Open">@MdrText.T("case.st.Open")</option>
+                        <option value="">@MdrText.T("case.f.all")</option>
+                        <option value="Closed">@MdrText.T("case.st.Closed")</option>
+                        <option value="Merged">@MdrText.T("case.st.Merged")</option>
+                    </select>
+                </div>
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("case.f.q")</label>
+                    <input id="q" class="glass-input-ag" placeholder="@MdrText.T("case.search")" autocomplete="off" />
+                </div>
+            </div>
+            <div class="row row-btn-AG row-ltr-AG">
+                <div class="col-xl-2 col-md-4">
+                    <a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("denied.back")</p></a>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <button type="button" class="glass-btn-ag" id="refresh"><i class="bi bi-arrow-repeat"></i><p>@MdrText.T("case.act.refresh")</p></button>
+                </div>
+                @if (canInsert)
+                {
+                    <div class="col-xl-2 col-md-4">
+                        <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newcase"><i class="bi bi-plus-lg"></i><p>@MdrText.T("case.act.new")</p></button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+
+    <div id="listwrap" class="glass-field-ag" hidden>
+        <div class="glass-field-body">
+            <table class="glass-table-ag">
+                <thead><tr>
+                    <th>@MdrText.T("case.col.number")</th><th>@MdrText.T("case.col.title")</th><th>@MdrText.T("case.f.status")</th><th>@MdrText.T("case.f.conf")</th>
+                    <th>@MdrText.T("case.col.owner")</th><th>@MdrText.T("case.col.links")</th><th>@MdrText.T("case.col.date")</th>
+                </tr></thead>
+                <tbody id="list" class="scrollbar"></tbody>
+            </table>
+        </div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-folder2-open", MdrText.T("case.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canInsert = @(canInsert ? "true" : "false"), canTask = @(canTask ? "true" : "false"), canChat = @(canChat ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"),
+        st = new { Open = MdrText.T("case.st.Open"), Closed = MdrText.T("case.st.Closed"), Merged = MdrText.T("case.st.Merged") },
+        conf = new { Normal = MdrText.T("case.conf.Normal"), Confidential = MdrText.T("case.conf.Confidential"), Secret = MdrText.T("case.conf.Secret") },
+        role = new { Editor = MdrText.T("case.role.Editor"), Viewer = MdrText.T("case.role.Viewer"), Owner = MdrText.T("case.role.Owner"), Creator = MdrText.T("case.role.Creator"), Manager = MdrText.T("case.role.Manager") },
+        pr = new { Low = MdrText.T("tsk.pr.Low"), Normal = MdrText.T("tsk.pr.Normal"), High = MdrText.T("tsk.pr.High"), Urgent = MdrText.T("tsk.pr.Urgent") },
+        tab = new { overview = MdrText.T("case.tab.overview"), ltr = MdrText.T("case.tab.ltr"), req = MdrText.T("case.tab.req"), tsk = MdrText.T("case.tab.tsk"), doc = MdrText.T("case.tab.doc"),
+                    wf = MdrText.T("case.tab.wf"), ctr = MdrText.T("case.tab.ctr"), notes = MdrText.T("case.tab.notes"), members = MdrText.T("case.tab.members"), timeline = MdrText.T("case.tab.timeline") },
+        f = new { title = MdrText.T("case.f.title"), desc = MdrText.T("case.f.desc"), conf = MdrText.T("case.f.conf"), owner = MdrText.T("case.f.owner"), searchUser = MdrText.T("case.f.searchuser"),
+                  note = MdrText.T("case.f.note"), reason = MdrText.T("case.f.reason"), role = MdrText.T("case.f.role"), q2 = MdrText.T("case.f.q2"), priority = MdrText.T("case.f.priority"),
+                  assignee = MdrText.T("case.f.assignee"), due = MdrText.T("case.f.due"), status = MdrText.T("case.f.status") },
+        act = new { save = MdrText.T("case.act.save"), edit = MdrText.T("case.act.edit"), close = MdrText.T("case.act.close"), reopen = MdrText.T("case.act.reopen"), merge = MdrText.T("case.act.merge"),
+                    unlink = MdrText.T("case.act.unlink"), addnote = MdrText.T("case.act.addnote"), addmember = MdrText.T("case.act.addmember"), removemember = MdrText.T("case.act.removemember"),
+                    task = MdrText.T("case.act.task"), search = MdrText.T("case.act.search"), link = MdrText.T("case.act.link"), open = MdrText.T("case.act.open"),
+                    mergeinto = MdrText.T("case.act.mergeinto"), chat = MdrText.T("chat.title"), forceclose = MdrText.T("case.act.forceclose"), newcase = MdrText.T("case.act.new") },
+        sec = new { info = MdrText.T("case.sec.info"), link = MdrText.T("case.sec.link"), newtask = MdrText.T("case.sec.newtask"), merge = MdrText.T("case.sec.merge") },
+        emptyLinks = MdrText.T("case.empty.links"), created = MdrText.T("case.created"), by = MdrText.T("case.by"), closed = MdrText.T("case.closed"), mergedInto = MdrText.T("case.mergedinto"),
+        hiddenLink = MdrText.T("case.hidden.link"), hiddenWarn = MdrText.T("case.warn.hidden"),
+        similar = MdrText.T("case.warn.similar"), similar2 = MdrText.T("case.warn.similar2"), openWarn = MdrText.T("case.warn.open"), openWarn2 = MdrText.T("case.warn.open2"),
+        secretWarn = MdrText.T("case.warn.secret"),
+        confirmUnlink = MdrText.T("case.confirm.unlink"), confirmMerge = MdrText.T("case.confirm.merge"),
+        prompt = new { close = MdrText.T("case.prompt.close"), reopen = MdrText.T("case.prompt.reopen"), merge = MdrText.T("case.prompt.merge") },
+        hist = new { Create = MdrText.T("case.hist.Create"), Edit = MdrText.T("case.hist.Edit"), Link = MdrText.T("case.hist.Link"), Unlink = MdrText.T("case.hist.Unlink"), Note = MdrText.T("case.hist.Note"),
+                     MemberAdd = MdrText.T("case.hist.MemberAdd"), MemberRole = MdrText.T("case.hist.MemberRole"), MemberRemove = MdrText.T("case.hist.MemberRemove"), Close = MdrText.T("case.hist.Close"),
+                     Reopen = MdrText.T("case.hist.Reopen"), Merge = MdrText.T("case.hist.Merge"), MergeIn = MdrText.T("case.hist.MergeIn") } }));
+    var u = @Html.Raw(Json.Encode(new {
+        list = Url.Action("GetList", "Cases", new { area = "Mdr" }), get = Url.Action("GetCase", "Cases", new { area = "Mdr" }),
+        save = Url.Action("Save", "Cases", new { area = "Mdr" }), link = Url.Action("Link", "Cases", new { area = "Mdr" }),
+        unlink = Url.Action("Unlink", "Cases", new { area = "Mdr" }), note = Url.Action("Note", "Cases", new { area = "Mdr" }),
+        setMember = Url.Action("SetMember", "Cases", new { area = "Mdr" }), removeMember = Url.Action("RemoveMember", "Cases", new { area = "Mdr" }),
+        task = Url.Action("CreateTask", "Cases", new { area = "Mdr" }), close = Url.Action("Close", "Cases", new { area = "Mdr" }),
+        reopen = Url.Action("Reopen", "Cases", new { area = "Mdr" }), merge = Url.Action("Merge", "Cases", new { area = "Mdr" }),
+        ents = Url.Action("SearchEntities", "Cases", new { area = "Mdr" }), users = Url.Action("SearchUsers", "Cases", new { area = "Mdr" }) }));
+
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var TYPES = [["ltr", "bi-envelope"], ["req", "bi-clipboard-check"], ["tsk", "bi-check2-square"], ["doc", "bi-file-earmark-text"], ["wf", "bi-diagram-3"], ["ctr", "bi-file-earmark-ruled"]];
+    var ST_CLS = { Open: "glass-status-success", Closed: "glass-status-warning", Merged: "glass-status-info" };
+    var CF_CLS = { Normal: "glass-status-info", Confidential: "glass-status-warning", Secret: "glass-status-danger" };
+    var cur = null, data = null, tab = "overview", confirmSim = false;
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function setHash() { history.replaceState(null, "", location.pathname + (cur ? "#id=" + cur + "&tab=" + tab : "")); }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + (attrs || "") + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function field(icon, title, body) {
+        return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) +
+            '</div></div></div><div class="glass-field-body">' + body + "</div></div>";
+    }
+    function badge(cls, text) { return '<span class="mdr-ag-badge ' + cls + '">' + E(text) + "</span>"; }
+
+    // ---------- فهرست ----------
+    function load() {
+        $("state").hidden = false; $("state").textContent = L.loading; $("listwrap").hidden = true;
+        mdr.get(u.list + "?scope=" + $("scope").value + "&status=" + encodeURIComponent($("status").value) + "&q=" + encodeURIComponent($("q").value)).then(function (d) {
+            if (!d.success) { $("state").textContent = L.error; return; }
+            var it = d.items, n = function (s) { return it.filter(function (c) { return c.Status === s; }).length; };
+            $("st-total").textContent = it.length; $("st-open").textContent = n("Open"); $("st-closed").textContent = n("Closed");
+            $("st-links").textContent = it.reduce(function (a, c) { return a + c.Links; }, 0);
+            if (!it.length) { $("state").textContent = L.empty; return; }
+            $("state").hidden = true; $("listwrap").hidden = false;
+            $("list").innerHTML = it.map(function (c) {
+                return '<tr data-id="' + c.CaseID + '"><td>' + E(c.Number) + "</td><td>" + E(c.Title) + '</td><td><span class="meeting-status ' + (ST_CLS[c.Status] || "") + '">' + E(L.st[c.Status] || c.Status) +
+                    '</span></td><td><span class="meeting-status ' + (CF_CLS[c.Confidentiality] || "") + '">' + E(L.conf[c.Confidentiality] || c.Confidentiality) + "</span></td><td>" + E(c.Owner || "—") +
+                    "</td><td>" + c.Links + "</td><td>" + E(c.CreatedAt) + "</td></tr>";
+            }).join("");
+        }).catch(function () { $("state").hidden = false; $("state").textContent = L.error; });
+    }
+
+    // ---------- انتخاب کاربر ----------
+    function picker(id, onPick) {
+        var inp = $(id + "-q"), box = $(id + "-r"), timer;
+        inp.oninput = function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                if (inp.value.trim().length < 2) { box.innerHTML = ""; return; }
+                mdr.get(u.users + "?q=" + encodeURIComponent(inp.value.trim())).then(function (d) {
+                    box.innerHTML = d.items.map(function (x) { return '<button type="button" class="glass-btn-ag" data-u="' + x.Id + '">' + E(x.Name) + "</button>"; }).join("");
+                });
+            }, 300);
+        };
+        box.onclick = function (e) {
+            var b = e.target.closest("button[data-u]"); if (!b) return;
+            onPick(+b.getAttribute("data-u"), b.textContent); box.innerHTML = ""; inp.value = b.textContent;
+        };
+    }
+
+    // ---------- فرم ایجاد / ویرایش ----------
+    function form(c) {
+        var isNew = !c, v = c || { Title: "", Description: "", Confidentiality: "Normal", OwnerUserID: null, Owner: "" }, pick = v.OwnerUserID;
+        confirmSim = false;
+        $("mtitle").textContent = isNew ? L.act.newcase : L.act.edit; $("msub").textContent = isNew ? "" : c.Number;
+        $("dbody").innerHTML =
+            '<div class="glass-field-ag"><div class="glass-field-body"><div class="row row-input-AG">' +
+            '<div class="col-xl-8 col-md-12"><label class="glass-label-ag">' + E(L.f.title) + ' *</label><input id="f-title" class="glass-input-ag" maxlength="300" value="' + E(v.Title) + '"></div>' +
+            '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.conf) + '</label><select id="f-conf" class="glass-select-search">' +
+            ["Normal", "Confidential", "Secret"].map(function (p) { return '<option value="' + p + '"' + (p === v.Confidentiality ? " selected" : "") + ">" + E(L.conf[p]) + "</option>"; }).join("") + "</select></div></div>" +
+            '<div class="row row-input-AG"><div class="col-xl-12"><label class="glass-label-ag">' + E(L.f.desc) + '</label><textarea id="f-desc" class="glass-textarea-ag" rows="3" maxlength="2000" style="height:5rem">' + E(v.Description || "") + "</textarea></div></div>" +
+            '<div class="row row-input-AG"><div class="col-xl-12"><label class="glass-label-ag">' + E(L.f.owner) + '</label><input id="pk-q" class="glass-input-ag" placeholder="' + E(L.f.searchUser) + '" value="' + E(v.Owner || "") + '"><div id="pk-r" class="mdr-ag-picks"></div></div></div>' +
+            '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="f-save"') + "</div></div></div>";
+        picker("pk", function (id) { pick = id; });
+        $("pk-q").addEventListener("input", function () { if (!this.value.trim()) pick = isNew ? null : v.OwnerUserID; });
+        $("f-title").addEventListener("input", function () { confirmSim = false; });
+        $("f-save").onclick = function () {
+            mdr.post(u.save, { id: isNew ? 0 : c.CaseID, title: $("f-title").value, description: $("f-desc").value, confidentiality: $("f-conf").value,
+                ownerUserId: pick, rowVer: isNew ? null : c.RowVer, confirmSimilar: confirmSim }).then(function (r) {
+                if (r.error === "case.err.similar") {
+                    confirmSim = true;
+                    toast(E(L.similar) + '<ul class="mdr-ag-list">' + (r.similar || []).map(function (s) { return '<li><a href="#" data-open="' + s.CaseID + '">' + E(s.Number) + " — " + E(s.Title) + "</a></li>"; }).join("") + "</ul>" + E(L.similar2), true);
+                    return;
+                }
+                if (!r.success) { toast(E(r.message || L.error), true); return; }
+                toast(""); load(); openCase(r.id, "overview");
+            });
+        };
+        toast(""); showModal(true);
+    }
+
+    // ---------- جزئیات ----------
+    function openCase(id, t) {
+        cur = id; tab = t || tab || "overview"; confirmSim = false;
+        mdr.get(u.get + "?id=" + id).then(function (d) {
+            showModal(true);
+            if (!d.success) { cur = null; setHash(); toast(E(d.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            data = d; toast(""); render();
+        });
+    }
+
+    function render() {
+        var c = data.case, links = data.links;
+        $("mtitle").textContent = c.Number + " — " + c.Title;
+        $("msub").textContent = (c.Creator || "") + (c.CreatedAt ? " · " + c.CreatedAt : "");
+        setHash();
+
+        var count = function (k) { return links.filter(function (l) { return l.Type === k; }).length; };
+        var tabs = '<div class="row row-btn-AG" style="margin-top:0 !important;gap:.4rem 0">' +
+            [["overview", "bi-info-circle", ""]].concat(TYPES.map(function (t) { return [t[0], t[1], " (" + count(t[0]) + ")"]; }))
+                .concat([["notes", "bi-chat-left-text", " (" + data.notes.length + ")"], ["members", "bi-people", " (" + data.members.length + ")"], ["timeline", "bi-clock-history", ""]])
+                .map(function (t) { return '<div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag' + (tab === t[0] ? " is-on" : "") + '" data-tab="' + t[0] + '"><i class="bi ' + t[1] + '"></i><p>' + E(L.tab[t[0]] + t[2]) + "</p></button></div>"; }).join("") +
+            "</div>";
+
+        var body = "";
+        if (tab === "overview") body = overview();
+        else if (tab === "notes") body = notes();
+        else if (tab === "members") body = members();
+        else if (tab === "timeline") body = timeline();
+        else body = linkTab(tab);
+
+        $("dbody").innerHTML = tabs + '<div style="margin-top:.8rem">' + body + "</div>";
+        bindTab();
+    }
+
+    function hiddenWarn() {
+        return data.hidden ? '<div class="mdr-ag-msg" style="margin-bottom:.6rem">' + E(L.hiddenWarn) + " <b>" + data.hidden + "</b></div>" : "";
+    }
+
+    function overview() {
+        var c = data.case, acts = "";
+        if (c.CanManage) acts += btn("", "bi-pencil", L.act.edit, 'data-a="edit"') + btn("glass-btn-ag-primary", "bi-lock", L.act.close, 'data-a="close"') + btn("", "bi-intersect", L.act.merge, 'data-a="mergeform"');
+        if (canChat) acts += '<div class="col-xl-3 col-md-4"><a class="glass-btn-ag" href="/Mdr/Chat#e=cas:' + c.CaseID + '"><i class="bi bi-chat-dots"></i><p>' + E(L.act.chat) + "</p></a></div>";
+        if (c.CanReopen) acts += btn("glass-btn-ag-primary", "bi-unlock", L.act.reopen, 'data-a="reopen"');
+        var info = '<div style="margin-bottom:.6rem">' + badge(ST_CLS[c.Status] || "", L.st[c.Status]) + badge(CF_CLS[c.Confidentiality] || "", L.conf[c.Confidentiality]) +
+            (c.Role ? badge("glass-status-info", L.role[c.Role] || c.Role) : "") + "</div>" +
+            (c.Confidentiality === "Secret" ? '<div class="mdr-ag-msg" style="margin-bottom:.6rem">' + E(L.secretWarn) + "</div>" : "") +
+            (c.Description ? '<div class="mdr-ag-text">' + E(c.Description) + "</div>" : "") +
+            '<dl class="mdr-ag-dl" style="margin-top:.6rem"><dt>' + E(L.f.owner) + "</dt><dd>" + E(c.Owner || "—") + "</dd><dt>" + E(L.created) + "</dt><dd>" + E(c.CreatedAt) + " · " + E(L.by) + " " + E(c.Creator || "") + "</dd>" +
+            (c.ClosedAt ? "<dt>" + E(L.closed) + "</dt><dd>" + E(c.ClosedAt) + (c.CloseReason ? " — " + E(c.CloseReason) : "") + "</dd>" : "") +
+            (c.MergedInto ? "<dt>" + E(L.mergedInto) + "</dt><dd>" + E(c.MergedInto) + "</dd>" : "") + "</dl>" +
+            (acts ? '<div class="row row-btn-AG row-ltr-AG">' + acts + "</div>" : "");
+        return hiddenWarn() + field("bi-info-circle", L.sec.info, info) + '<div id="mergebox"></div>';
+    }
+
+    function linkTab(key) {
+        var c = data.case, rows = data.links.filter(function (l) { return l.Type === key; });
+        var list = rows.length ? '<ul class="mdr-ag-list">' + rows.map(function (l) {
+            var title = l.Visible ? '<a href="' + E(l.Url) + '">' + E(l.Title) + "</a>" : '<i>' + E(L.hiddenLink) + "</i>";
+            return "<li>" + title + (l.Visible && l.Status ? " " + badge("glass-status-info", l.Status) : "") + (l.Note ? " <small>" + E(l.Note) + "</small>" : "") +
+                " <small>" + E(l.LinkedBy || "") + " · " + E(l.LinkedAt) + "</small>" +
+                (c.CanEdit ? ' <button type="button" class="mdr-btn" data-unlink="' + l.LinkID + '">' + E(L.act.unlink) + "</button>" : "") + "</li>";
+        }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.emptyLinks) + "</div>";
+
+        var add = "";
+        if (c.CanEdit) {
+            add = field("bi-link-45deg", L.sec.link,
+                '<div class="row row-input-AG"><div class="col-xl-9 col-md-8"><input id="e-q" class="glass-input-ag" placeholder="' + E(L.f.q2) + '" autocomplete="off"></div>' +
+                '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag" id="e-go"><i class="bi bi-search"></i><p>' + E(L.act.search) + '</p></button></div></div><div id="e-r"></div>');
+            if (key === "tsk" && canTask)
+                add += field("bi-plus-square", L.sec.newtask,
+                    '<div class="row row-input-AG"><div class="col-xl-8 col-md-12"><label class="glass-label-ag">' + E(L.f.title) + ' *</label><input id="t-title" class="glass-input-ag" maxlength="300"></div>' +
+                    '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.priority) + '</label><select id="t-pr" class="glass-select-search">' +
+                    ["Low", "Normal", "High", "Urgent"].map(function (p) { return '<option value="' + p + '"' + (p === "Normal" ? " selected" : "") + ">" + E(L.pr[p]) + "</option>"; }).join("") + "</select></div></div>" +
+                    '<div class="row row-input-AG"><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.due) + '</label>' + mdr.jd.html("t-due", "") + '</div><div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + mdr.jd.L.time + '</label>' + mdr.jd.timeHtml("t-due-t", "") + '</div>' +
+                    '<div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.assignee) + '</label><input id="tp-q" class="glass-input-ag" placeholder="' + E(L.f.searchUser) + '"><div id="tp-r" class="mdr-ag-picks"></div></div></div>' +
+                    '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.task, 'id="t-save"') + "</div>");
+        }
+        return hiddenWarn() + field(TYPES.filter(function (t) { return t[0] === key; })[0][1], L.tab[key], list) + add;
+    }
+
+    function notes() {
+        var c = data.case;
+        var list = data.notes.length ? '<ul class="mdr-ag-list">' + data.notes.map(function (n) { return "<li><b>" + E(n.User || "") + "</b> <small>" + E(n.CreatedAt) + '</small><br><span class="mdr-ag-text">' + E(n.Body) + "</span></li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+        var add = c.CanEdit ? '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-xl-10 col-md-9"><textarea id="n-body" class="glass-textarea-ag" rows="2" maxlength="2000" style="height:3rem"></textarea></div>' +
+            '<div class="col-xl-2 col-md-3 d-flex align-items-end"><button type="button" class="glass-btn-ag" id="n-send"><i class="bi bi-chat-dots"></i><p>' + E(L.act.addnote) + "</p></button></div></div>" : "";
+        return field("bi-chat-left-text", L.tab.notes, list + add);
+    }
+
+    function members() {
+        var c = data.case;
+        var list = '<ul class="mdr-ag-list"><li><b>' + E(c.Owner || "") + "</b> " + badge("glass-status-success", L.role.Owner) + "</li>" + data.members.map(function (m) {
+            return "<li><b>" + E(m.Name || "") + "</b> " + badge("glass-status-info", L.role[m.Role] || m.Role) +
+                (c.CanManage ? ' <button type="button" class="mdr-btn" data-rm="' + m.UserID + '">' + E(L.act.removemember) + "</button>" : "") + "</li>";
+        }).join("") + "</ul>";
+        var add = c.CanManage ? '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-xl-6 col-md-8"><label class="glass-label-ag">' + E(L.act.addmember) + '</label><input id="mp-q" class="glass-input-ag" placeholder="' + E(L.f.searchUser) + '"><div id="mp-r" class="mdr-ag-picks"></div></div>' +
+            '<div class="col-xl-3 col-md-4"><label class="glass-label-ag">' + E(L.f.role) + '</label><select id="m-role" class="glass-select-search"><option value="Editor">' + E(L.role.Editor) + '</option><option value="Viewer">' + E(L.role.Viewer) + "</option></select></div></div>" : "";
+        return field("bi-people", L.tab.members, list + add);
+    }
+
+    function timeline() {
+        return field("bi-clock-history", L.tab.timeline, '<div class="meeting-timeline" style="max-height:24rem">' + data.history.map(function (h) {
+            return '<div class="timeline-item completed"><div class="timeline-icon"></div><div class="timeline-content"><div class="timeline-title">' + E(L.hist[h.ActionKey] || h.ActionKey) + " — " + E(h.Actor || "") +
+                '</div><div class="timeline-description">' + E(h.CreatedAt) + (h.Detail ? " — " + E(h.Detail) : "") + " · " + E(h.CorrelationID) + "</div></div></div>"; }).join("") + "</div>");
+    }
+
+    // ---------- اتصال رویدادهای تب فعال ----------
+    function refresh() { load(); openCase(cur, tab); }
+    function post(url, p, then) {
+        mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); (then || refresh)(r); });
+    }
+
+    function bindTab() {
+        var c = data.case;
+        var go = $("e-go");
+        if (go) {
+            var run = function () {
+                var q = $("e-q").value.trim(); if (!q) return;
+                mdr.get(u.ents + "?q=" + encodeURIComponent(q) + "&key=" + tab).then(function (d) {
+                    if (!d.success) { $("e-r").innerHTML = '<div class="mdr-ag-msg is-bad">' + E(d.message || L.error) + "</div>"; return; }
+                    $("e-r").innerHTML = d.items.length ? '<ul class="mdr-ag-list">' + d.items.map(function (x) {
+                        return "<li>" + E(x.Title) + " " + badge("glass-status-info", x.Status || "") + ' <button type="button" class="mdr-btn" data-add="' + x.Id + '">' + E(L.act.link) + "</button></li>"; }).join("") + "</ul>"
+                        : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+                });
+            };
+            go.onclick = run; $("e-q").onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); run(); } };
+        }
+        var ts = $("t-save");
+        if (ts) {
+            var assignee = null;
+            picker("tp", function (id) { assignee = id; });
+            $("tp-q").addEventListener("input", function () { if (!this.value.trim()) assignee = null; });
+            ts.onclick = function () {
+                post(u.task, { id: c.CaseID, title: $("t-title").value, description: "", priority: $("t-pr").value, assigneeUserId: assignee, dueAt: mdr.jd.getDT("t-due", "t-due-t", "23:59") });
+            };
+        }
+        var ns = $("n-send");
+        if (ns) ns.onclick = function () { post(u.note, { id: c.CaseID, body: $("n-body").value }); };
+        if ($("mp-q")) {
+            picker("mp", function (uid) { post(u.setMember, { id: c.CaseID, userId: uid, role: $("m-role").value }); });
+        }
+    }
+
+    function closeCase(force) {
+        var c = data.case, reason = prompt(L.prompt.close); if (!reason) return;
+        mdr.post(u.close, { id: c.CaseID, reason: reason, rowVer: c.RowVer, force: !!force }).then(function (r) {
+            if (r.error === "case.err.openitems") {
+                if (confirm(L.openWarn + " " + r.openCount + "\n" + L.openWarn2)) {
+                    mdr.post(u.close, { id: c.CaseID, reason: reason, rowVer: c.RowVer, force: true }).then(function (r2) {
+                        if (!r2.success) toast(E(r2.message || L.error), true); else refresh();
+                    });
+                }
+                return;
+            }
+            if (!r.success) toast(E(r.message || L.error), true); else refresh();
+        });
+    }
+
+    function mergeForm() {
+        var c = data.case, box = $("mergebox");
+        box.innerHTML = field("bi-intersect", L.sec.merge, '<div class="row row-input-AG"><div class="col-xl-12"><input id="mg-q" class="glass-input-ag" placeholder="' + E(L.f.q2) + '" autocomplete="off"></div></div><div id="mg-r"></div>');
+        var run = function () {
+            mdr.get(u.list + "?scope=" + $("scope").value + "&status=Open&excludeId=" + c.CaseID + "&q=" + encodeURIComponent($("mg-q").value)).then(function (d) {
+                $("mg-r").innerHTML = d.items.length ? '<ul class="mdr-ag-list">' + d.items.slice(0, 15).map(function (x) {
+                    return "<li>" + E(x.Number) + " — " + E(x.Title) + ' <button type="button" class="mdr-btn" data-merge="' + x.CaseID + '">' + E(L.act.mergeinto) + "</button></li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+            });
+        };
+        var t; $("mg-q").oninput = function () { clearTimeout(t); t = setTimeout(run, 300); };
+        run();
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        var o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); openCase(o.getAttribute("data-open"), "overview"); return; }
+        var tb = e.target.closest("button[data-tab]"); if (tb) { tab = tb.getAttribute("data-tab"); render(); return; }
+        if (!data) return;
+        var c = data.case;
+        var ad = e.target.closest("button[data-add]");
+        if (ad) { post(u.link, { id: c.CaseID, key: tab, entityId: ad.getAttribute("data-add"), note: "" }); return; }
+        var ul = e.target.closest("button[data-unlink]");
+        if (ul) { if (confirm(L.confirmUnlink)) post(u.unlink, { linkId: ul.getAttribute("data-unlink") }); return; }
+        var rm = e.target.closest("button[data-rm]");
+        if (rm) { post(u.removeMember, { id: c.CaseID, userId: rm.getAttribute("data-rm") }); return; }
+        var mg = e.target.closest("button[data-merge]");
+        if (mg) {
+            if (!confirm(L.confirmMerge)) return;
+            var reason = prompt(L.prompt.merge); if (!reason) return;
+            mdr.post(u.merge, { id: c.CaseID, targetId: mg.getAttribute("data-merge"), reason: reason }).then(function (r) {
+                if (!r.success) { toast(E(r.message || L.error), true); return; }
+                load(); openCase(r.id, "overview");
+            });
+            return;
+        }
+        var b = e.target.closest("button[data-a]"); if (!b) return;
+        var a = b.getAttribute("data-a");
+        if (a === "edit") return form(c);
+        if (a === "close") return closeCase(false);
+        if (a === "mergeform") return mergeForm();
+        if (a === "reopen") {
+            var rs = prompt(L.prompt.reopen); if (!rs) return;
+            post(u.reopen, { id: c.CaseID, reason: rs, rowVer: c.RowVer });
+        }
+    });
+
+    $("list").addEventListener("click", function (e) { var r = e.target.closest("tr[data-id]"); if (r) openCase(r.getAttribute("data-id"), "overview"); });
+    $("dclose").onclick = function () { showModal(false); cur = null; data = null; setHash(); };
+    $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) $("dclose").onclick(); });
+    ["scope", "status"].forEach(function (x) { $(x).onchange = load; });
+    var qt; $("q").oninput = function () { clearTimeout(qt); qt = setTimeout(load, 350); };
+    $("refresh").onclick = load;
+    if ($("newcase")) $("newcase").onclick = function () { cur = null; setHash(); form(null); };
+
+    var m = /id=(\d+)/.exec(location.hash), t = /tab=(\w+)/.exec(location.hash);
+    load(); if (m) openCase(m[1], t ? t[1] : "overview");
+})();
+</script>
+}

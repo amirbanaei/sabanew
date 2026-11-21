@@ -1,0 +1,301 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("fin.docs.title");
+    bool isManager = ViewBag.IsManager == true;
+    bool canExport = ViewBag.CanExport == true;
+    bool canDash = ViewBag.CanDash == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-receipt", MdrText.T("fin.docs.title"), MdrText.T("fin.docs.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("fin.filters")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("fin.f.scope")</label>
+                    <select id="scope" class="glass-select-search">
+                        <option value="mine">@MdrText.T("fin.scope.mine")</option>
+                        <option value="todo">@MdrText.T("fin.scope.todo")</option>
+                        @if (isManager) { <option value="all">@MdrText.T("fin.scope.all")</option> }
+                    </select>
+                </div>
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("fin.f.status")</label>
+                    <select id="status" class="glass-select-search">
+                        <option value="">@MdrText.T("fin.f.all")</option>
+                        <option value="Draft">@MdrText.T("fin.st.Draft")</option><option value="Submitted">@MdrText.T("fin.st.Submitted")</option><option value="Approved">@MdrText.T("fin.st.Approved")</option>
+                        <option value="Paid">@MdrText.T("fin.st.Paid")</option><option value="Rejected">@MdrText.T("fin.st.Rejected")</option><option value="Cancelled">@MdrText.T("fin.st.Cancelled")</option>
+                    </select>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("fin.f.direction")</label>
+                    <select id="direction" class="glass-select-search">
+                        <option value="">@MdrText.T("fin.f.all")</option><option value="Payment">@MdrText.T("fin.dir.Payment")</option><option value="Receipt">@MdrText.T("fin.dir.Receipt")</option>
+                    </select>
+                </div>
+                <div class="col-xl-4 col-md-12">
+                    <label class="glass-label-ag">@MdrText.T("fin.f.q")</label>
+                    <input id="q" class="glass-input-ag" placeholder="@MdrText.T("fin.search")" autocomplete="off" />
+                </div>
+            </div>
+            <div class="row row-btn-AG row-ltr-AG">
+                <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("fin.act.back")</p></a></div>
+                @if (canDash)
+                {
+                    <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Finance", new { area = "Mdr" })"><i class="bi bi-cash-coin"></i><p>@MdrText.T("fin.act.dash")</p></a></div>
+                }
+                @if (isManager)
+                {
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="cfg"><i class="bi bi-gear"></i><p>@MdrText.T("fin.act.config")</p></button></div>
+                }
+                @if (canExport)
+                {
+                    <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="exp"><i class="bi bi-download"></i><p>@MdrText.T("fin.act.export")</p></button></div>
+                }
+                <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newdoc"><i class="bi bi-plus-lg"></i><p>@MdrText.T("fin.act.new")</p></button></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+    <div id="listwrap" class="glass-field-ag" hidden>
+        <div class="glass-field-body">
+            <table class="glass-table-ag">
+                <thead><tr>
+                    <th>@MdrText.T("fin.col.number")</th><th>@MdrText.T("fin.col.title")</th><th>@MdrText.T("fin.col.dir")</th><th>@MdrText.T("fin.col.amount")</th>
+                    <th>@MdrText.T("fin.col.date")</th><th>@MdrText.T("fin.col.status")</th><th>@MdrText.T("fin.col.cc")</th><th>@MdrText.T("fin.col.requester")</th>
+                </tr></thead>
+                <tbody id="list" class="scrollbar"></tbody>
+            </table>
+        </div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-receipt", MdrText.T("fin.docs.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var isManager = @(isManager ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("wf.empty"),
+        st = new { Draft = MdrText.T("fin.st.Draft"), Submitted = MdrText.T("fin.st.Submitted"), Approved = MdrText.T("fin.st.Approved"), Rejected = MdrText.T("fin.st.Rejected"), Paid = MdrText.T("fin.st.Paid"), Cancelled = MdrText.T("fin.st.Cancelled") },
+        dir = new { Payment = MdrText.T("fin.dir.Payment"), Receipt = MdrText.T("fin.dir.Receipt") },
+        f = new { title = MdrText.T("fin.f.title"), amount = MdrText.T("fin.f.amount"), date = MdrText.T("fin.f.date"), cc = MdrText.T("fin.f.costcenter"), peyman = MdrText.T("fin.f.peyman"), payee = MdrText.T("fin.f.payee"),
+                  ref_ = MdrText.T("fin.f.ref"), dir = MdrText.T("fin.f.direction"), level = MdrText.T("fin.f.level"), minAmount = MdrText.T("fin.f.minamount"), user = MdrText.T("fin.f.user"), year = MdrText.T("fin.f.year"),
+                  month = MdrText.T("fin.f.month"), reason = MdrText.T("fin.f.reason") },
+        col = new { number = MdrText.T("fin.col.number"), requester = MdrText.T("fin.col.requester"), status = MdrText.T("fin.col.status") },
+        act = new { save = MdrText.T("fin.act.save"), submit = MdrText.T("fin.act.submit"), approve = MdrText.T("fin.act.approve"), ret = MdrText.T("fin.act.return"), reject = MdrText.T("fin.act.reject"), cancel = MdrText.T("fin.act.cancel"),
+                    pay = MdrText.T("fin.act.pay"), edit = MdrText.T("fin.act.edit"), add = MdrText.T("fin.act.add"), remove = MdrText.T("fin.act.remove"), close = MdrText.T("fin.act.close"), reopen = MdrText.T("fin.act.reopen"),
+                    setBudget = MdrText.T("fin.act.setbudget"), newDoc = MdrText.T("fin.act.new") },
+        sec = new { info = MdrText.T("fin.sec.info"), steps = MdrText.T("fin.sec.steps"), history = MdrText.T("fin.sec.history"), approvers = MdrText.T("fin.sec.approvers"), budgets = MdrText.T("fin.sec.budgets"),
+                    periods = MdrText.T("fin.sec.periods"), budgetInfo = MdrText.T("fin.sec.budgetinfo"), config = MdrText.T("fin.act.config") },
+        cfg = new { glob = MdrText.T("fin.cfg.global"), used = MdrText.T("fin.cfg.used"), remaining = MdrText.T("fin.cfg.remaining"), budget = MdrText.T("fin.cfg.budget"), closedAt = MdrText.T("fin.cfg.closedat"), hint = MdrText.T("fin.cfg.hint") },
+        step = new { Pending = MdrText.T("fin.step.Pending"), Approved = MdrText.T("fin.step.Approved"), Returned = MdrText.T("fin.step.Returned"), Rejected = MdrText.T("fin.step.Rejected") },
+        hist = new { Create = MdrText.T("fin.hist.Create"), Edit = MdrText.T("fin.hist.Edit"), Submit = MdrText.T("fin.hist.Submit"), Approve = MdrText.T("fin.hist.Approve"), Return = MdrText.T("fin.hist.Return"),
+                     Reject = MdrText.T("fin.hist.Reject"), Cancel = MdrText.T("fin.hist.Cancel"), Pay = MdrText.T("fin.hist.Pay") },
+        warn = new { duplicate = MdrText.T("fin.warn.duplicate"), dupCount = MdrText.T("fin.warn.dupcount"), periodClosed = MdrText.T("fin.warn.periodclosed"), returned = MdrText.T("fin.warn.returned"), noApprover = MdrText.T("fin.warn.noapprover") },
+        prompt = new { reason = MdrText.T("fin.prompt.reason"), comment = MdrText.T("fin.prompt.comment"), payref = MdrText.T("fin.prompt.payref") },
+        confirm = new { pay = MdrText.T("fin.confirm.pay"), reopen = MdrText.T("fin.confirm.reopen"), close = MdrText.T("fin.confirm.close") }, attach = MdrText.T("fin.sec.attach") }));
+    var u = @Html.Raw(Json.Encode(new {
+        list = Url.Action("GetList", "Finance", new { area = "Mdr" }), doc = Url.Action("GetDocument", "Finance", new { area = "Mdr" }), cc = Url.Action("GetCostCenters", "Finance", new { area = "Mdr" }),
+        config = Url.Action("GetConfig", "Finance", new { area = "Mdr" }), save = Url.Action("Save", "Finance", new { area = "Mdr" }), submit = Url.Action("Submit", "Finance", new { area = "Mdr" }),
+        approve = Url.Action("Approve", "Finance", new { area = "Mdr" }), ret = Url.Action("Return", "Finance", new { area = "Mdr" }), reject = Url.Action("Reject", "Finance", new { area = "Mdr" }),
+        cancel = Url.Action("Cancel", "Finance", new { area = "Mdr" }), pay = Url.Action("Pay", "Finance", new { area = "Mdr" }), addApprover = Url.Action("AddApprover", "Finance", new { area = "Mdr" }),
+        removeApprover = Url.Action("RemoveApprover", "Finance", new { area = "Mdr" }), setBudget = Url.Action("SetBudget", "Finance", new { area = "Mdr" }), closePeriod = Url.Action("ClosePeriod", "Finance", new { area = "Mdr" }),
+        reopenPeriod = Url.Action("ReopenPeriod", "Finance", new { area = "Mdr" }), users = Url.Action("SearchUsers", "Finance", new { area = "Mdr" }), exp = Url.Action("ExportDocs", "Finance", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var cur = null, ccs = [];
+    var ST_CLS = { Draft: "glass-status-info", Submitted: "glass-status-warning", Approved: "glass-status-info", Paid: "glass-status-success", Rejected: "glass-status-danger", Cancelled: "glass-status-info" };
+
+    function money(v) { return v === null || v === undefined ? "—" : Math.round(Number(v)).toLocaleString("fa-IR"); }
+    function latin(s) { return String(s == null ? "" : s).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/[,٬\s]/g, ""); }
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function setHash() { history.replaceState(null, "", location.pathname + (cur ? "#id=" + cur : "")); }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + (attrs || "") + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function field(icon, title, body) {
+        return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) +
+            '</div></div></div><div class="glass-field-body">' + body + "</div></div>";
+    }
+    function badge(cls, t) { return '<span class="mdr-ag-badge ' + cls + '">' + E(t) + "</span>"; }
+    function post(url, p, then) { mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); then(r); }); }
+
+    // ---------- فهرست ----------
+    function load() {
+        $("state").hidden = false; $("state").textContent = L.loading; $("listwrap").hidden = true;
+        mdr.get(u.list + "?scope=" + $("scope").value + "&status=" + $("status").value + "&direction=" + $("direction").value + "&q=" + encodeURIComponent($("q").value)).then(function (r) {
+            if (!r.success) { $("state").textContent = r.message || L.error; return; }
+            if (!r.items.length) { $("state").textContent = L.empty; return; }
+            $("state").hidden = true; $("listwrap").hidden = false;
+            $("list").innerHTML = r.items.map(function (d) {
+                return '<tr data-id="' + d.DocumentID + '"><td>' + E(d.Number) + "</td><td>" + E(d.Title) + "</td><td>" + E(L.dir[d.Direction]) + "</td><td>" + money(d.Amount) + "</td><td>" + E(d.DocDate) +
+                    '</td><td><span class="meeting-status ' + (ST_CLS[d.Status] || "") + '">' + E(L.st[d.Status]) + (d.Status === "Submitted" && d.CurrentLevel ? " (" + d.CurrentLevel + ")" : "") + "</span></td><td>" + E(d.CostCenter || "—") + "</td><td>" + E(d.Requester || "") + "</td></tr>";
+            }).join("");
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    function loadCc() { return ccs.length ? Promise.resolve() : mdr.get(u.cc).then(function (r) { if (r.success) ccs = r.items; }); }
+    function ccOptions(sel, withGlobal) {
+        return (withGlobal ? '<option value="">' + E(L.cfg.glob) + "</option>" : '<option value="">—</option>') + ccs.map(function (c) { return '<option value="' + c.Id + '"' + (c.Id === sel ? " selected" : "") + ">" + E(c.Name) + "</option>"; }).join("");
+    }
+
+    // ---------- فرم ----------
+    function form(d) {
+        var isNew = !d, v = d || { Direction: "Payment", Title: "", Amount: "", DocDate: new Date().toISOString().slice(0, 10), CostCenterID: null, PeymanID: "", Payee: "", ReferenceNo: "" };
+        loadCc().then(function () {
+            $("mtitle").textContent = isNew ? L.act.newDoc : L.act.edit; $("msub").textContent = isNew ? "" : d.Number; toast("");
+            $("dbody").innerHTML = field("bi-receipt", L.sec.info,
+                '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.dir) + '</label><select id="f-dir" class="glass-select-search"><option value="Payment"' + (v.Direction === "Payment" ? " selected" : "") + ">" + E(L.dir.Payment) + '</option><option value="Receipt"' + (v.Direction === "Receipt" ? " selected" : "") + ">" + E(L.dir.Receipt) + "</option></select></div>" +
+                '<div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.title) + ' *</label><input id="f-title" class="glass-input-ag" maxlength="300" value="' + E(v.Title) + '"></div></div>' +
+                '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.amount) + ' *</label><input id="f-amount" class="glass-input-ag" inputmode="numeric" value="' + E(v.Amount) + '"></div>' +
+                '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.date) + ' *</label>' + mdr.jd.html("f-date", v.DocDate) + '</div>' +
+                '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.cc) + '</label><select id="f-cc" class="glass-select-search">' + ccOptions(v.CostCenterID, false) + "</select></div></div>" +
+                '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.peyman) + '</label><input id="f-peyman" class="glass-input-ag" inputmode="numeric" value="' + E(v.PeymanID || "") + '"></div>' +
+                '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.payee) + '</label><input id="f-payee" class="glass-input-ag" maxlength="200" value="' + E(v.Payee || "") + '"></div>' +
+                '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.ref_) + '</label><input id="f-ref" class="glass-input-ag" maxlength="50" value="' + E(v.ReferenceNo || "") + '"></div></div>' +
+                '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="f-save"') + "</div>");
+            $("f-save").onclick = function () {
+                post(u.save, { id: isNew ? 0 : d.DocumentID, direction: $("f-dir").value, title: $("f-title").value, amount: latin($("f-amount").value), docDate: mdr.jd.get("f-date"), costCenterId: $("f-cc").value,
+                    peymanId: latin($("f-peyman").value), payee: $("f-payee").value, referenceNo: $("f-ref").value, rowVer: isNew ? null : d.RowVer }, function (r) { load(); openDoc(r.id); });
+            };
+            showModal(true);
+        });
+    }
+
+    // ---------- جزئیات ----------
+    function openDoc(id) {
+        cur = id;
+        mdr.get(u.doc + "?id=" + id).then(function (r) {
+            showModal(true);
+            if (!r.success) { cur = null; setHash(); toast(E(r.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            setHash(); toast(""); render(r.doc);
+        });
+    }
+
+    function render(d) {
+        $("mtitle").textContent = d.Number + " — " + d.Title; $("msub").textContent = d.Requester || "";
+        var warns = "";
+        if (d.Status === "Draft" && d.ReturnReason) warns += '<div class="mdr-ag-msg is-bad" style="margin-bottom:.5rem">' + E(L.warn.returned) + " " + E(d.ReturnReason) + "</div>";
+        if (d.PeriodClosed) warns += '<div class="mdr-ag-msg is-bad" style="margin-bottom:.5rem">' + E(L.warn.periodClosed) + "</div>";
+        if (d.DuplicateCount) warns += '<div class="mdr-ag-msg" style="margin-bottom:.5rem">' + d.DuplicateCount + " " + E(L.warn.dupCount) + (d.DuplicateNumbers.length ? ": " + E(d.DuplicateNumbers.join("، ")) : "") + "</div>";
+
+        var info = '<div style="margin-bottom:.6rem">' + badge(ST_CLS[d.Status] || "", L.st[d.Status]) + badge("glass-status-info", L.dir[d.Direction]) + "</div>" +
+            '<dl class="mdr-ag-dl"><dt>' + E(L.f.amount) + "</dt><dd><b>" + money(d.Amount) + "</b></dd><dt>" + E(L.f.date) + "</dt><dd>" + E(d.DocDate) + "</dd><dt>" + E(L.f.cc) + "</dt><dd>" + E(d.CostCenter || "—") + "</dd>" +
+            (d.PeymanID ? "<dt>" + E(L.f.peyman) + "</dt><dd>" + d.PeymanID + (d.PeymanTitle ? " — " + E(d.PeymanTitle) : "") + "</dd>" : "") +
+            (d.Payee ? "<dt>" + E(L.f.payee) + "</dt><dd>" + E(d.Payee) + "</dd>" : "") + (d.ReferenceNo ? "<dt>" + E(L.f.ref_) + "</dt><dd>" + E(d.ReferenceNo) + "</dd>" : "") +
+            (d.PaidAt ? "<dt>" + E(L.st.Paid) + "</dt><dd>" + E(d.PaidAt) + " · " + E(d.PaidBy || "") + " · " + E(d.PaymentRef || "") + "</dd>" : "") + "</dl>";
+        var acts = "";
+        if (d.CanEdit) acts += btn("", "bi-pencil", L.act.edit, 'data-a="edit"') + btn("glass-btn-ag-primary", "bi-send", L.act.submit, 'data-a="submit"');
+        if (d.CanCancel) acts += btn("glass-btn-text-reject", "bi-x-circle", L.act.cancel, 'data-a="cancel"');
+        if (d.CanApprove) acts += btn("glass-btn-ag-primary", "bi-check2-circle", L.act.approve, 'data-a="approve"') + btn("", "bi-arrow-return-left", L.act.ret, 'data-a="return"') + btn("glass-btn-text-reject", "bi-slash-circle", L.act.reject, 'data-a="reject"');
+        if (d.CanPay) acts += btn("glass-btn-ag-primary", "bi-cash-stack", L.act.pay, 'data-a="pay"');
+        var html = warns + field("bi-info-circle", L.sec.info, info + (acts ? '<div class="row row-btn-AG row-ltr-AG">' + acts + "</div>" : ""));
+
+        if (d.Budget) html += field("bi-piggy-bank", L.sec.budgetInfo, '<dl class="mdr-ag-dl"><dt>' + E(L.cfg.budget) + " " + d.Budget.Year + "</dt><dd>" + money(d.Budget.Budget) + "</dd><dt>" + E(L.cfg.used) + "</dt><dd>" + money(d.Budget.Used) + "</dd><dt>" + E(L.cfg.remaining) + "</dt><dd>" + money(d.Budget.Remaining) + "</dd></dl>");
+        if (d.Steps.length) html += field("bi-diagram-3", L.sec.steps, '<ul class="mdr-ag-list">' + d.Steps.map(function (s) {
+            return "<li><b>" + s.Level + "</b> " + badge(s.Status === "Approved" ? "glass-status-success" : s.Status === "Pending" ? "glass-status-warning" : "glass-status-danger", L.step[s.Status]) + " <small>" +
+                E(s.DecidedBy ? s.DecidedBy + " · " + (s.DecidedAt || "") : s.Approvers.join("، ")) + (s.Comment ? " — " + E(s.Comment) : "") + "</small></li>"; }).join("") + "</ul>");
+        html += '<div class="glass-field-ag"><div class="glass-field-body"><div id="att"></div></div></div>';
+        html += field("bi-clock-history", L.sec.history, '<div class="meeting-timeline" style="max-height:14rem">' + d.History.map(function (h) {
+            return '<div class="timeline-item completed"><div class="timeline-icon"></div><div class="timeline-content"><div class="timeline-title">' + E(L.hist[h.ActionKey] || h.ActionKey) + " — " + E(h.Actor || "") +
+                '</div><div class="timeline-description">' + E(h.At) + (h.Detail ? " — " + E(h.Detail) : "") + " · " + E(h.CorrelationID) + "</div></div></div>"; }).join("") + "</div>");
+        $("dbody").innerHTML = html;
+        mdr.attach($("att"), "MDR_FinDocuments", d.DocumentID);
+        $("dbody")._doc = d;
+    }
+
+    function refresh() { load(); openDoc(cur); }
+
+    function act(a, d) {
+        if (a === "edit") return form(d);
+        if (a === "submit") {
+            var p = { id: d.DocumentID, rowVer: d.RowVer };
+            return mdr.post(u.submit, p).then(function (r) {
+                if (r.error === "fin.err.duplicate") {
+                    if (!confirm(L.warn.duplicate)) return;
+                    p.confirmDuplicate = true;
+                    return mdr.post(u.submit, p).then(function (r2) { if (!r2.success) toast(E(r2.message || L.error), true); else refresh(); });
+                }
+                if (!r.success) toast(E(r.message || L.error), true); else refresh();
+            });
+        }
+        if (a === "cancel") { var rc = prompt(L.prompt.reason); if (!rc) return; return post(u.cancel, { id: d.DocumentID, reason: rc }, refresh); }
+        if (a === "approve") { var cm = prompt(L.prompt.comment); if (cm === null) return; return post(u.approve, { id: d.DocumentID, comment: cm, rowVer: d.RowVer }, refresh); }
+        if (a === "return") { var rr = prompt(L.prompt.reason); if (!rr) return; return post(u.ret, { id: d.DocumentID, reason: rr, rowVer: d.RowVer }, refresh); }
+        if (a === "reject") { var rj = prompt(L.prompt.reason); if (!rj) return; return post(u.reject, { id: d.DocumentID, reason: rj, rowVer: d.RowVer }, refresh); }
+        if (a === "pay") { if (!confirm(L.confirm.pay)) return; var pr = prompt(L.prompt.payref); if (!pr) return; return post(u.pay, { id: d.DocumentID, paymentRef: pr, rowVer: d.RowVer }, refresh); }
+    }
+
+    // ---------- تنظیمات مالی (مدیر مالی) ----------
+    function config() {
+        loadCc().then(function () { return mdr.get(u.config); }).then(function (r) {
+            showModal(true); $("mtitle").textContent = L.sec.config; $("msub").textContent = ""; toast("");
+            if (!r.success) { toast(E(r.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            var c = r.config, year = parseInt(new Intl.DateTimeFormat("en-u-ca-persian", { year: "numeric" }).format(new Date()), 10) || 1405;
+            var ap = c.Approvers.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.f.cc) + "</th><th>" + E(L.f.level) + "</th><th>" + E(L.col.requester) + "</th><th>" + E(L.f.minAmount) + "</th><th></th></tr></thead><tbody>" +
+                c.Approvers.map(function (a) { return "<tr><td>" + E(a.CostCenter || L.cfg.glob) + "</td><td>" + a.Level + "</td><td>" + E(a.User) + "</td><td>" + (a.MinAmount === null ? "—" : money(a.MinAmount)) + '</td><td><button type="button" class="mdr-btn" data-rma="' + a.ApproverID + '">' + E(L.act.remove) + "</button></td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+            var apForm = '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.cc) + '</label><select id="a-cc" class="glass-select-search">' + ccOptions(null, true) + "</select></div>" +
+                '<div class="col-xl-2 col-md-3"><label class="glass-label-ag">' + E(L.f.level) + '</label><select id="a-level" class="glass-select-search">' + [1, 2, 3, 4, 5].map(function (n) { return "<option>" + n + "</option>"; }).join("") + "</select></div>" +
+                '<div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.user) + '</label><input id="a-q" class="glass-input-ag" autocomplete="off"><div id="a-r" class="mdr-ag-picks"></div></div>' +
+                '<div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.minAmount) + '</label><input id="a-min" class="glass-input-ag" inputmode="numeric"></div></div>';
+            var bt = c.Budgets.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.f.cc) + "</th><th>" + E(L.f.year) + "</th><th>" + E(L.cfg.budget) + "</th><th>" + E(L.cfg.used) + "</th></tr></thead><tbody>" +
+                c.Budgets.map(function (b) { return "<tr><td>" + E(b.CostCenter) + "</td><td>" + b.FiscalYear + "</td><td>" + money(b.Amount) + "</td><td>" + money(b.Used) + "</td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+            var bForm = '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-xl-5 col-md-6"><label class="glass-label-ag">' + E(L.f.cc) + '</label><select id="b-cc" class="glass-select-search">' + ccOptions(null, false) + "</select></div>" +
+                '<div class="col-xl-3 col-md-3"><label class="glass-label-ag">' + E(L.f.year) + '</label><input id="b-year" class="glass-input-ag" value="' + year + '"></div>' +
+                '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.cfg.budget) + '</label><input id="b-amt" class="glass-input-ag" inputmode="numeric"></div></div>' +
+                '<div class="row row-btn-AG row-ltr-AG"><div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag" id="b-go"><i class="bi bi-check2"></i><p>' + E(L.act.setBudget) + "</p></button></div></div>";
+            var pt = c.Periods.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.f.year) + "</th><th>" + E(L.f.month) + "</th><th>" + E(L.cfg.closedAt) + "</th><th></th></tr></thead><tbody>" +
+                c.Periods.map(function (p) { return "<tr><td>" + p.FiscalYear + "</td><td>" + p.Month + "</td><td>" + E(p.ClosedAt) + '</td><td><button type="button" class="mdr-btn" data-reopen="' + p.FiscalYear + "-" + p.Month + '">' + E(L.act.reopen) + "</button></td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+            var pForm = '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-xl-3 col-md-4"><label class="glass-label-ag">' + E(L.f.year) + '</label><input id="p-year" class="glass-input-ag" value="' + year + '"></div>' +
+                '<div class="col-xl-3 col-md-4"><label class="glass-label-ag">' + E(L.f.month) + '</label><select id="p-month" class="glass-select-search">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(function (n) { return "<option>" + n + "</option>"; }).join("") + "</select></div>" +
+                '<div class="col-xl-6 col-md-4"><label class="glass-label-ag">' + E(L.f.reason) + '</label><input id="p-reason" class="glass-input-ag" maxlength="300"></div></div>' +
+                '<div class="row row-btn-AG row-ltr-AG"><div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag" id="p-go"><i class="bi bi-lock"></i><p>' + E(L.act.close) + "</p></button></div></div>";
+            $("dbody").innerHTML = '<div class="mdr-ag-msg" style="margin-bottom:.6rem">' + E(L.cfg.hint) + "</div>" +
+                field("bi-people", L.sec.approvers, ap + apForm + '<div class="row row-btn-AG row-ltr-AG"><div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag" id="a-go"><i class="bi bi-plus-lg"></i><p>' + E(L.act.add) + "</p></button></div></div>") +
+                field("bi-piggy-bank", L.sec.budgets, bt + bForm) + field("bi-lock", L.sec.periods, pt + pForm);
+            var pick = null, timer;
+            $("a-q").oninput = function () {
+                pick = null; clearTimeout(timer); var q = this.value.trim();
+                timer = setTimeout(function () { if (q.length < 2) { $("a-r").innerHTML = ""; return; } mdr.get(u.users + "?q=" + encodeURIComponent(q)).then(function (x) { $("a-r").innerHTML = x.items.map(function (i) { return '<button type="button" class="glass-btn-ag" data-u="' + i.Id + '">' + E(i.Name) + "</button>"; }).join(""); }); }, 300);
+            };
+            $("a-r").onclick = function (e) { var b = e.target.closest("button[data-u]"); if (b) { pick = +b.getAttribute("data-u"); $("a-q").value = b.textContent; $("a-r").innerHTML = ""; } };
+            $("a-go").onclick = function () { post(u.addApprover, { costCenterId: $("a-cc").value, level: $("a-level").value, userId: pick, minAmount: latin($("a-min").value) }, config); };
+            $("b-go").onclick = function () { post(u.setBudget, { costCenterId: $("b-cc").value, year: latin($("b-year").value), amount: latin($("b-amt").value) }, config); };
+            $("p-go").onclick = function () { if (!confirm(L.confirm.close)) return; post(u.closePeriod, { year: latin($("p-year").value), month: $("p-month").value, reason: $("p-reason").value }, config); };
+            $("dbody").onclick = function (e) {
+                var rm = e.target.closest("[data-rma]"); if (rm) return post(u.removeApprover, { id: rm.getAttribute("data-rma") }, config);
+                var ro = e.target.closest("[data-reopen]");
+                if (ro) { if (!confirm(L.confirm.reopen)) return; var reason = prompt(L.prompt.reason); if (!reason) return; var p = ro.getAttribute("data-reopen").split("-"); post(u.reopenPeriod, { year: p[0], month: p[1], reason: reason }, config); }
+            };
+        });
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-a]"); if (!b || !$("dbody")._doc) return;
+        act(b.getAttribute("data-a"), $("dbody")._doc);
+    });
+    $("list").addEventListener("click", function (e) { var r = e.target.closest("tr[data-id]"); if (r) { $("dbody").onclick = null; openDoc(r.getAttribute("data-id")); } });
+    $("dclose").onclick = function () { showModal(false); cur = null; setHash(); $("dbody").onclick = null; };
+    $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) $("dclose").onclick(); });
+    ["scope", "status", "direction"].forEach(function (x) { $(x).onchange = load; });
+    var qt; $("q").oninput = function () { clearTimeout(qt); qt = setTimeout(load, 350); };
+    $("newdoc").onclick = function () { cur = null; setHash(); $("dbody")._doc = null; form(null); };
+    if ($("cfg")) $("cfg").onclick = function () { cur = null; setHash(); $("dbody")._doc = null; config(); };
+    if ($("exp")) $("exp").onclick = function () { location.href = u.exp + "?scope=" + $("scope").value + "&status=" + $("status").value + "&direction=" + $("direction").value + "&q=" + encodeURIComponent($("q").value); };
+
+    var m = /id=(\d+)/.exec(location.hash); load(); if (m) openDoc(m[1]);
+})();
+</script>
+}

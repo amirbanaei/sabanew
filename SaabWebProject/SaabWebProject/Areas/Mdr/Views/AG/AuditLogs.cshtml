@@ -1,0 +1,1501 @@
+﻿@* =========================================================
+    MDR
+    Phase 1    : زیرساخت مشترک
+    Step 1.4   : Audit Log — ثبت تاریخچه و رویدادهای سیستم
+
+    Part 1.4.4 : صفحه مشاهده تاریخچه رویدادها
+    - کارت‌های آمار امروز
+    - فیلترها (تاریخ، کاربر، عملیات، جدول، منبع، جستجو)
+    - جدول گلس (glass-table-ag)
+    - مودال گلس جزئیات (ModalAG) با مقایسه قبل / بعد
+    ========================================================= *@
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "تاریخچه رویدادها";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>AuditLogs</title>
+
+    <style>
+
+        /* =========================================================
+            MDR 1.4.4
+            PAGE
+            ========================================================= */
+
+        .audit-page {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            direction: rtl;
+            color: rgba(255,255,255,.92);
+        }
+
+
+        /* =========================================================
+            HEADER (هم‌سبک صفحه ساختار سازمانی)
+            ========================================================= */
+
+        .audit-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .audit-header-icon {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            color: #00ffff;
+            font-size: 22px;
+            background: rgba(0,255,255,.08);
+            border: 1px solid rgba(0,255,255,.25);
+            box-shadow: 0 0 18px rgba(0,255,255,.08), inset 0 0 12px rgba(0,255,255,.03);
+        }
+
+        .audit-header-text h4 {
+            margin: 0 0 4px 0;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .audit-header-text p {
+            margin: 0;
+            color: rgba(255,255,255,.52);
+            font-size: 11px;
+        }
+
+
+        /* =========================================================
+            STATS CARDS
+            ========================================================= */
+
+        .audit-stats {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: .6rem;
+            margin-bottom: 1rem;
+        }
+
+        .audit-stat {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .7rem .8rem;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: .55rem;
+            background: rgba(255,255,255,.035);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+        }
+
+        .audit-stat-icon {
+            width: 2.2rem;
+            height: 2.2rem;
+            flex: 0 0 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .6rem;
+            font-size: 1rem;
+            border: 1px solid currentColor;
+            background: rgba(255,255,255,.03);
+        }
+
+        .audit-stat-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .audit-stat-label {
+            font-size: .62rem;
+            color: rgba(255,255,255,.55);
+        }
+
+        .audit-stat-info .audit-stat-icon {
+            color: #00ffff;
+        }
+
+        .audit-stat-success .audit-stat-icon {
+            color: #32d583;
+        }
+
+        .audit-stat-warning .audit-stat-icon {
+            color: #ffc857;
+        }
+
+        .audit-stat-danger .audit-stat-icon {
+            color: #ff5a4f;
+        }
+
+        .audit-stat-users .audit-stat-icon {
+            color: #b692f6;
+        }
+
+
+        /* =========================================================
+            FILTERS
+            ========================================================= */
+
+        .audit-filters {
+            margin-bottom: 1rem;
+        }
+
+            .audit-filters .glass-field-body {
+                padding: .7rem;
+            }
+
+            .audit-filters .row > div {
+                margin-bottom: .45rem;
+            }
+
+            .audit-filters .glass-input-ag,
+            .audit-filters .glass-select-ag {
+                width: 100%;
+                margin-bottom: 0 !important;
+            }
+
+        .audit-filter-actions {
+            display: flex;
+            gap: .4rem;
+            align-items: flex-end;
+            height: 100%;
+        }
+
+            .audit-filter-actions button {
+                flex: 1;
+                margin: 0 !important;
+            }
+
+
+        /* =========================================================
+            TABLE (glass-table-ag از Layout)
+            عرض ستون‌ها باید در thead و tbody یکی باشد
+            ========================================================= */
+
+        .audit-table-wrap .glass-table-ag tbody {
+            max-height: calc(100vh - 25rem);
+            min-height: 8rem;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(1),
+        .audit-table-wrap .glass-table-ag td:nth-child(1) {
+            width: 5%;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(2),
+        .audit-table-wrap .glass-table-ag td:nth-child(2) {
+            width: 11%;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(3),
+        .audit-table-wrap .glass-table-ag td:nth-child(3) {
+            width: 12%;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(4),
+        .audit-table-wrap .glass-table-ag td:nth-child(4) {
+            width: 9%;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(5),
+        .audit-table-wrap .glass-table-ag td:nth-child(5) {
+            width: 15%;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(6),
+        .audit-table-wrap .glass-table-ag td:nth-child(6) {
+            width: 13%;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(7),
+        .audit-table-wrap .glass-table-ag td:nth-child(7) {
+            width: 29%;
+            text-align: right;
+            padding-right: .6rem;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(8),
+        .audit-table-wrap .glass-table-ag td:nth-child(8) {
+            width: 6%;
+        }
+
+        .audit-table-wrap .glass-table-ag th:nth-child(7) {
+            text-align: center;
+        }
+
+        .audit-table-wrap .glass-table-ag tbody tr {
+            cursor: pointer;
+        }
+
+        .audit-date-cell {
+            line-height: 1.35;
+        }
+
+            .audit-date-cell small {
+                display: block;
+                color: rgba(255,255,255,.45);
+                font-size: .58rem;
+            }
+
+        .audit-muted {
+            color: rgba(255,255,255,.45);
+            font-size: .58rem;
+        }
+
+        .audit-table-wrap .glass-table-ag td.audit-empty,
+        .audit-diff-wrap .glass-table-ag td.audit-empty,
+        .audit-empty {
+            width: 100% !important;
+            text-align: center !important;
+            padding: 2rem 0 !important;
+            color: rgba(255,255,255,.45) !important;
+            font-size: .7rem;
+            white-space: normal !important;
+        }
+
+        .audit-source-badge {
+            display: inline-block;
+            margin-left: .25rem;
+            padding: 0 .35rem;
+            border-radius: .3rem;
+            font-size: .52rem;
+            color: #b692f6;
+            border: 1px solid rgba(182,146,246,.45);
+            background: rgba(182,146,246,.06);
+        }
+
+        .audit-source-badge-manual {
+            color: #00ffff;
+            border-color: rgba(0,255,255,.4);
+            background: rgba(0,255,255,.05);
+        }
+
+
+        /* =========================================================
+            PAGINATION
+            ========================================================= */
+
+        .audit-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .6rem;
+            flex-wrap: wrap;
+            margin-top: .75rem;
+            font-size: .65rem;
+            color: rgba(255,255,255,.6);
+        }
+
+        .audit-pages {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+            .audit-pages .glass-btn-icon {
+                width: 2rem;
+                height: 2rem;
+            }
+
+        .audit-page-number {
+            min-width: 5.5rem;
+            text-align: center;
+        }
+
+
+        /* =========================================================
+            MODAL (ModalAG از Layout)
+            ========================================================= */
+
+        /* مقادیر فقط‌خواندنی، هم‌شکل glass-input-ag */
+        #AuditModalAG .audit-readonly {
+            min-height: 2.1rem;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: default;
+        }
+
+            #AuditModalAG .audit-readonly:hover,
+            #AuditModalAG .audit-readonly:focus {
+                transform: none !important;
+            }
+
+            #AuditModalAG .audit-readonly.audit-ltr {
+                direction: ltr;
+                justify-content: flex-end;
+                font-size: 11px !important;
+                color: rgba(255,255,255,.7) !important;
+            }
+
+            #AuditModalAG .audit-readonly .meeting-status {
+                height: 1.4rem;
+                min-width: 3.5rem;
+                padding: 0 .55rem;
+                border-radius: .4rem;
+                font-size: .65rem;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+        .audit-diff-wrap {
+            margin-top: .35rem;
+        }
+
+        .audit-diff-wrap .glass-table-ag tbody {
+            max-height: 18rem;
+        }
+
+        .audit-diff-wrap .glass-table-ag th:nth-child(1),
+        .audit-diff-wrap .glass-table-ag td:nth-child(1) {
+            width: 24%;
+        }
+
+        .audit-diff-wrap .glass-table-ag th:nth-child(2),
+        .audit-diff-wrap .glass-table-ag td:nth-child(2),
+        .audit-diff-wrap .glass-table-ag th:nth-child(3),
+        .audit-diff-wrap .glass-table-ag td:nth-child(3) {
+            width: 38%;
+        }
+
+        .audit-diff-wrap .glass-table-ag td {
+            white-space: normal !important;
+            word-break: break-word;
+            height: auto !important;
+            padding: .45rem .5rem;
+        }
+
+        .audit-diff-changed td {
+            background: rgba(255,200,87,.05) !important;
+        }
+
+            .audit-diff-changed td:first-child {
+                color: #ffc857 !important;
+                font-weight: 700;
+            }
+
+        .audit-diff-old {
+            color: #ff8a80;
+        }
+
+        .audit-diff-new {
+            color: #6ee7b7;
+        }
+
+        .audit-null {
+            color: rgba(255,255,255,.3);
+            font-style: italic;
+        }
+
+
+
+        /* =========================================================
+            MOBILE
+            ========================================================= */
+
+        @@media (max-width: 992px) {
+
+            .audit-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+
+    @* =============================================================
+        GLOBAL ALERTS (استایل در Layout)
+        ============================================================= *@
+
+    <div class="global-alert-container">
+
+        <div class="global-alert global-alert-error" id="GlobalAlertError">
+
+            <div class="global-alert-icon">
+                <i class="bi bi-x-circle-fill"></i>
+            </div>
+
+            <div class="global-alert-content">
+                <div class="global-alert-title">عملیات ناموفق</div>
+                <div class="global-alert-message">خطا</div>
+            </div>
+
+            <button type="button"
+                    class="global-alert-close action-reject"
+                    aria-label="بستن">
+                <i class="bi bi-x-lg"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="tab-content tab-AG">
+
+
+        @* =====================================================
+            MDR 1.4.4 — HEADER
+            ===================================================== *@
+
+        <div class="audit-header">
+
+            <div class="audit-header-icon">
+                <i class="bi bi-clock-history"></i>
+            </div>
+
+            <div class="audit-header-text">
+                <h4>تاریخچه رویدادها</h4>
+                <p>ثبت همه تغییرات سیستم؛ چه کسی، چه زمانی، چه چیزی را تغییر داد</p>
+            </div>
+
+        </div>
+
+
+        @* =====================================================
+            MDR 1.4.4 — STATS (امروز)
+            ===================================================== *@
+
+        <div class="audit-stats">
+
+            <div class="audit-stat audit-stat-info">
+                <div class="audit-stat-icon"><i class="bi bi-activity"></i></div>
+                <div>
+                    <div class="audit-stat-value" id="statTotal">-</div>
+                    <div class="audit-stat-label">رویدادهای امروز</div>
+                </div>
+            </div>
+
+            <div class="audit-stat audit-stat-success">
+                <div class="audit-stat-icon"><i class="bi bi-plus-circle"></i></div>
+                <div>
+                    <div class="audit-stat-value" id="statCreates">-</div>
+                    <div class="audit-stat-label">ثبت</div>
+                </div>
+            </div>
+
+            <div class="audit-stat audit-stat-warning">
+                <div class="audit-stat-icon"><i class="bi bi-pencil"></i></div>
+                <div>
+                    <div class="audit-stat-value" id="statUpdates">-</div>
+                    <div class="audit-stat-label">ویرایش</div>
+                </div>
+            </div>
+
+            <div class="audit-stat audit-stat-danger">
+                <div class="audit-stat-icon"><i class="bi bi-trash"></i></div>
+                <div>
+                    <div class="audit-stat-value" id="statDeletes">-</div>
+                    <div class="audit-stat-label">حذف</div>
+                </div>
+            </div>
+
+            <div class="audit-stat audit-stat-users">
+                <div class="audit-stat-icon"><i class="bi bi-people"></i></div>
+                <div>
+                    <div class="audit-stat-value" id="statUsers">-</div>
+                    <div class="audit-stat-label">کاربران فعال امروز</div>
+                </div>
+            </div>
+
+        </div>
+
+
+        @* =====================================================
+            MDR 1.4.4 — FILTERS
+            ===================================================== *@
+
+        <div class="glass-field-ag audit-filters">
+
+            <div class="glass-field-header">
+
+                <div class="glass-field-icon">
+                    <i class="bi bi-funnel"></i>
+                </div>
+
+                <div class="glass-field-heading">
+                    <div class="glass-field-title">فیلترها</div>
+                    <div class="glass-field-subtitle">بازه زمانی، کاربر، نوع عملیات و جدول</div>
+                </div>
+
+            </div>
+
+            <div class="glass-field-body">
+
+                <div class="row row-input-AG">
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">از تاریخ</label>
+                        <input id="fltFromDate"
+                               class="glass-input-ag pdate"
+                               data-jdp
+                               jdp-btn-close
+                               autocomplete="off" />
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">تا تاریخ</label>
+                        <input id="fltToDate"
+                               class="glass-input-ag pdate"
+                               data-jdp
+                               jdp-btn-close
+                               autocomplete="off" />
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">کاربر</label>
+                        <select id="fltUser" class="glass-select-search" data-search="true">
+                            <option value="">همه کاربران</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">نوع عملیات</label>
+                        <select id="fltAction" class="glass-select-search">
+                            <option value="">همه</option>
+                            <option value="Create">ثبت</option>
+                            <option value="Update">ویرایش</option>
+                            <option value="Delete">حذف</option>
+                            <option value="Login">ورود</option>
+                            <option value="Error">خطا</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">جدول</label>
+                        <select id="fltEntity" class="glass-select-search" data-search="true">
+                            <option value="">همه جدول‌ها</option>
+                        </select>
+                    </div>
+
+                    <div class="col-xl-2 col-md-4">
+                        <label class="glass-label-ag">منبع لاگ</label>
+                        <select id="fltSource" class="glass-select-search">
+                            <option value="">همه</option>
+                            <option value="manual">دستی (ماژول‌های MDR)</option>
+                            <option value="auto">خودکار (کل پروژه)</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="row row-input-AG">
+
+                    <div class="col-xl-8">
+                        <label class="glass-label-ag">جستجو</label>
+                        <input id="fltSearch"
+                               class="glass-input-ag"
+                               placeholder="توضیحات، نام کاربر، عنوان یا شناسه رکورد..."
+                               autocomplete="off" />
+                    </div>
+
+                    <div class="col-xl-2">
+                        <button type="button"
+                                id="btnAuditSearch"
+                                class="glass-btn-ag glass-btn-text-confirm">
+                            <i class="bi bi-search"></i>
+                            اعمال فیلتر
+                        </button>
+                    </div>
+                    <div class="col-xl-2">
+
+                        <button type="button"
+                                id="btnAuditReset"
+                                class="glass-btn-ag glass-btn-text-reject">
+                            <i class="bi bi-trash"></i>
+                            پاک کردن
+                        </button>
+
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        @* =====================================================
+            MDR 1.4.4 — TABLE (glass-table-ag)
+            ===================================================== *@
+
+        <div class="audit-table-wrap">
+
+            <table class="glass-table-ag">
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>زمان</th>
+                        <th>کاربر</th>
+                        <th>عملیات</th>
+                        <th>بخش</th>
+                        <th>جدول / رکورد</th>
+                        <th>توضیحات</th>
+                        <th>جزئیات</th>
+                    </tr>
+                </thead>
+
+                <tbody id="auditTableBody" class="scrollbar">
+                    <tr>
+                        <td colspan="8" class="audit-empty">در حال بارگذاری...</td>
+                    </tr>
+                </tbody>
+
+            </table>
+
+
+            @* PAGINATION *@
+            <div class="audit-pagination">
+
+                <div id="auditTotalText">-</div>
+
+                <div class="audit-pages">
+
+                    <button type="button"
+                            id="btnAuditPrev"
+                            class="glass-btn-icon"
+                            title="صفحه قبل">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+
+                    <span class="audit-page-number" id="auditPageText">-</span>
+
+                    <button type="button"
+                            id="btnAuditNext"
+                            class="glass-btn-icon"
+                            title="صفحه بعد">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+
+                    <select id="auditPageSize"
+                            data-search="false"
+                            class="glass-select-search"
+                            style="width:5.5rem !important; margin-bottom:0 !important;">
+                        <option value="20">۲۰ ردیف</option>
+                        <option value="50">۵۰ ردیف</option>
+                        <option value="100">۱۰۰ ردیف</option>
+                    </select>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    @* =============================================================
+        MDR 1.4.4 — DETAIL MODAL (ModalAG از Layout)
+        ============================================================= *@
+
+    <div id="AuditModalAG" class="ModalAG">
+
+        <div class="ContentModalAG">
+
+            <div class="BtnCloseAG action-reject" id="btnCloseAuditModal">
+                <i class="bi bi-x"></i>
+            </div>
+
+            <div id="BodyModalAG">
+
+                <div class="tab-content scrollbar">
+
+                    @* =====================================================
+                        MDR
+                        Phase 1   : زیرساخت مشترک
+                        Step 1.4  : Audit Log
+                        Part 1.4.4.3: جزئیات رویداد
+                        (هم‌سبک مودال ساختار سازمانی)
+                        ===================================================== *@
+
+                    <div class="glass-field-ag scrollbar">
+
+                        <!-- Header -->
+                        <div class="glass-field-header">
+
+                            <div class="glass-field-icon">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+
+                            <div class="glass-field-heading">
+                                <div class="glass-field-title"
+                                     id="mdlTitle">
+                                    جزئیات رویداد
+                                </div>
+                                <div class="glass-field-subtitle"
+                                     id="mdlSubtitle">
+                                    -
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Body -->
+                        <div class="glass-field-body">
+
+                            <!-- ردیف اول -->
+                            <div class="row row-input-AG">
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">
+                                        عملیات
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly" id="mdlAction">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">
+                                        کاربر
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly" id="mdlUser">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">
+                                        زمان
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly" id="mdlDate">-</div>
+                                </div>
+                            </div>
+
+                            <!-- ردیف دوم -->
+                            <div class="row row-input-AG">
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">
+                                        جدول
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly audit-ltr" id="mdlEntity">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">
+                                        شناسه / عنوان رکورد
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly" id="mdlEntityId">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">
+                                        بخش
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly" id="mdlModule">-</div>
+                                </div>
+                            </div>
+
+                            <!-- مقایسه قبل / بعد -->
+                            <div class="row row-input-AG">
+                                <div class="col-xl-12">
+                                    <label class="glass-label-ag">
+                                        مقادیر قبل و بعد
+                                        <span class="audit-muted">(ردیف‌های زرد تغییر کرده‌اند)</span>
+                                    </label>
+
+                                    <div class="audit-diff-wrap">
+                                        <table class="glass-table-ag">
+                                            <thead>
+                                                <tr>
+                                                    <th>فیلد</th>
+                                                    <th>قبل</th>
+                                                    <th>بعد</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="mdlDiffBody" class="scrollbar"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- اطلاعات فنی -->
+                            <div class="row row-input-AG">
+                                <div class="col-xl-3">
+                                    <label class="glass-label-ag">
+                                        IP
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly audit-ltr" id="mdlIp">-</div>
+                                </div>
+                                <div class="col-xl-4">
+                                    <label class="glass-label-ag">
+                                        صفحه
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly audit-ltr" id="mdlPage">-</div>
+                                </div>
+                                <div class="col-xl-5">
+                                    <label class="glass-label-ag">
+                                        مرورگر
+                                    </label>
+                                    <div class="glass-input-ag audit-readonly audit-ltr" id="mdlAgent">-</div>
+                                </div>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="row row-btn-AG row-ltr-AG">
+                                <div class="col-xl-2">
+                                    <button type="button"
+                                            id="btnCloseAuditModal2"
+                                            class="glass-btn-ag glass-btn-text-reject">
+                                        <i class="bi bi-x-circle"></i>
+                                        بستن
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    @* =============================================================
+        JAVASCRIPT
+        ============================================================= *@
+
+    @* =============================================================
+        MDR 1.4.4.4 — تقویم جلالی (همان قالب DashbordJalasat)
+        ============================================================= *@
+
+    <link href="~/Assets/css/jalalidatepicker.min.css" rel="stylesheet" />
+    <link href="~/MyStyles/jalalidatepicker.css" rel="stylesheet" />
+    <script data-cfasync="false" src="~/Assets/js/jalalidatepicker.min.js"></script>
+
+    <script data-cfasync="false">
+
+        if (!window.__mdrAuditJdpInit) {
+
+            window.__mdrAuditJdpInit = true;
+
+            jalaliDatepicker.startWatch({
+                time: false,
+                days: ["شنبه", "1شنبه", "2شنبه", "3شنبه", "4شنبه", "5شنبه", "جمعه"],
+                persianDigits: true,
+                autoClose: true,
+                autocomplete: true,
+                showEmptyBtn: false,
+                showCloseBtn: true,
+                zIndex: 100000
+            });
+        }
+
+    </script>
+
+
+    <script data-cfasync="false">
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        // =====================================================
+        // MDR — جلوگیری از اجرای دوباره (Rocket Loader)
+        // =====================================================
+
+        if (window.__mdrAuditInit) {
+            return;
+        }
+
+        window.__mdrAuditInit = true;
+
+
+        // =====================================================
+        // URLs
+        // =====================================================
+
+        var urls = {
+            list: '@Url.Action("GetAuditLogs", "AG", new { area = "Mdr" })',
+            filters: '@Url.Action("GetAuditLogFilters", "AG", new { area = "Mdr" })',
+            detail: '@Url.Action("GetAuditLogDetail", "AG", new { area = "Mdr" })'
+        };
+
+        var state = {
+            page: 1,
+            totalPages: 1
+        };
+
+        var $ = function (id) {
+            return document.getElementById(id);
+        };
+
+
+        // =====================================================
+        // Helpers
+        // =====================================================
+
+        function escapeHtml(value) {
+
+            if (value === null || value === undefined) {
+                return "";
+            }
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function toPersianDigits(value) {
+
+            return String(value === null || value === undefined ? "" : value)
+                .replace(/\d/g, function (d) {
+                    return "۰۱۲۳۴۵۶۷۸۹"[d];
+                });
+        }
+
+        function toLatinDigits(value) {
+
+            return String(value || "")
+                .replace(/[۰-۹]/g, function (d) {
+                    return "۰۱۲۳۴۵۶۷۸۹".indexOf(d);
+                })
+                .replace(/[٠-٩]/g, function (d) {
+                    return "٠١٢٣٤٥٦٧٨٩".indexOf(d);
+                });
+        }
+
+        function showError(message) {
+
+            var box = $("GlobalAlertError");
+
+            box.querySelector(".global-alert-message").textContent = message;
+            box.classList.add("show");
+
+            setTimeout(function () {
+                box.classList.remove("show");
+            }, 4500);
+        }
+
+        document.addEventListener("click", function (e) {
+
+            var closeButton = e.target.closest(".global-alert-close");
+
+            if (closeButton) {
+                closeButton.closest(".global-alert").classList.remove("show");
+            }
+        });
+
+
+        // نمایش عملیات با رنگ
+        var actionInfo = {
+            Create: { text: "ثبت", css: "glass-status-success" },
+            Update: { text: "ویرایش", css: "glass-status-warning" },
+            Delete: { text: "حذف", css: "glass-status-danger" },
+            Login: { text: "ورود", css: "glass-status-info" },
+            Logout: { text: "خروج", css: "glass-status-info" },
+            View: { text: "مشاهده", css: "glass-status-info" },
+            Export: { text: "خروجی", css: "glass-status-info" },
+            Error: { text: "خطا", css: "glass-status-danger" }
+        };
+
+        function actionBadge(action) {
+
+            var info = actionInfo[action] || { text: action || "-", css: "glass-status-info" };
+
+            return '<span class="meeting-status ' + info.css + '">' +
+                escapeHtml(info.text) +
+                '</span>';
+        }
+
+
+        // نام خوانای بخش
+        var moduleNames = {
+            OrganizationStructure: "ساختار سازمانی",
+            Users: "کاربران",
+            Roles: "نقش‌ها",
+            Meetings: "جلسات",
+            Tasks: "وظایف",
+            Requests: "درخواست‌ها"
+        };
+
+        function moduleHtml(module) {
+
+            if (!module) {
+                return "-";
+            }
+
+            if (module.indexOf("Auto") === 0) {
+
+                var path = module.replace(/^Auto\/?/, "") || "-";
+
+                return '<span class="audit-source-badge">خودکار</span>' +
+                    '<span dir="ltr">' + escapeHtml(path) + '</span>';
+            }
+
+            return '<span class="audit-source-badge audit-source-badge-manual">MDR</span>' +
+                escapeHtml(moduleNames[module] || module);
+        }
+
+
+        // =====================================================
+        // MDR 1.4.4.1 — FILTER OPTIONS
+        // =====================================================
+
+        function loadFilters() {
+
+            fetch(urls.filters)
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        return;
+                    }
+
+                    var userSelect = $("fltUser");
+
+                    result.users.forEach(function (u) {
+
+                        var option = document.createElement("option");
+                        option.value = u.id;
+                        option.textContent = u.name || ("کاربر " + u.id);
+                        userSelect.appendChild(option);
+                    });
+
+                    var entitySelect = $("fltEntity");
+
+                    result.entities.forEach(function (name) {
+
+                        var option = document.createElement("option");
+                        option.value = name;
+                        option.textContent = name;
+                        entitySelect.appendChild(option);
+                    });
+                })
+                .catch(function (error) {
+                    console.error("MDR Audit Filters Error:", error);
+                });
+        }
+
+
+        // =====================================================
+        // MDR 1.4.4.2 — LOAD LIST
+        // =====================================================
+
+        function buildQuery() {
+
+            var params = new URLSearchParams();
+
+            params.append("page", state.page);
+            params.append("pageSize", $("auditPageSize").value);
+
+            var fields = {
+                fromDate: toLatinDigits($("fltFromDate").value.trim()),
+                toDate: toLatinDigits($("fltToDate").value.trim()),
+                userId: $("fltUser").value,
+                actionType: $("fltAction").value,
+                entityName: $("fltEntity").value,
+                source: $("fltSource").value,
+                search: $("fltSearch").value.trim()
+            };
+
+            Object.keys(fields).forEach(function (key) {
+
+                if (fields[key]) {
+                    params.append(key, fields[key]);
+                }
+            });
+
+            return params.toString();
+        }
+
+
+        function loadLogs() {
+
+            var body = $("auditTableBody");
+
+            body.innerHTML =
+                '<tr><td colspan="8" class="audit-empty">در حال بارگذاری...</td></tr>';
+
+            fetch(urls.list + "?" + buildQuery())
+                .then(function (r) {
+
+                    if (!r.ok) {
+                        throw new Error("خطا در ارتباط با سرور");
+                    }
+
+                    return r.json();
+                })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        showError(result.message);
+                        body.innerHTML =
+                            '<tr><td colspan="8" class="audit-empty">خطا در دریافت اطلاعات</td></tr>';
+                        return;
+                    }
+
+                    renderStats(result.stats);
+                    renderRows(result.items);
+                    renderPagination(result);
+                })
+                .catch(function (error) {
+
+                    console.error("MDR Audit List Error:", error);
+                    showError("در دریافت تاریخچه رویدادها خطایی رخ داد.");
+
+                    body.innerHTML =
+                        '<tr><td colspan="8" class="audit-empty">خطا در دریافت اطلاعات</td></tr>';
+                });
+        }
+
+
+        function renderStats(stats) {
+
+            if (!stats) {
+                return;
+            }
+
+            $("statTotal").textContent = toPersianDigits(stats.total);
+            $("statCreates").textContent = toPersianDigits(stats.creates);
+            $("statUpdates").textContent = toPersianDigits(stats.updates);
+            $("statDeletes").textContent = toPersianDigits(stats.deletes);
+            $("statUsers").textContent = toPersianDigits(stats.users);
+        }
+
+
+        function renderRows(items) {
+
+            var body = $("auditTableBody");
+
+            if (!items || items.length === 0) {
+
+                body.innerHTML =
+                    '<tr><td colspan="8" class="audit-empty">' +
+                    '<i class="bi bi-inbox"></i> رویدادی با این فیلترها پیدا نشد' +
+                    '</td></tr>';
+
+                return;
+            }
+
+            body.innerHTML = items.map(function (x) {
+
+                var entityHtml = x.entity
+                    ? escapeHtml(x.entity) +
+                      '<div class="audit-muted">' +
+                      escapeHtml(x.entityTitle || (x.entityId ? "رکورد " + x.entityId : "")) +
+                      '</div>'
+                    : "-";
+
+                return '' +
+                    '<tr data-id="' + x.id + '">' +
+                        '<td>' + toPersianDigits(x.id) + '</td>' +
+                        '<td class="audit-date-cell">' +
+                            toPersianDigits(x.date || "-") +
+                            '<small>' + toPersianDigits(x.time || "") + '</small>' +
+                        '</td>' +
+                        '<td>' + escapeHtml(x.user || "نامشخص") + '</td>' +
+                        '<td>' + actionBadge(x.action) + '</td>' +
+                        '<td>' + moduleHtml(x.module) + '</td>' +
+                        '<td>' + entityHtml + '</td>' +
+                        '<td title="' + escapeHtml(x.description) + '">' +
+                            escapeHtml(x.description || "-") +
+                        '</td>' +
+                        '<td>' +
+                            '<div class="meeting-actions">' +
+                                '<button type="button" class="glass-btn-icon glass-btn-icon-suggest btn-audit-detail" ' +
+                                        'data-id="' + x.id + '" title="جزئیات">' +
+                                    '<i class="bi bi-eye"></i>' +
+                                '</button>' +
+                            '</div>' +
+                        '</td>' +
+                    '</tr>';
+
+            }).join("");
+        }
+
+
+        function renderPagination(result) {
+
+            state.page = result.page;
+            state.totalPages = Math.max(result.totalPages, 1);
+
+            $("auditTotalText").textContent =
+                "مجموع: " + toPersianDigits(result.total) + " رویداد";
+
+            $("auditPageText").textContent =
+                "صفحه " + toPersianDigits(state.page) + " از " + toPersianDigits(state.totalPages);
+
+            $("btnAuditPrev").disabled = state.page <= 1;
+            $("btnAuditNext").disabled = state.page >= state.totalPages;
+        }
+
+
+        // =====================================================
+        // MDR 1.4.4.3 — DETAIL MODAL
+        // =====================================================
+
+        function parseJson(text) {
+
+            if (!text) {
+                return null;
+            }
+
+            try {
+                return JSON.parse(text);
+            }
+            catch (e) {
+                return { "مقدار": text };
+            }
+        }
+
+        function formatValue(value) {
+
+            if (value === null || value === undefined) {
+                return '<span class="audit-null">خالی</span>';
+            }
+
+            if (typeof value === "object") {
+                return escapeHtml(JSON.stringify(value));
+            }
+
+            // تاریخ‌های JSON دات‌نت: /Date(…)/ یا 2026-09-30T16:27:44
+            return escapeHtml(value);
+        }
+
+        // «ی/ي» و «ک/ك» یکسان حساب شوند
+        function normalizeText(value) {
+
+            return JSON.stringify(value === undefined ? null : value)
+                .replace(/ي/g, "ی")
+                .replace(/ى/g, "ی")
+                .replace(/ك/g, "ک");
+        }
+
+
+        function renderDiff(oldText, newText) {
+
+            var oldValues = parseJson(oldText) || {};
+            var newValues = parseJson(newText) || {};
+
+            var keys = [];
+
+            Object.keys(oldValues).concat(Object.keys(newValues))
+                .forEach(function (k) {
+                    if (keys.indexOf(k) === -1) {
+                        keys.push(k);
+                    }
+                });
+
+            var body = $("mdlDiffBody");
+
+            if (keys.length === 0) {
+
+                body.innerHTML =
+                    '<tr><td colspan="3" class="audit-empty">مقداری ثبت نشده است</td></tr>';
+
+                return;
+            }
+
+            var hasOld = !!oldText;
+            var hasNew = !!newText;
+
+            body.innerHTML = keys.map(function (key) {
+
+                var oldValue = oldValues[key];
+                var newValue = newValues[key];
+
+                var changed = hasOld && hasNew &&
+                    normalizeText(oldValue) !== normalizeText(newValue);
+
+                return '' +
+                    '<tr class="' + (changed ? "audit-diff-changed" : "") + '">' +
+                        '<td dir="ltr">' + escapeHtml(key) + '</td>' +
+                        '<td class="audit-diff-old">' +
+                            (hasOld ? formatValue(oldValue) : '<span class="audit-null">—</span>') +
+                        '</td>' +
+                        '<td class="audit-diff-new">' +
+                            (hasNew ? formatValue(newValue) : '<span class="audit-null">—</span>') +
+                        '</td>' +
+                    '</tr>';
+
+            }).join("");
+        }
+
+
+        function openDetail(id) {
+
+            fetch(urls.detail + "?id=" + encodeURIComponent(id))
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        showError(result.message);
+                        return;
+                    }
+
+                    var log = result.log;
+                    var info = actionInfo[log.action] || { text: log.action };
+
+                    $("mdlTitle").textContent = "جزئیات رویداد #" + toPersianDigits(log.id);
+                    $("mdlSubtitle").textContent = log.description || "-";
+
+                    $("mdlAction").innerHTML = actionBadge(log.action);
+                    $("mdlUser").textContent = log.user || "نامشخص";
+                    $("mdlDate").textContent =
+                        toPersianDigits((log.date || "") + " — " + (log.time || ""));
+                    $("mdlEntity").textContent = log.entity || "-";
+                    $("mdlEntityId").textContent =
+                        [log.entityId, log.entityTitle].filter(Boolean).join(" — ") || "-";
+                    $("mdlModule").innerHTML = moduleHtml(log.module);
+
+                    $("mdlIp").textContent = log.ip || "-";
+                    $("mdlPage").textContent = log.pageUrl || "-";
+                    $("mdlAgent").textContent = log.userAgent || "-";
+
+                    $("mdlAgent").title = log.userAgent || "";
+                    $("mdlPage").title = log.pageUrl || "";
+
+                    renderDiff(log.oldValues, log.newValues);
+
+                    var modal = $("AuditModalAG");
+                    modal.classList.add("fade-in");
+                    modal.style.display = "flex";
+                })
+                .catch(function (error) {
+                    console.error("MDR Audit Detail Error:", error);
+                    showError("در دریافت جزئیات رویداد خطایی رخ داد.");
+                });
+        }
+
+
+        function closeDetail() {
+
+            var modal = $("AuditModalAG");
+            modal.style.display = "none";
+            modal.classList.remove("fade-in");
+        }
+
+
+        // =====================================================
+        // EVENTS
+        // =====================================================
+
+        // کلیک روی ردیف یا دکمه جزئیات
+        $("auditTableBody").addEventListener("click", function (e) {
+
+            var row = e.target.closest("tr[data-id]");
+
+            if (row) {
+                openDetail(row.getAttribute("data-id"));
+            }
+        });
+
+        // بستن مودال
+        $("btnCloseAuditModal").addEventListener("click", closeDetail);
+        $("btnCloseAuditModal2").addEventListener("click", closeDetail);
+
+        $("AuditModalAG").addEventListener("click", function (e) {
+
+            if (e.target === this) {
+                closeDetail();
+            }
+        });
+
+        document.addEventListener("keydown", function (e) {
+
+            if (e.key === "Escape") {
+                closeDetail();
+            }
+        });
+
+        // فیلترها
+        $("btnAuditSearch").addEventListener("click", function () {
+            state.page = 1;
+            loadLogs();
+        });
+
+        $("fltSearch").addEventListener("keydown", function (e) {
+
+            if (e.key === "Enter") {
+                state.page = 1;
+                loadLogs();
+            }
+        });
+
+        // با انتخاب تاریخ از تقویم، لیست به‌روز شود
+        ["fltFromDate", "fltToDate"].forEach(function (id) {
+
+            $(id).addEventListener("jdp:change", function () {
+                state.page = 1;
+                loadLogs();
+            });
+        });
+
+        ["fltUser", "fltAction", "fltEntity", "fltSource", "auditPageSize"]
+            .forEach(function (id) {
+
+                $(id).addEventListener("change", function () {
+                    state.page = 1;
+                    loadLogs();
+                });
+            });
+
+        $("btnAuditReset").addEventListener("click", function () {
+
+            ["fltFromDate", "fltToDate", "fltSearch"].forEach(function (id) {
+                $(id).value = "";
+            });
+
+            ["fltUser", "fltAction", "fltEntity", "fltSource"].forEach(function (id) {
+                $(id).value = "";
+            });
+
+            state.page = 1;
+            loadLogs();
+        });
+
+        // صفحه‌بندی
+        $("btnAuditPrev").addEventListener("click", function () {
+
+            if (state.page > 1) {
+                state.page--;
+                loadLogs();
+            }
+        });
+
+        $("btnAuditNext").addEventListener("click", function () {
+
+            if (state.page < state.totalPages) {
+                state.page++;
+                loadLogs();
+            }
+        });
+
+
+        // =====================================================
+        // INITIAL LOAD
+        // =====================================================
+
+        loadFilters();
+        loadLogs();
+
+    }
+);
+
+    </script>
+
+</body>
+</html>

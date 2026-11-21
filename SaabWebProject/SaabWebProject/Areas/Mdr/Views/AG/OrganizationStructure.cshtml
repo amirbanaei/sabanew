@@ -1,0 +1,5486 @@
+﻿@* =========================================================
+    MDR
+    Phase 1    : زیرساخت مشترک
+    Step 1.3   : ساختار سازمانی و واحدها
+
+    Part 1.3.1 : صفحه اصلی ساختار سازمانی
+    Part 1.3.2 : نمایش چارت سازمانی
+    Part 1.3.8 : مشاهده جزئیات واحد
+    ========================================================= *@
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "ساختار سازمانی";
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+
+    <meta name="viewport"
+          content="width=device-width" />
+
+    <title>OrganizationStructure</title>
+
+
+    <style>
+
+        /* =========================================================
+                MDR 1.3
+                PAGE
+                ========================================================= */
+
+        html,
+        body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden !important;
+        }
+
+            body.org-drawer-open {
+                overflow-x: hidden !important;
+            }
+
+        .org-page {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            direction: rtl;
+        }
+
+
+        /* =========================================================
+                MDR 1.3.1
+                HEADER
+                ========================================================= */
+
+        .org-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .org-header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .org-header-icon {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            color: #00ffff;
+            font-size: 22px;
+            background: rgba(0,255,255,.08);
+            border: 1px solid rgba(0,255,255,.25);
+            box-shadow: 0 0 18px rgba(0,255,255,.08), inset 0 0 12px rgba(0,255,255,.03);
+        }
+
+        .org-header-text h4 {
+            margin: 0 0 4px 0;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .org-header-text p {
+            margin: 0;
+            color: rgba(255,255,255,.52);
+            font-size: 11px;
+        }
+
+
+        /* =========================================================
+                MDR 1.3.2
+                TOOLBAR
+                ========================================================= */
+
+        .org-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .org-search {
+            width: 340px;
+            max-width: 100%;
+            position: relative;
+        }
+
+            .org-search > i {
+                position: absolute;
+                right: 14px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #00ffff;
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            .org-search input {
+                padding-right: 42px !important;
+            }
+
+        .org-toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .org-zoom-value {
+            width: 4.1rem;
+            /*                 height: 35px;*/
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 0 8px;
+            border-radius: 9px;
+            color: #00ffff;
+            font-size: 10px;
+            font-weight: 600;
+            background: rgba(0,255,255,.05);
+            border: 1px solid rgba(0,255,255,.18);
+        }
+
+
+       
+
+        /* =========================================================
+   MDR 1.3.2
+   CHART SCROLL AREA
+   Horizontal + Vertical Scroll
+   ========================================================= */
+
+        .org-chart-wrapper {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.18) transparent;
+            width: 100%;
+            height: 30rem;
+            position: relative;
+            box-sizing: border-box;
+            /*
+        مهم:
+        نمودار باید در هر دو جهت
+        قابل Scroll باشد.
+    */
+            overflow-x: auto;
+            overflow-y: auto;
+            direction: ltr;
+            border-radius: 16px;
+            background: radial-gradient( circle at 50% 0, rgba(0,255,255,.055), transparent 34% ), linear-gradient( 135deg, rgba(255,255,255,.02), rgba(255,255,255,.006) );
+            border: 1px solid rgba(255,255,255,.06);
+        }
+
+            .org-chart-wrapper::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+                opacity: .14;
+                background-image: linear-gradient( rgba(0,255,255,.08) 1px, transparent 1px ), linear-gradient( 90deg, rgba(0,255,255,.08) 1px, transparent 1px );
+                background-size: 35px 35px;
+            }
+
+
+        /* =========================================================
+   MDR 1.3.2
+   TREE SCROLLABLE VIEWPORT
+   ========================================================= */
+
+        .org-tree-viewport {
+            /*
+        حداقل به اندازه Wrapper
+        ولی اجازه رشد بر اساس نمودار
+    */
+            width: max-content;
+            min-width: 100%;
+            min-height: 100%;
+            box-sizing: border-box;
+            padding: 48px 40px 100px 40px;
+            position: relative;
+            z-index: 2;
+            direction: ltr;
+            /*
+        دیگر Flex Center نمی‌کنیم.
+        چون در نمودارهای عریض می‌تواند
+        ابتدای نمودار را خارج از Scroll Area ببرد.
+    */
+            display: block;
+        }
+
+        /* =========================================================
+   MDR 1.3.2
+   TREE SCALE CONTAINER
+   ========================================================= */
+
+        .org-tree-scale {
+            display: block;
+            width: max-content;
+            margin-left: auto;
+            margin-right: auto;
+            
+            transition: transform .16s ease;
+            position: relative;
+        }
+
+
+        /* =========================================================
+                MDR 1.3.2
+                TREE
+                ========================================================= */
+
+        .org-tree {
+            display: inline-block;
+            width: max-content;
+            position: relative;
+            direction: ltr;
+            text-align: center;
+        }
+
+            .org-tree ul {
+                position: relative;
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                direction: ltr;
+                margin: 0;
+                padding: 42px 0 0 0;
+            }
+
+            .org-tree > ul {
+                padding-top: 0;
+            }
+
+            .org-tree li {
+                position: relative;
+                list-style: none;
+                text-align: center;
+                direction: ltr;
+                margin: 0;
+                padding: 42px 11px 0 11px;
+                box-sizing: border-box;
+            }
+
+            .org-tree > ul > li {
+                padding-top: 0;
+            }
+
+
+            /* =========================================================
+   MDR 1.3.2
+   CONNECTOR ARCHITECTURE - FINAL
+   ========================================================= */
+
+            /*
+    فاصله عمودی بین Parent و Child = 42px
+
+    اتصال هر Child فقط توسط LI خودش ساخته می‌شود:
+    ::before = نیمه چپ + خط عمودی ورودی
+    ::after  = نیمه راست
+
+    در Single Child همان ::before استفاده می‌شود
+    و دیگر روی .org-node::before خط جداگانه نمی‌سازیم.
+*/
+
+
+            /* =========================================================
+   CHILD CONNECTORS
+   ========================================================= */
+
+            .org-tree li::before,
+            .org-tree li::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                width: 50%;
+                height: 42px;
+                box-sizing: border-box;
+                border-top: 1px solid rgba(0,255,255,.72);
+                opacity: var(--connector-opacity, 1);
+                transition: opacity .14s ease;
+                pointer-events: none;
+            }
+
+
+            /*
+    نیمه چپ اتصال +
+    خط عمودی ورودی Child
+*/
+
+            .org-tree li::before {
+                right: 50%;
+                border-right: 1px solid rgba(0,255,255,.72);
+            }
+
+
+            /*
+    نیمه راست اتصال
+*/
+
+            .org-tree li::after {
+                left: 50%;
+            }
+
+
+            /* =========================================================
+   FIRST CHILD
+   ========================================================= */
+
+            .org-tree li:first-child::before {
+                border-top-color: transparent;
+            }
+
+
+            /* =========================================================
+   LAST CHILD
+   ========================================================= */
+
+            .org-tree li:last-child::after {
+                border-top-color: transparent;
+            }
+
+
+            /* =========================================================
+   SINGLE CHILD
+
+   فقط یک خط عمودی کامل داریم.
+   دیگر هیچ Connector جداگانه‌ای روی Node ساخته نمی‌شود.
+   ========================================================= */
+
+            .org-tree li:only-child::before {
+                display: block;
+                right: 50%;
+                width: 1px;
+                height: 42px;
+                border: 0;
+                background: rgba(0,255,255,.72);
+                transform: translateX(50%);
+                opacity: var(--connector-opacity, 1);
+            }
+
+
+            .org-tree li:only-child::after {
+                display: none;
+            }
+
+
+            /* =========================================================
+   ROOT
+
+   Root هیچ ورودی ندارد.
+   ========================================================= */
+
+            .org-tree > ul > li::before,
+            .org-tree > ul > li::after {
+                display: none;
+            }
+
+
+            /* =========================================================
+   PARENT → CHILDREN
+
+   خط خروجی Parent تا محل انشعاب فرزندان
+   ========================================================= */
+
+            .org-tree li > ul::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 50%;
+                width: 1px;
+                height: 42px;
+                background: rgba(0,255,255,.72);
+                border: 0;
+                transform: translateX(-50%);
+                box-sizing: border-box;
+                opacity: var(--children-connector-opacity, 1);
+                transition: opacity .14s ease;
+                pointer-events: none;
+            }
+
+
+            /* =========================================================
+   CONNECTOR GLOW
+   ========================================================= */
+
+            .org-tree li > ul::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 50%;
+                width: 3px;
+                height: 42px;
+                transform: translateX(-50%);
+                background: linear-gradient( to bottom, rgba(0,255,255,.08), transparent );
+                opacity: var(--children-connector-opacity, 1);
+                transition: opacity .14s ease;
+                pointer-events: none;
+            }
+        /* =========================================================
+                NODE
+                ========================================================= */
+
+        .org-node {
+            width: 220px;
+            min-height: 82px;
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            /*
+                     فقط محتوای کارت RTL است.
+                 */
+            direction: rtl;
+            text-align: right;
+            position: relative;
+            z-index: 5;
+            border-radius: 14px;
+            background: linear-gradient( 135deg, rgba(15,34,43,.98), rgba(7,18,27,.98) );
+            border: 1px solid rgba(0,255,255,.28);
+            box-shadow: 0 7px 22px rgba(0,0,0,.32), 0 0 15px rgba(0,255,255,.045);
+            cursor: pointer;
+            opacity: 1;
+            filter: none;
+            transition: opacity .14s ease, filter .14s ease, transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+        }
+
+            .org-node:hover {
+                transform: translateY(-3px);
+            }
+
+
+        /* =========================================================
+                ROOT NODE
+                ========================================================= */
+
+        .org-node-root {
+            border-color: rgba(0,255,255,.72);
+            background: linear-gradient( 135deg, rgba(0,255,255,.13), rgba(8,20,29,.98) 58% );
+            box-shadow: 0 8px 25px rgba(0,0,0,.35), 0 0 25px rgba(0,255,255,.12);
+        }
+
+
+        /* =========================================================
+                SELECTED NODE
+                ========================================================= */
+
+        .org-node.selected {
+            border-color: #00ffff;
+            box-shadow: 0 0 0 1px rgba(0,255,255,.14), 0 8px 25px rgba(0,0,0,.35), 0 0 27px rgba(0,255,255,.25);
+        }
+
+
+        /* =========================================================
+                NODE PHOTO
+                ========================================================= */
+
+        .org-node-photo {
+            width: 58px;
+            height: 58px;
+            min-width: 58px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            color: #00ffff;
+            background: linear-gradient( 145deg, rgba(0,255,255,.14), rgba(0,255,255,.035) );
+            border: 1px solid rgba(0,255,255,.30);
+        }
+
+            .org-node-photo > i {
+                font-size: 27px;
+                opacity: .82;
+            }
+
+            .org-node-photo img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+
+        .org-node-status {
+            width: 9px;
+            height: 9px;
+            position: absolute;
+            left: 3px;
+            bottom: 3px;
+            border-radius: 50%;
+            background: #21db81;
+            border: 2px solid #09151d;
+            box-shadow: 0 0 7px rgba(33,219,129,.8);
+        }
+
+
+        /* =========================================================
+                NODE TEXT
+                ========================================================= */
+
+        .org-node-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .org-node-name {
+            margin-bottom: 4px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .org-node-job {
+            margin-bottom: 6px;
+            color: rgba(255,255,255,.60);
+            font-size: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .org-node-unit {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #00ffff;
+            font-size: 9px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .org-node-level {
+            position: absolute;
+            top: -9px;
+            left: 12px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            color: #00ffff;
+            background: #091820;
+            border: 1px solid rgba(0,255,255,.28);
+            font-size: 8px;
+        }
+
+
+        /* =========================================================
+   MDR 1.3.2
+   BRANCH HOVER
+   ========================================================= */
+
+
+        /* =========================================================
+   NODE
+
+   ابتدا همه Nodeها کم‌رنگ می‌شوند.
+   ========================================================= */
+
+        .org-tree.branch-focus .org-node {
+            opacity: .13;
+            filter: grayscale(.50) brightness(.58);
+        }
+
+
+            /*
+    Node انتخاب‌شده +
+    تمام Descendantهای آن
+*/
+
+            .org-tree.branch-focus .org-node.branch-active {
+                opacity: 1;
+                filter: none;
+            }
+
+
+            /*
+    فقط Node اصلی که Mouse روی آن قرار دارد
+    Highlight اضافه می‌گیرد.
+*/
+
+            .org-tree.branch-focus .org-node.branch-hover-root {
+                opacity: 1;
+                filter: none;
+                border-color: #00ffff;
+                box-shadow: 0 0 0 1px rgba(0,255,255,.14), 0 8px 25px rgba(0,0,0,.35), 0 0 29px rgba(0,255,255,.28);
+            }
+
+
+        /* =========================================================
+   CONNECTORS
+
+   پیش‌فرض:
+   تمام خطوط کم‌رنگ
+   ========================================================= */
+
+        .org-tree.branch-focus li {
+            --connector-opacity: .10;
+            --children-connector-opacity: .10;
+        }
+
+
+            /*
+    LIهای فعال:
+
+    Connector مربوط به Child
+    و Connector خروجی به Children
+    روشن می‌شوند.
+*/
+
+            .org-tree.branch-focus li.branch-active-li {
+                --connector-opacity: 1;
+                --children-connector-opacity: 1;
+            }
+
+
+                /*
+    نکته مهم:
+
+    خط ورودی خود Node اصلی Hover شده نباید روشن شود،
+    چون این خط متعلق به مسیر Ancestor → Hovered Node است.
+
+    بنابراین Connector ورودی Hover Root را دوباره
+    کم‌رنگ می‌کنیم.
+*/
+
+                .org-tree.branch-focus
+                li.branch-active-li:has(> .org-node.branch-hover-root)::before,
+                .org-tree.branch-focus
+                li.branch-active-li:has(> .org-node.branch-hover-root)::after {
+                    opacity: .10;
+                }
+
+
+        /* =========================================================
+   IMMEDIATE RETURN
+   ========================================================= */
+
+        .org-tree.instant-return .org-node,
+        .org-tree.instant-return li::before,
+        .org-tree.instant-return li::after,
+        .org-tree.instant-return li > ul::before,
+        .org-tree.instant-return li > ul::after {
+            transition: none !important;
+        }
+
+        /* =========================================================
+                SEARCH
+                ========================================================= */
+
+        .org-node.search-found {
+            animation: orgSearchPulse .75s ease 2;
+        }
+
+        @@keyframes orgSearchPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 7px 22px rgba(0,0,0,.32);
+            }
+
+            50% {
+                border-color: #00ffff;
+                box-shadow: 0 0 32px rgba(0,255,255,.42);
+            }
+        }
+
+
+        /* =========================================================
+                MDR 1.3.8
+                DRAWER OVERLAY
+                ========================================================= */
+
+        .org-drawer-overlay {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 9997;
+            /*
+                     width:100vw عمداً استفاده نشده
+                     تا Scrollbar صفحه باعث Overflow نشود.
+                 */
+
+            background: rgba(0,0,0,.36);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .20s ease, visibility .20s ease;
+        }
+
+            .org-drawer-overlay.open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+
+        /* =========================================================
+                DRAWER
+                ========================================================= */
+
+        .org-drawer {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 365px;
+            max-width: 90%;
+            z-index: 9998;
+            direction: rtl;
+            padding: 18px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            background: linear-gradient( 145deg, rgba(8,28,37,.98), rgba(5,17,24,.99) );
+            border-right: 1px solid rgba(0,255,255,.30);
+            box-shadow: 12px 0 40px rgba(0,0,0,.55), 0 0 30px rgba(0,255,255,.08);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            transform: translate3d(-100%,0,0);
+            transition: transform .28s cubic-bezier(.22,.61,.36,1);
+            contain: layout paint;
+        }
+
+            .org-drawer.open {
+                transform: translate3d(0,0,0);
+            }
+
+
+        /* =========================================================
+                DRAWER HEADER
+                ========================================================= */
+
+        .org-drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+
+        .org-drawer-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .org-drawer-title-icon {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 11px;
+            color: #00ffff;
+            background: rgba(0,255,255,.07);
+            border: 1px solid rgba(0,255,255,.20);
+        }
+
+        .org-drawer-title-text {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .org-drawer-subtitle {
+            margin-top: 2px;
+            color: rgba(255,255,255,.42);
+            font-size: 9px;
+        }
+
+        .org-drawer-close {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 10px;
+            color: rgba(255,255,255,.65);
+            background: rgba(255,255,255,.04);
+            cursor: pointer;
+            transition: .15s ease;
+        }
+
+            .org-drawer-close:hover {
+                color: #fff;
+                border-color: rgba(255,80,80,.45);
+                background: rgba(255,80,80,.10);
+            }
+
+
+        /* =========================================================
+                DRAWER PERSON
+                ========================================================= */
+
+        .org-drawer-person {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 14px;
+            margin-bottom: 16px;
+            border-radius: 14px;
+            background: linear-gradient( 135deg, rgba(0,255,255,.07), rgba(255,255,255,.018) );
+            border: 1px solid rgba(0,255,255,.15);
+        }
+
+        .org-drawer-photo {
+            width: 70px;
+            height: 70px;
+            min-width: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 16px;
+            color: #00ffff;
+            background: rgba(0,255,255,.07);
+            border: 1px solid rgba(0,255,255,.28);
+        }
+
+            .org-drawer-photo i {
+                font-size: 34px;
+            }
+
+            .org-drawer-photo img {
+                width: 100%;
+                height: 100%;
+                display: none;
+                object-fit: cover;
+            }
+
+        .org-drawer-name {
+            margin-bottom: 5px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .org-drawer-job {
+            margin-bottom: 6px;
+            color: #00ffff;
+            font-size: 11px;
+        }
+
+        .org-drawer-unit-small {
+            color: rgba(255,255,255,.45);
+            font-size: 9px;
+        }
+
+
+        /* =========================================================
+                DRAWER INFO
+                ========================================================= */
+
+        .org-drawer-section-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 19px 0 8px;
+            color: rgba(255,255,255,.78);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+            .org-drawer-section-title i {
+                color: #00ffff;
+            }
+
+        .org-drawer-info {
+            overflow: hidden;
+            border-radius: 13px;
+            background: rgba(255,255,255,.018);
+            border: 1px solid rgba(255,255,255,.055);
+        }
+
+        .org-drawer-row {
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 12px;
+            box-sizing: border-box;
+            border-bottom: 1px solid rgba(255,255,255,.05);
+        }
+
+            .org-drawer-row:last-child {
+                border-bottom: none;
+            }
+
+        .org-drawer-label {
+            color: rgba(255,255,255,.43);
+            font-size: 10px;
+        }
+
+        .org-drawer-value {
+            max-width: 62%;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .org-active-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 8px;
+            border-radius: 10px;
+            color: #2ce68c;
+            background: rgba(44,230,140,.07);
+            border: 1px solid rgba(44,230,140,.25);
+            font-size: 9px;
+        }
+
+            .org-active-status::before {
+                content: "";
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #2ce68c;
+                box-shadow: 0 0 6px rgba(44,230,140,.75);
+            }
+
+        .org-drawer-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+
+        /* =========================================================
+                FULLSCREEN
+                ========================================================= */
+
+        /* =========================================================
+        MDR
+        Phase 1
+        Step 1.3
+        Part 1.3.8
+        FLOATING GLASS / NEON DRAWER
+        ========================================================= */
+
+
+        /* =========================
+        OVERLAY
+        ========================= */
+
+        .org-drawer-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 999998 !important;
+            background: rgba(1, 8, 13, .42);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity .18s ease, visibility .18s ease;
+        }
+
+            .org-drawer-overlay.open {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: auto;
+            }
+
+
+        /* =========================
+        MAIN DRAWER
+        ========================= */
+
+        .org-drawer {
+            position: fixed !important;
+            top: 18px !important;
+            bottom: 18px !important;
+            left: 18px !important;
+            width: 385px;
+            max-width: calc(100vw - 36px);
+            z-index: 999999 !important;
+            box-sizing: border-box;
+            padding: 18px;
+            direction: rtl;
+            overflow-x: hidden;
+            overflow-y: auto;
+            border-radius: 22px;
+            /*
+            Glass Background
+         */
+            background: linear-gradient( 145deg, rgba(12, 35, 45, .82), rgba(5, 17, 25, .88) );
+            backdrop-filter: blur(22px) saturate(145%);
+            -webkit-backdrop-filter: blur(22px) saturate(145%);
+            /*
+            Neon Border
+         */
+            border: 1px solid rgba(0, 255, 255, .38);
+            /*
+            Neon + Glass Shadow
+         */
+            box-shadow: 0 25px 70px rgba(0, 0, 0, .58), 0 0 0 1px rgba(0, 255, 255, .05), 0 0 28px rgba(0, 255, 255, .13), inset 0 0 25px rgba(0, 255, 255, .025);
+            /*
+            بسته
+         */
+            transform: translate3d( calc(-100% - 40px), 0, 0 );
+            opacity: 0;
+            visibility: hidden;
+            transition: transform .27s cubic-bezier(.22,.61,.36,1), opacity .18s ease, visibility .27s ease;
+            /*
+            جلوگیری از تأثیر Layout والد
+         */
+            isolation: isolate;
+        }
+
+
+            /* =========================
+        OPEN
+        ========================= */
+
+            .org-drawer.open {
+                transform: translate3d(0,0,0);
+                opacity: 1;
+                visibility: visible;
+            }
+
+
+            /* =========================
+        NEON TOP GLOW
+        ========================= */
+
+            .org-drawer::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 35px;
+                right: 35px;
+                height: 1px;
+                background: linear-gradient( 90deg, transparent, rgba(0,255,255,.95), transparent );
+                box-shadow: 0 0 14px rgba(0,255,255,.65);
+                pointer-events: none;
+            }
+
+
+            /* =========================
+        SCROLLBAR
+        ========================= */
+
+            .org-drawer::-webkit-scrollbar {
+                width: 5px;
+            }
+
+            .org-drawer::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .org-drawer::-webkit-scrollbar-thumb {
+                background: rgba(0,255,255,.24);
+                border-radius: 20px;
+            }
+
+                .org-drawer::-webkit-scrollbar-thumb:hover {
+                    background: rgba(0,255,255,.45);
+                }
+
+
+        /* =========================
+        HEADER
+        ========================= */
+
+        .org-drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 4px 2px 15px;
+            margin-bottom: 17px;
+            border-bottom: 1px solid rgba(0,255,255,.13);
+        }
+
+
+        .org-drawer-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+
+        .org-drawer-title-icon {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            color: #00ffff;
+            font-size: 17px;
+            background: linear-gradient( 145deg, rgba(0,255,255,.13), rgba(0,255,255,.035) );
+            border: 1px solid rgba(0,255,255,.27);
+            box-shadow: 0 0 15px rgba(0,255,255,.08);
+        }
+
+
+        .org-drawer-title-text {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+
+        .org-drawer-subtitle {
+            margin-top: 3px;
+            color: rgba(255,255,255,.45);
+            font-size: 9px;
+        }
+
+
+        /* =========================
+        CLOSE BUTTON
+        ========================= */
+
+        .org-drawer-close {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border-radius: 11px;
+            color: rgba(255,255,255,.70);
+            background: rgba(255,255,255,.035);
+            border: 1px solid rgba(255,255,255,.10);
+            cursor: pointer;
+            transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+        }
+
+
+            .org-drawer-close:hover {
+                color: #ff7373;
+                background: rgba(255,70,70,.08);
+                border-color: rgba(255,70,70,.35);
+                box-shadow: 0 0 13px rgba(255,70,70,.08);
+            }
+
+
+        /* =========================
+        PERSON GLASS CARD
+        ========================= */
+
+        .org-drawer-person {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 14px;
+            margin-bottom: 17px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            background: linear-gradient( 135deg, rgba(0,255,255,.085), rgba(255,255,255,.022) );
+            border: 1px solid rgba(0,255,255,.17);
+            box-shadow: inset 0 0 18px rgba(0,255,255,.025);
+        }
+
+
+            .org-drawer-person::after {
+                content: "";
+                position: absolute;
+                width: 100px;
+                height: 100px;
+                left: -35px;
+                top: -45px;
+                border-radius: 50%;
+                background: rgba(0,255,255,.08);
+                filter: blur(30px);
+                pointer-events: none;
+            }
+
+
+        /* =========================
+        PERSON PHOTO
+        ========================= */
+
+        .org-drawer-photo {
+            width: 70px;
+            height: 70px;
+            min-width: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+            border-radius: 17px;
+            color: #00ffff;
+            background: linear-gradient( 145deg, rgba(0,255,255,.15), rgba(0,255,255,.035) );
+            border: 1px solid rgba(0,255,255,.35);
+            box-shadow: 0 0 18px rgba(0,255,255,.09);
+        }
+
+
+            .org-drawer-photo i {
+                font-size: 34px;
+            }
+
+
+            .org-drawer-photo img {
+                width: 100%;
+                height: 100%;
+                display: none;
+                object-fit: cover;
+            }
+
+
+        /* =========================
+        PERSON TEXT
+        ========================= */
+
+        .org-drawer-name {
+            margin-bottom: 5px;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+
+        .org-drawer-job {
+            margin-bottom: 6px;
+            color: #00ffff;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+
+        .org-drawer-unit-small {
+            color: rgba(255,255,255,.48);
+            font-size: 9px;
+        }
+
+
+        /* =========================
+        SECTION TITLE
+        ========================= */
+
+        .org-drawer-section-title {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin: 19px 2px 9px;
+            color: rgba(255,255,255,.78);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+
+            .org-drawer-section-title i {
+                color: #00ffff;
+                font-size: 12px;
+            }
+
+
+        /* =========================
+        INFORMATION GLASS CARD
+        ========================= */
+
+        .org-drawer-info {
+            overflow: hidden;
+            border-radius: 15px;
+            background: linear-gradient( 145deg, rgba(255,255,255,.035), rgba(255,255,255,.012) );
+            border: 1px solid rgba(0,255,255,.10);
+            box-shadow: inset 0 0 20px rgba(0,255,255,.015);
+        }
+
+
+        .org-drawer-row {
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 13px;
+            box-sizing: border-box;
+            border-bottom: 1px solid rgba(255,255,255,.055);
+            transition: background .15s ease;
+        }
+
+
+            .org-drawer-row:hover {
+                background: rgba(0,255,255,.025);
+            }
+
+
+            .org-drawer-row:last-child {
+                border-bottom: none;
+            }
+
+
+        .org-drawer-label {
+            color: rgba(255,255,255,.43);
+            font-size: 10px;
+        }
+
+
+        .org-drawer-value {
+            max-width: 62%;
+            color: rgba(255,255,255,.92);
+            font-size: 10px;
+            font-weight: 600;
+            text-align: left;
+        }
+
+
+        /* =========================
+        ACTIVE STATUS
+        ========================= */
+
+        .org-active-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 9px;
+            border-radius: 12px;
+            color: #2ce68c;
+            background: rgba(44,230,140,.07);
+            border: 1px solid rgba(44,230,140,.23);
+            font-size: 9px;
+            box-shadow: 0 0 12px rgba(44,230,140,.035);
+        }
+
+
+            .org-active-status::before {
+                content: "";
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #2ce68c;
+                box-shadow: 0 0 7px rgba(44,230,140,.85);
+            }
+
+
+        /* =========================
+        ACTIONS
+        ========================= */
+
+        .org-drawer-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 18px;
+        }
+
+
+        /* =========================
+        MOBILE
+        ========================= */
+
+        @@media (max-width: 576px) {
+
+            .org-drawer {
+                top: 10px !important;
+                bottom: 10px !important;
+                left: 10px !important;
+                width: calc(100vw - 20px);
+                max-width: calc(100vw - 20px);
+                border-radius: 18px;
+            }
+        }
+        /* =========================================================
+        MDR
+        Phase 1
+        Step 1.3
+        Part 1.3.8.1
+        DRAWER STYLE — هم‌سبک پنل تنظیمات DashbordWithAi
+        (این بلاک آخر است و استایل‌های قبلی Drawer را Override می‌کند)
+        ========================================================= */
+
+        .org-drawer-overlay {
+            background: rgba(0, 0, 0, .18) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+
+        .org-drawer {
+            top: 0 !important;
+            bottom: 0 !important;
+            right: 0 !important;
+            left: auto !important;
+            width: min(18rem, calc(100vw - 20px)) !important;
+            max-width: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: flex !important;
+            flex-direction: column;
+            overflow: hidden !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+            border-left: 1px solid rgba(255, 255, 255, .10) !important;
+            background: rgba(7, 17, 27, .96) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            box-shadow: -20px 0 45px rgba(0, 0, 0, .32) !important;
+            color: #edfaff;
+            transform: translateX(105%);
+            opacity: 1;
+            transition: transform .28s cubic-bezier(.22, .61, .36, 1), visibility .28s ease;
+        }
+
+            .org-drawer.open {
+                transform: translateX(0);
+            }
+
+            .org-drawer::before {
+                display: none !important;
+            }
+
+            .org-drawer .glass-field-header {
+                flex: 0 0 auto;
+            }
+
+        .org-drawer-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto !important;
+            padding: .7rem !important;
+        }
+
+        /* SECTION — مثل db-setting-section */
+        .org-set-section {
+            margin-bottom: .7rem;
+            padding: .65rem;
+            border: 1px solid rgba(255, 255, 255, .10);
+            border-radius: .7rem;
+            background: rgba(255, 255, 255, .025);
+        }
+
+        /* TITLE — مثل db-setting-title */
+        .org-set-title {
+            font-size: .72rem;
+            color: #00ffff;
+            margin-bottom: .55rem;
+        }
+
+        .org-drawer .org-drawer-person {
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+            .org-drawer .org-drawer-person::after {
+                display: none !important;
+            }
+
+        .org-drawer .org-drawer-photo {
+            width: 46px !important;
+            height: 46px !important;
+        }
+
+        .org-drawer .org-drawer-name {
+            font-size: .78rem !important;
+        }
+
+        .org-drawer .org-drawer-job,
+        .org-drawer .org-drawer-unit-small {
+            font-size: .64rem !important;
+            color: #91a9b7 !important;
+        }
+
+        .org-drawer .org-drawer-row {
+            padding: .38rem 0 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, .06) !important;
+            background: transparent !important;
+        }
+
+            .org-drawer .org-drawer-row:last-child {
+                border-bottom: 0 !important;
+            }
+
+        .org-drawer .org-drawer-label {
+            font-size: .62rem !important;
+            color: #91a9b7 !important;
+        }
+
+        .org-drawer .org-drawer-value {
+            font-size: .68rem !important;
+            color: #edfaff !important;
+        }
+
+        /* ACTIONS — مثل db-settings-actions */
+        .org-drawer .org-drawer-actions {
+            position: sticky;
+            bottom: -.7rem;
+            display: flex !important;
+            flex-direction: column;
+            gap: .45rem;
+            margin: 0 !important;
+            padding: .65rem 0 .1rem;
+            background: linear-gradient(transparent, rgba(7, 17, 27, .98) 25%);
+            z-index: 5;
+        }
+
+            .org-drawer .org-drawer-actions button {
+                width: 100% !important;
+                margin: 0 !important;
+            }
+
+        /* =========================================================
+        MDR 1.3.8.2
+        DRAWER FIXES
+        - دکمه بستن در گوشه چپ هدر
+        - اصلاح ظاهر بخش مدیر / مسئول
+        - پس‌زمینه کاملاً مات (محتوای صفحه از پشت دیده نشود)
+        ========================================================= */
+
+        .org-drawer {
+            background: #07111b !important;
+        }
+
+            .org-drawer .glass-field-header {
+                display: flex;
+                align-items: center;
+            }
+
+                .org-drawer .glass-field-header #btnCloseDrawer {
+                    margin-right: auto !important;
+                    margin-left: 0 !important;
+                    flex: 0 0 auto;
+                }
+
+            .org-drawer .org-drawer-person {
+                display: flex !important;
+                flex-direction: row;
+                align-items: center;
+                gap: .65rem !important;
+                overflow: visible !important;
+            }
+
+            .org-drawer .org-drawer-photo {
+                flex: 0 0 44px !important;
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                border-radius: .7rem !important;
+                background: rgba(0, 255, 255, .07) !important;
+                border: 1px solid rgba(0, 255, 255, .3) !important;
+                box-shadow: 0 0 1rem rgba(0, 255, 255, .12) !important;
+            }
+
+                .org-drawer .org-drawer-photo i {
+                    font-size: 1.35rem !important;
+                }
+
+            .org-drawer .org-drawer-person-text {
+                flex: 1 1 auto;
+                min-width: 0;
+                text-align: right;
+            }
+
+                .org-drawer .org-drawer-person-text > div {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+            .org-drawer .org-drawer-name {
+                margin-bottom: .15rem !important;
+                font-size: .8rem !important;
+                font-weight: 700;
+                color: #edfaff !important;
+            }
+
+            .org-drawer .org-drawer-job {
+                margin-bottom: .1rem !important;
+                font-size: .64rem !important;
+                color: #00ffff !important;
+            }
+
+            .org-drawer .org-drawer-unit-small {
+                font-size: .62rem !important;
+                color: #91a9b7 !important;
+            }
+
+        /* =========================================================
+        MDR 1.3.8.3
+        DRAWER ACTIONS — سه دکمه در یک ردیف
+        ========================================================= */
+
+        .org-drawer .org-drawer-actions {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            flex-direction: unset;
+            gap: .4rem;
+        }
+
+            .org-drawer .org-drawer-actions button {
+                width: 100% !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding-left: .3rem !important;
+                padding-right: .3rem !important;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                gap: .3rem;
+                white-space: nowrap;
+                font-size: .7rem;
+                grid-column: auto !important;
+            }
+
+        @@media (max-width: 576px) {
+
+            .org-drawer {
+                width: min(390px, 95%) !important;
+            }
+        }
+
+
+    </style>
+
+</head>
+
+
+<body>
+
+    @* =============================================================
+        MDR — GLOBAL ALERTS (هم‌سبک DashbordJalasat — استایل در Layout)
+        ============================================================= *@
+
+    <div class="global-alert-container">
+
+        <!-- SUCCESS -->
+        <div class="global-alert global-alert-success" id="GlobalAlertSuccess">
+
+            <!-- SUCCESS -->
+            <div class="global-alert-icon">
+                <i class="bi bi-check-circle-fill"></i>
+            </div>
+
+            <div class="global-alert-content">
+
+                <div class="global-alert-title">
+                    عملیات موفق
+                </div>
+
+                <div class="global-alert-message">
+                    اطلاعات با موفقیت ثبت شد.
+                </div>
+
+            </div>
+
+            <button type="button"
+                    class="global-alert-close action-reject"
+                    aria-label="بستن">
+
+                <i class="bi bi-x-lg"></i>
+
+            </button>
+
+        </div>
+
+
+        <!-- WARNING -->
+        <div class="global-alert global-alert-warning" id="GlobalAlertWarning">
+
+            <!-- WARNING -->
+            <div class="global-alert-icon">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+
+            <div class="global-alert-content">
+
+                <div class="global-alert-title">
+                    توجه
+                </div>
+
+                <div class="global-alert-message">
+                    لطفاً اطلاعات مورد نیاز را بررسی کنید.
+                </div>
+
+            </div>
+
+            <button type="button"
+                    class="global-alert-close action-reject"
+                    aria-label="بستن">
+
+                <i class="bi bi-x-lg"></i>
+
+            </button>
+
+        </div>
+
+
+        <!-- ERROR -->
+        <div class="global-alert global-alert-error" id="GlobalAlertError">
+
+            <!-- ERROR -->
+            <div class="global-alert-icon">
+                <i class="bi bi-x-circle-fill"></i>
+            </div>
+
+            <div class="global-alert-content">
+
+                <div class="global-alert-title">
+                    عملیات ناموفق
+                </div>
+
+                <div class="global-alert-message">
+                    انجام عملیات با خطا مواجه شد.
+                </div>
+
+            </div>
+
+            <button type="button"
+                    class="global-alert-close action-reject"
+                    aria-label="بستن">
+
+                <i class="bi bi-x-lg"></i>
+
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+     MDR
+     Phase 1   : زیرساخت مشترک
+     Step 1.3  : ساختار سازمانی و واحدها
+     Part 1.3.3: افزودن واحد سازمانی
+     ===================================================== -->
+
+    <div id="MyModalAG" class="ModalAG">
+
+        <div class="ContentModalAG">
+
+            <div class="BtnCloseAG action-reject" id="btnCloseOrganizationModal">
+                <i class="bi bi-x"></i>
+            </div>
+
+            <div id="BodyModalAG">
+
+                <div class="tab-content scrollbar">
+
+                    @* =====================================================
+                        MDR
+                        Phase 1   : زیرساخت مشترک
+                        Step 1.3  : ساختار سازمانی و واحدها
+                        Part 1.3.3: افزودن واحد سازمانی
+                        ===================================================== *@
+
+                    <div class="glass-field-ag">
+
+                        <!-- Header -->
+                        <div class="glass-field-header">
+
+                            <div class="glass-field-icon">
+                                <i class="bi bi-diagram-3"></i>
+                            </div>
+
+                            <div class="glass-field-heading">
+
+                                <div class="glass-field-title"
+                                     id="organizationModalTitle">
+                                    افزودن واحد سازمانی
+                                </div>
+
+                                <div class="glass-field-subtitle"
+                                     id="organizationModalSubtitle">
+                                    اطلاعات واحد جدید را وارد کنید
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Body -->
+                        <div class="glass-field-body">
+
+                            <!-- ردیف اول -->
+                            <div class="row row-input-AG">
+
+                                <!-- نام واحد -->
+                                <div class="col-xl-6">
+
+                                    <label class="glass-label-ag">
+                                        نام واحد سازمانی
+                                    </label>
+
+                                    <input type="text"
+                                           id="OrganizationUnitName"
+                                           class="glass-input-ag"
+                                           placeholder="مثلاً مدیریت فناوری اطلاعات" />
+
+                                </div>
+
+
+                                <!-- نوع واحد -->
+                                <div class="col-xl-6">
+
+                                    <label class="glass-label-ag">
+                                        نوع واحد
+                                    </label>
+
+                                    <select id="OrganizationUnitType"
+                                            class="glass-select-ag">
+
+                                        <option value="">
+                                            انتخاب کنید
+                                        </option>
+
+                                        <option value="Company">
+                                            شرکت / سازمان
+                                        </option>
+
+                                        <option value="Deputy">
+                                            معاونت
+                                        </option>
+
+                                        <option value="Management">
+                                            مدیریت
+                                        </option>
+
+                                        <option value="Department">
+                                            اداره
+                                        </option>
+
+                                        <option value="Unit">
+                                            واحد
+                                        </option>
+
+                                        <option value="Group">
+                                            گروه
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ردیف دوم -->
+                            <div class="row row-input-AG">
+
+                                <!-- واحد بالادستی -->
+                                <div class="col-xl-6">
+
+                                    <label class="glass-label-ag">
+                                        واحد بالادستی
+                                    </label>
+
+                                    <select id="OrganizationParentId"
+                                            class="glass-select-ag">
+
+                                        <option value="">
+                                            بدون واحد بالادستی
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+
+                                <!-- مدیر / مسئول -->
+                                <div class="col-xl-6">
+
+                                    <label class="glass-label-ag">
+                                        مدیر / مسئول واحد
+                                    </label>
+
+                                    <select id="OrganizationManagerId"
+                                            class="glass-select-ag">
+
+                                        <option value="">
+                                            انتخاب نشده
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- ردیف سوم -->
+                            <div class="row row-input-AG">
+
+                                <!-- ترتیب نمایش -->
+                                <div class="col-xl-6">
+
+                                    <label class="glass-label-ag">
+                                        ترتیب نمایش
+                                    </label>
+
+                                    <input type="number"
+                                           id="OrganizationSortOrder"
+                                           class="glass-input-ag"
+                                           min="1"
+                                           placeholder="خودکار" />
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- Buttons -->
+                            <div class="row row-btn-AG row-ltr-AG">
+
+                                <div class="col-xl-2">
+
+                                    <button type="button"
+                                            id="btnSaveOrganizationUnit"
+                                            class="glass-btn-ag glass-btn-ag-primary">
+
+                                        <i class="bi bi-check2-circle"></i>
+
+                                        ثبت
+
+                                    </button>
+
+                                </div>
+
+
+                                <div class="col-xl-2">
+
+                                    <button type="button"
+                                            id="btnCancelOrganizationUnit"
+                                            class="glass-btn-ag glass-btn-text-reject">
+
+                                        <i class="bi bi-x-circle"></i>
+
+                                        انصراف
+
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="tab-content tab-AG"
+         id="pills-tabContent">
+
+
+        <div class="org-page">
+
+
+            @* =====================================================
+                MDR 1.3.1
+                HEADER
+                ===================================================== *@
+
+            <div class="org-header">
+
+
+                <div class="org-header-title">
+
+
+                    <div class="org-header-icon">
+
+                        <i class="bi bi-diagram-3"></i>
+
+                    </div>
+
+
+                    <div class="org-header-text">
+
+                        <h4>
+                            ساختار سازمانی
+                        </h4>
+
+                        <p>
+                            نمایش سلسله‌مراتب واحدها و مسئولین سازمان
+                        </p>
+
+                    </div>
+
+
+                </div>
+
+
+
+
+
+            </div>
+
+
+            @* =====================================================
+                MDR
+                Phase 1   : زیرساخت مشترک
+                Step 1.3  : ساختار سازمانی و واحدها
+                Part 1.3.2: TOOLBAR
+                ===================================================== *@
+
+            <div class="row row-input-AG">
+
+                <!-- جستجو -->
+                <div class="col-xl-4">
+                    <label class="glass-label-ag">
+                        جستجو
+                    </label>
+
+                    <input id="txtOrgSearch"
+                           class="glass-input-ag"
+                           placeholder="نام فرد، سمت یا واحد را جستجو کنید..." />
+                </div>
+
+                <div class="col-xl-2">
+                    <button type="button"
+                            class="glass-btn-ag glass-btn-ag-primary"
+                            id="btnAddOrganizationUnit">
+
+                        <i class="bi bi-plus-circle"></i>
+
+                        <p>
+                            افزودن واحد سازمانی
+                        </p>
+
+                    </button>
+                </div>
+                <div class="col-xl-3"></div>
+
+                <!-- ابزارهای کنترل نمودار -->
+                <div class="col-xl-3 col-xl-AG">
+
+                    <button type="button"
+                            id="btnZoomOut"
+                            class="glass-btn-icon glass-btn-icon-suggest"
+                            title="کوچک‌نمایی">
+
+                        <i class="bi bi-dash-lg"></i>
+
+                    </button>
+
+
+                    <div class="org-zoom-value"
+                         id="zoomValue">
+                        Auto
+                    </div>
+
+
+                    <button type="button"
+                            id="btnZoomIn"
+                            class="glass-btn-icon glass-btn-icon-suggest"
+                            title="بزرگ‌نمایی">
+
+                        <i class="bi bi-plus-lg"></i>
+
+                    </button>
+
+
+                    <button type="button"
+                            id="btnFitTree"
+                            class="glass-btn-icon glass-btn-icon-suggest"
+                            title="نمایش کامل">
+
+                        <i class="bi bi-arrows-angle-contract"></i>
+
+                    </button>
+
+
+                    <button type="button"
+                            id="btnResetTree"
+                            class="glass-btn-icon glass-btn-icon-suggest"
+                            title="بازنشانی">
+
+                        <i class="bi bi-arrow-clockwise"></i>
+
+                    </button>
+
+
+                    <button type="button"
+                            id="btnFullScreen"
+                            class="glass-btn-icon glass-btn-icon-suggest"
+                            title="تمام صفحه">
+
+                        <i class="bi bi-arrows-fullscreen"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            @* =====================================================
+                MDR 1.3.2
+                ORGANIZATION CHART
+                ===================================================== *@
+
+            <div class="glass-field-ag" style="margin-top: .5rem;">
+
+
+                <div class="glass-field-header">
+
+
+                    <div class="glass-field-icon">
+
+                        <i class="bi bi-diagram-3"></i>
+
+                    </div>
+
+
+                    <div class="glass-field-heading">
+
+
+                        <div class="glass-field-title">
+                            نمودار سازمانی
+                        </div>
+
+
+                        <div class="glass-field-subtitle">
+                            روی هر سرشاخه قرار بگیرید تا همان شاخه و تمام زیرمجموعه‌های آن مشخص شوند
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+                <div class="glass-field-body">
+
+
+                    <div class="org-chart-wrapper"
+                         id="orgChartWrapper">
+
+
+                        <div class="org-tree-viewport"
+                             id="orgTreeViewport">
+
+
+                            <div class="org-tree-scale"
+                                 id="orgTreeScale">
+
+
+                                <div class="org-tree"
+                                     id="orgTree">
+
+
+                                   
+
+
+                                </div>
+
+
+                            </div>
+
+
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+    @* =============================================================
+        MDR 1.3.8
+        DRAWER OVERLAY
+        ============================================================= *@
+
+    <div id="orgDrawerOverlay"
+         class="org-drawer-overlay">
+    </div>
+
+
+    @* =============================================================
+        MDR 1.3.8
+        DRAWER
+        ============================================================= *@
+
+    <aside id="orgDrawer"
+           class="org-drawer glass-field-ag"
+           aria-hidden="true">
+
+
+        @* HEADER — هم‌سبک پنل تنظیمات DashbordWithAi *@
+        <div class="glass-field-header">
+
+            <div class="glass-field-icon">
+                <i class="bi bi-building"></i>
+            </div>
+
+            <div class="glass-field-heading">
+
+                <div class="glass-field-title">
+                    اطلاعات واحد
+                </div>
+
+                <div class="glass-field-subtitle">
+                    جزئیات واحد سازمانی انتخاب‌شده
+                </div>
+
+            </div>
+
+            <button type="button"
+                    id="btnCloseDrawer"
+                    class="glass-btn-icon glass-btn-icon-reject"
+                    title="بستن">
+                <i class="bi bi-x-lg"></i>
+            </button>
+
+        </div>
+
+
+        <div class="glass-field-body org-drawer-body scrollbar">
+
+
+            @* SECTION — مدیر / مسئول *@
+            <div class="org-set-section">
+
+                <div class="org-set-title">
+                    مدیر / مسئول واحد
+                </div>
+
+                <div class="org-drawer-person">
+
+                    <div class="org-drawer-photo">
+
+                        <img id="drawerPhoto"
+                             src=""
+                             alt="" />
+
+                        <i id="drawerPhotoIcon"
+                           class="bi bi-person-fill"></i>
+
+                    </div>
+
+                    <div class="org-drawer-person-text">
+
+                        <div class="org-drawer-name"
+                             id="drawerName">
+                            -
+                        </div>
+
+                        <div class="org-drawer-job"
+                             id="drawerJob">
+                            -
+                        </div>
+
+                        <div class="org-drawer-unit-small"
+                             id="drawerUnitSmall">
+                            -
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            @* SECTION — اطلاعات سازمانی *@
+            <div class="org-set-section">
+
+                <div class="org-set-title">
+                    اطلاعات سازمانی
+                </div>
+
+                <div class="org-drawer-row">
+                    <span class="org-drawer-label">واحد سازمانی</span>
+                    <span class="org-drawer-value" id="drawerUnit">-</span>
+                </div>
+
+                <div class="org-drawer-row">
+                    <span class="org-drawer-label">نوع واحد</span>
+                    <span class="org-drawer-value" id="drawerType">-</span>
+                </div>
+
+                <div class="org-drawer-row">
+                    <span class="org-drawer-label">واحد بالادستی</span>
+                    <span class="org-drawer-value" id="drawerParent">-</span>
+                </div>
+
+                <div class="org-drawer-row">
+                    <span class="org-drawer-label">تعداد کارکنان</span>
+                    <span class="org-drawer-value" id="drawerCount">-</span>
+                </div>
+
+                <div class="org-drawer-row">
+                    <span class="org-drawer-label">وضعیت</span>
+                    <span class="org-active-status">فعال</span>
+                </div>
+
+            </div>
+
+
+            @* ACTIONS — مثل db-settings-actions *@
+            <div class="org-drawer-actions">
+
+                <button type="button"
+                        id="btnEditUnit"
+                        class="glass-btn-text glass-btn-text-suggest"
+                        title="ویرایش واحد">
+                    <i class="bi bi-pencil"></i>
+                    ویرایش
+                </button>
+
+                <button type="button"
+                        id="btnAddChild"
+                        class="glass-btn-text glass-btn-text-confirm"
+                        title="افزودن زیرمجموعه">
+                    <i class="bi bi-diagram-2"></i>
+                    افزودن
+                </button>
+
+                <button type="button"
+                        id="btnDeleteUnit"
+                        class="glass-btn-text glass-btn-text-reject"
+                        title="حذف واحد">
+                    <i class="bi bi-trash"></i>
+                    حذف
+                </button>
+
+            </div>
+
+
+        </div>
+
+
+    </aside>
+
+
+    @* =============================================================
+        JAVASCRIPT
+        ============================================================= *@
+    
+
+<script data-cfasync="false">
+
+        // =========================================================
+        // MDR — اعلان‌های سراسری (هم‌سبک DashbordJalasat)
+        // =========================================================
+
+        let globalAlertTimer = null;
+
+        function showAlert(type, title, message, duration = 4000) {
+
+            let alertBox = null;
+
+            switch (type) {
+
+                case "success":
+                    alertBox = document.getElementById("GlobalAlertSuccess");
+                    break;
+
+                case "warning":
+                    alertBox = document.getElementById("GlobalAlertWarning");
+                    break;
+
+                case "error":
+                    alertBox = document.getElementById("GlobalAlertError");
+                    break;
+            }
+
+            if (!alertBox) {
+                console.error("Alert پیدا نشد:", type);
+                return;
+            }
+
+            const titleElement =
+                alertBox.querySelector(".global-alert-title");
+
+            const messageElement =
+                alertBox.querySelector(".global-alert-message");
+
+            if (titleElement) {
+                titleElement.textContent = title;
+            }
+
+            if (messageElement) {
+                messageElement.textContent = message;
+            }
+
+            // حذف دکمه‌های تأیید قبلی (مثل تأیید حذف)
+            document
+                .querySelectorAll(".global-alert .cancel-alert-actions")
+                .forEach(function (actions) {
+                    actions.remove();
+                });
+
+            // بستن اعلان‌های قبلی
+            document
+                .querySelectorAll(".global-alert")
+                .forEach(function (alert) {
+                    alert.classList.remove("show");
+                });
+
+            // نمایش اعلان
+            requestAnimationFrame(function () {
+                alertBox.classList.add("show");
+            });
+
+            // حذف تایمر قبلی
+            if (globalAlertTimer) {
+                clearTimeout(globalAlertTimer);
+            }
+
+            // بستن خودکار
+            if (duration > 0) {
+
+                globalAlertTimer = setTimeout(function () {
+
+                    alertBox.classList.remove("show");
+
+                }, duration);
+            }
+        }
+
+
+        // =========================================================
+        // بستن دستی اعلان
+        // =========================================================
+
+        // بدون jQuery؛ چون این اسکریپت قبل از بارگذاری jQuery در Layout اجرا می‌شود
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                var closeButton =
+                    event.target.closest(
+                        ".global-alert-close"
+                    );
+
+                if (!closeButton) {
+                    return;
+                }
+
+                var alertBox =
+                    closeButton.closest(".global-alert");
+
+                alertBox.classList.remove("show");
+
+                alertBox
+                    .querySelectorAll(".cancel-alert-actions")
+                    .forEach(function (actions) {
+                        actions.remove();
+                    });
+
+            }
+        );
+
+</script>
+
+
+<script data-cfasync="false">
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        // =====================================================
+        // MDR — جلوگیری از اجرای دوباره
+        // Rocket Loader رویداد DOMContentLoaded را یک بار دیگر
+        // به‌صورت مصنوعی صدا می‌زند؛ این Guard اجرای دوم را رد می‌کند
+        // =====================================================
+
+        if (window.__mdrOrgInit) {
+            return;
+        }
+
+        window.__mdrOrgInit = true;
+
+
+        // =====================================================
+        // MDR
+        // Phase 1   : زیرساخت مشترک
+        // Step 1.3  : ساختار سازمانی و واحدها
+        // Part 1.3.2: چارت سازمانی واقعی
+        // =====================================================
+
+        console.log("MDR SCRIPT LOADED");
+
+
+        // =====================================================
+        // ELEMENTS
+        // =====================================================
+
+        var orgTree =
+            document.getElementById("orgTree");
+
+        var treeScale =
+            document.getElementById("orgTreeScale");
+
+        var treeViewport =
+            document.getElementById("orgTreeViewport");
+
+        var chartWrapper =
+            document.getElementById("orgChartWrapper");
+
+        var drawer =
+            document.getElementById("orgDrawer");
+
+        var overlay =
+            document.getElementById("orgDrawerOverlay");
+
+        var zoomValue =
+            document.getElementById("zoomValue");
+
+        var searchInput =
+            document.getElementById("txtOrgSearch");
+
+        var btnAddOrganizationUnit =
+            document.getElementById(
+                "btnAddOrganizationUnit"
+            );
+
+        var organizationModal =
+            document.getElementById(
+                "MyModalAG"
+            );
+
+        var btnCloseOrganizationModal =
+            document.getElementById(
+                "btnCloseOrganizationModal"
+            );
+
+        var btnCancelOrganizationUnit =
+            document.getElementById(
+                "btnCancelOrganizationUnit"
+            );
+
+        var btnSaveOrganizationUnit =
+            document.getElementById(
+                "btnSaveOrganizationUnit"
+            );
+
+
+        // =====================================================
+        // متغیرهای Dynamic Tree
+        // =====================================================
+
+        var nodes = [];
+
+        var allTreeItems = [];
+
+        var selectedNode = null;
+
+        var currentZoom = 1;
+
+        var minZoom = .35;
+
+        var maxZoom = 1.40;
+
+        var zoomStep = .10;
+
+        var returnTimer = null;
+
+
+        // =====================================================
+        // MDR 1.3.8
+        // انتقال Drawer به Body
+        // =====================================================
+
+        if (
+            overlay &&
+            overlay.parentElement !== document.body
+        ) {
+
+            document.body.appendChild(
+                overlay
+            );
+        }
+
+
+        if (
+            drawer &&
+            drawer.parentElement !== document.body
+        ) {
+
+            document.body.appendChild(
+                drawer
+            );
+        }
+
+
+        // =====================================================
+        // MDR - 1.3.2.1 / 1.3.2.2
+        // دریافت اطلاعات واقعی چارت
+        // =====================================================
+
+        function loadOrganizationChart() {
+
+            fetch(
+                '@Url.Action("GetOrganizationChartData", "AG", new { area = "Mdr" })'
+            )
+            .then(function (response) {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "خطا در ارتباط با سرور"
+                    );
+                }
+
+                return response.json();
+
+            })
+            .then(function (result) {
+
+                if (!result.success) {
+
+                    console.error(
+                        "GetOrganizationChartData:",
+                        result.message
+                    );
+
+                    return;
+                }
+
+
+                var treeData =
+                    buildOrganizationTree(
+                        result.units
+                    );
+
+
+                console.log(
+                    "MDR Organization Tree:",
+                    treeData
+                );
+
+
+                // -----------------------------------------
+                // ساخت HTML واقعی Tree
+                // -----------------------------------------
+
+                renderOrganizationTree(
+                    treeData
+                );
+
+
+                // -----------------------------------------
+                // MDR 1.3.2.4
+                // اتصال مجدد رفتارها به Nodeهای جدید
+                // -----------------------------------------
+
+                refreshOrganizationTreeBindings();
+
+
+                // =====================================================
+                // MDR 1.3.2.5
+                // INITIAL CHART ZOOM = 100%
+                // CENTER CHART ON LOAD
+                // =====================================================
+
+                setTimeout(
+                    function () {
+
+                        // -----------------------------------------
+                        // نمایش اولیه همیشه 100 درصد
+                        // -----------------------------------------
+
+                        currentZoom = 1;
+
+                        applyZoom();
+
+
+                        // -----------------------------------------
+                        // شروع از بالای نمودار
+                        // -----------------------------------------
+
+                        chartWrapper.scrollTop = 0;
+
+
+                        // -----------------------------------------
+                        // قرار دادن مرکز نمودار
+                        // در مرکز Wrapper
+                        // -----------------------------------------
+
+                        var maxScrollLeft =
+                            chartWrapper.scrollWidth -
+                            chartWrapper.clientWidth;
+
+
+                        if (maxScrollLeft > 0) {
+
+                            chartWrapper.scrollLeft =
+                                maxScrollLeft / 2;
+
+                        }
+                        else {
+
+                            chartWrapper.scrollLeft = 0;
+
+                        }
+
+                    },
+                    50
+                );
+
+            })
+            .catch(function (error) {
+
+                console.error(
+                    "MDR Organization Chart Error:",
+                    error
+                );
+
+            });
+        }
+
+
+        // =====================================================
+        // MDR - 1.3.2.2
+        // تبدیل Flat List به Parent / Child Tree
+        // =====================================================
+
+        function buildOrganizationTree(
+            units
+        ) {
+
+            var unitMap = {};
+
+            var roots = [];
+
+
+            units.forEach(
+                function (unit) {
+
+                    unitMap[unit.id] = {
+
+                        id:
+                            unit.id,
+
+                        unitName:
+                            unit.unitName || "",
+
+                        unitType:
+                            unit.unitType || "",
+
+                        parentId:
+                            unit.parentId,
+
+                        managerUserId:
+                            unit.managerUserId,
+
+                        managerName:
+                            unit.managerName || "",
+
+                        managerJobTitle:
+                            unit.managerJobTitle || "",
+
+                        managerPicture:
+                            unit.managerPicture || "",
+
+                        sortOrder:
+                            unit.sortOrder || 0,
+
+                        children: []
+                    };
+
+                }
+            );
+
+
+            Object.keys(
+                unitMap
+            )
+            .forEach(
+                function (key) {
+
+                    var node =
+                        unitMap[key];
+
+
+                    if (
+                        node.parentId !== null &&
+                        node.parentId !== undefined &&
+                        unitMap[node.parentId]
+                    ) {
+
+                        unitMap[
+                            node.parentId
+                        ]
+                        .children
+                        .push(node);
+
+                    }
+                    else {
+
+                        roots.push(node);
+
+                    }
+
+                }
+            );
+            // ==========================================================
+            // MDR - 1.3.2.4.1
+            // تعیین نام واحد بالادستی
+            // ==========================================================
+
+            Object.keys(
+                unitMap
+            )
+                .forEach(
+                    function (key) {
+
+                        var node =
+                            unitMap[key];
+
+                        if (
+                            node.parentId !== null &&
+                            node.parentId !== undefined &&
+                            unitMap[node.parentId]
+                        ) {
+
+                            node.parentName =
+                                unitMap[
+                                    node.parentId
+                                ].unitName;
+
+                        }
+                        else {
+
+                            node.parentName =
+                                "-";
+                        }
+
+                    }
+                );
+
+            function sortNodes(
+                list
+            ) {
+
+                list.sort(
+                    function (a, b) {
+
+                        if (
+                            a.sortOrder !==
+                            b.sortOrder
+                        ) {
+
+                            return (
+                                a.sortOrder -
+                                b.sortOrder
+                            );
+                        }
+
+
+                        return (
+                            a.unitName || ""
+                        )
+                        .localeCompare(
+                            b.unitName || "",
+                            "fa"
+                        );
+
+                    }
+                );
+
+
+                list.forEach(
+                    function (node) {
+
+                        if (
+                            node.children &&
+                            node.children.length > 0
+                        ) {
+
+                            sortNodes(
+                                node.children
+                            );
+                        }
+
+                    }
+                );
+            }
+
+
+            sortNodes(
+                roots
+            );
+
+
+            return roots;
+        }
+
+
+        // =====================================================
+        // MDR - 1.3.2.3
+        // Render Tree
+        // =====================================================
+
+        function renderOrganizationTree(
+            treeData
+        ) {
+
+            if (!orgTree) {
+
+                return;
+            }
+
+
+            orgTree.innerHTML = "";
+
+
+            if (
+                !treeData ||
+                treeData.length === 0
+            ) {
+
+                orgTree.innerHTML =
+                    '<div class="glass-alert glass-alert-warning">' +
+                    'هنوز واحد سازمانی ثبت نشده است.' +
+                    '</div>';
+
+                return;
+            }
+
+
+            var rootUl =
+                document.createElement(
+                    "ul"
+                );
+
+
+            treeData.forEach(
+                function (node) {
+
+                    rootUl.appendChild(
+
+                        createOrganizationTreeNode(
+                            node,
+                            1
+                        )
+
+                    );
+
+                }
+            );
+
+
+            orgTree.appendChild(
+                rootUl
+            );
+        }
+
+
+        // =====================================================
+        // MDR - 1.3.2.3
+        // ساخت Recursive Node
+        // =====================================================
+
+        function createOrganizationTreeNode(
+            node,
+            level
+        ) {
+
+            var li =
+                document.createElement(
+                    "li"
+                );
+
+
+            var nodeElement =
+                document.createElement(
+                    "div"
+                );
+
+
+            nodeElement.className =
+                "org-node" +
+                (
+                    level === 1
+                        ? " org-node-root"
+                        : ""
+                );
+
+
+            // -----------------------------------------
+            // DATA
+            // -----------------------------------------
+
+            nodeElement.setAttribute(
+                "data-id",
+                node.id
+            );
+
+            nodeElement.setAttribute(
+                "data-name",
+                node.managerName || "-"
+            );
+
+            nodeElement.setAttribute(
+                "data-job",
+                node.managerJobTitle || "-"
+            );
+
+            nodeElement.setAttribute(
+                "data-unit",
+                node.unitName || "-"
+            );
+
+            nodeElement.setAttribute(
+                "data-type",
+                node.unitType || "-"
+            );
+
+            nodeElement.setAttribute(
+                "data-parent-id",
+                node.parentId == null
+                    ? ""
+                    : node.parentId
+            );
+
+            nodeElement.setAttribute(
+                "data-parent",
+                node.parentName || "-"
+            );
+
+            nodeElement.setAttribute(
+                "data-manager-id",
+                node.managerUserId == null
+                    ? ""
+                    : node.managerUserId
+            );
+
+            nodeElement.setAttribute(
+                "data-sort-order",
+                node.sortOrder || 0
+            );
+
+            nodeElement.setAttribute(
+                "data-count",
+                node.children
+                    ? node.children.length
+                    : 0
+            );
+
+
+            // -----------------------------------------
+            // LEVEL
+            // -----------------------------------------
+
+            var levelElement =
+                document.createElement(
+                    "span"
+                );
+
+            levelElement.className =
+                "org-node-level";
+
+            levelElement.textContent =
+                "سطح " + level;
+
+            nodeElement.appendChild(
+                levelElement
+            );
+
+
+            // -----------------------------------------
+            // PHOTO
+            // -----------------------------------------
+
+            var photo =
+                document.createElement(
+                    "div"
+                );
+
+            photo.className =
+                "org-node-photo";
+
+
+            if (
+                node.managerPicture
+            ) {
+
+                var img =
+                    document.createElement(
+                        "img"
+                    );
+
+                img.src =
+                    node.managerPicture;
+
+                img.alt =
+                    node.managerName || "";
+
+                photo.appendChild(
+                    img
+                );
+
+            }
+            else {
+
+                var personIcon =
+                    document.createElement(
+                        "i"
+                    );
+
+                personIcon.className =
+                    "bi bi-person-fill";
+
+                photo.appendChild(
+                    personIcon
+                );
+            }
+
+
+            var status =
+                document.createElement(
+                    "span"
+                );
+
+            status.className =
+                "org-node-status";
+
+            photo.appendChild(
+                status
+            );
+
+            nodeElement.appendChild(
+                photo
+            );
+
+
+            // -----------------------------------------
+            // INFO
+            // -----------------------------------------
+
+            var info =
+                document.createElement(
+                    "div"
+                );
+
+            info.className =
+                "org-node-info";
+
+
+            var name =
+                document.createElement(
+                    "div"
+                );
+
+            name.className =
+                "org-node-name";
+
+            name.textContent =
+                node.managerName ||
+                "بدون مسئول";
+
+            info.appendChild(
+                name
+            );
+
+
+            var job =
+                document.createElement(
+                    "div"
+                );
+
+            job.className =
+                "org-node-job";
+
+            job.textContent =
+                node.managerJobTitle ||
+                "سمت تعریف نشده";
+
+            info.appendChild(
+                job
+            );
+
+
+            var unit =
+                document.createElement(
+                    "div"
+                );
+
+            unit.className =
+                "org-node-unit";
+
+
+            var buildingIcon =
+                document.createElement(
+                    "i"
+                );
+
+            buildingIcon.className =
+                "bi bi-building";
+
+            unit.appendChild(
+                buildingIcon
+            );
+
+
+            var unitName =
+                document.createElement(
+                    "span"
+                );
+
+            unitName.textContent =
+                node.unitName || "-";
+
+            unit.appendChild(
+                unitName
+            );
+
+
+            info.appendChild(
+                unit
+            );
+
+            nodeElement.appendChild(
+                info
+            );
+
+
+            li.appendChild(
+                nodeElement
+            );
+
+
+            // -----------------------------------------
+            // CHILDREN
+            // -----------------------------------------
+
+            if (
+                node.children &&
+                node.children.length > 0
+            ) {
+
+                var childrenUl =
+                    document.createElement(
+                        "ul"
+                    );
+
+
+                node.children.forEach(
+                    function (child) {
+
+                        childrenUl.appendChild(
+
+                            createOrganizationTreeNode(
+                                child,
+                                level + 1
+                            )
+
+                        );
+
+                    }
+                );
+
+
+                li.appendChild(
+                    childrenUl
+                );
+            }
+
+
+            return li;
+        }
+
+
+        // =====================================================
+        // MDR - 1.3.2.4
+        // Refresh Dynamic Node References + Events
+        // =====================================================
+
+        function refreshOrganizationTreeBindings() {
+
+            nodes =
+                Array.prototype.slice.call(
+                    orgTree.querySelectorAll(
+                        ".org-node"
+                    )
+                );
+
+
+            allTreeItems =
+                Array.prototype.slice.call(
+                    orgTree.querySelectorAll(
+                        "li"
+                    )
+                );
+
+
+            // -----------------------------------------
+            // Hover
+            // -----------------------------------------
+
+            nodes.forEach(
+                function (node) {
+
+                    /*
+                        جلوگیری از Bind چندباره
+                        هنگام Refresh چارت
+                    */
+
+                    if (
+                        node.dataset.mdrBound ===
+                        "1"
+                    ) {
+
+                        return;
+                    }
+
+
+                    node.dataset.mdrBound =
+                        "1";
+
+
+                    node.addEventListener(
+                        "mouseenter",
+                        function () {
+
+                            activateBranch(
+                                this
+                            );
+                        }
+                    );
+
+
+                    node.addEventListener(
+                        "mouseleave",
+                        function () {
+
+                            clearBranchFocusImmediate();
+                        }
+                    );
+
+
+                    // ---------------------------------
+                    // Drawer
+                    // ---------------------------------
+
+                    node.addEventListener(
+                        "click",
+                        function (event) {
+
+                            event.stopPropagation();
+
+                            openDrawer(
+                                this
+                            );
+                        }
+                    );
+
+                }
+            );
+        }
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // APPLY ZOOM + SCROLL AREA
+        // =====================================================
+
+        function applyZoom() {
+
+            if (
+                !orgTree ||
+                !treeScale ||
+                !treeViewport ||
+                !chartWrapper
+            ) {
+                return;
+            }
+
+
+            // -----------------------------------------
+            // اعمال Zoom
+            // -----------------------------------------
+
+            treeScale.style.transform =
+                "scale(" +
+                currentZoom +
+                ")";
+
+
+            // -----------------------------------------
+            // نمایش درصد Zoom
+            // -----------------------------------------
+
+            zoomValue.innerText =
+                Math.round(
+                    currentZoom * 100
+                )
+                +
+                "%";
+
+
+            // -----------------------------------------
+            // ابعاد واقعی نمودار قبل از Scale
+            // -----------------------------------------
+
+            var treeWidth =
+                orgTree.offsetWidth;
+
+            var treeHeight =
+                orgTree.offsetHeight;
+
+
+            // -----------------------------------------
+            // ابعاد واقعی نمودار بعد از Scale
+            // -----------------------------------------
+
+            var scaledWidth =
+                treeWidth *
+                currentZoom;
+
+            var scaledHeight =
+                treeHeight *
+                currentZoom;
+
+
+            
+
+
+            // -----------------------------------------
+            // تنظیم Viewport
+            // -----------------------------------------
+
+            treeViewport.style.minWidth =
+                Math.max(
+                    scaledWidth + 80,
+                    chartWrapper.clientWidth
+                )
+                +
+                "px";
+
+
+            treeViewport.style.minHeight =
+                Math.max(
+                    scaledHeight + 140,
+                    580
+                )
+                +
+                "px";
+        }   
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // FIT TO WIDTH
+        // =====================================================
+
+        function fitTreeToScreen() {
+
+            if (
+                !orgTree ||
+                !treeScale ||
+                !chartWrapper
+            ) {
+
+                return;
+            }
+
+
+            treeScale.style.transform =
+                "scale(1)";
+
+
+            var availableWidth =
+                chartWrapper.clientWidth -
+                40;
+
+
+            var treeWidth =
+                orgTree.offsetWidth;
+
+
+            if (
+                !treeWidth ||
+                treeWidth <= 0
+            ) {
+
+                return;
+            }
+
+
+            if (
+                treeWidth >
+                availableWidth
+            ) {
+
+                currentZoom =
+                    availableWidth /
+                    treeWidth;
+
+            }
+            else {
+
+                currentZoom = 1;
+            }
+
+
+            currentZoom =
+                Math.max(
+                    minZoom,
+                    Math.min(
+                        currentZoom,
+                        1
+                    )
+                );
+
+
+            applyZoom();
+        }
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // CLEAR FOCUS
+        // =====================================================
+
+        function clearFocusClasses() {
+
+            nodes.forEach(
+                function (node) {
+
+                    node.classList.remove(
+                        "branch-active"
+                    );
+
+                    node.classList.remove(
+                        "branch-hover-root"
+                    );
+
+                }
+            );
+
+
+            allTreeItems.forEach(
+                function (li) {
+
+                    li.classList.remove(
+                        "branch-active-li"
+                    );
+
+                }
+            );
+        }
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // CLEAR FOCUS IMMEDIATELY
+        // =====================================================
+
+        function clearBranchFocusImmediate() {
+
+            if (returnTimer) {
+
+                clearTimeout(
+                    returnTimer
+                );
+
+                returnTimer = null;
+            }
+
+
+            orgTree.classList.add(
+                "instant-return"
+            );
+
+
+            orgTree.classList.remove(
+                "branch-focus"
+            );
+
+
+            clearFocusClasses();
+
+
+            requestAnimationFrame(
+                function () {
+
+                    requestAnimationFrame(
+                        function () {
+
+                            orgTree.classList.remove(
+                                "instant-return"
+                            );
+
+                        }
+                    );
+
+                }
+            );
+        }
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // ACTIVATE BRANCH
+        // =====================================================
+
+        function activateBranch(
+            node
+        ) {
+
+            if (returnTimer) {
+
+                clearTimeout(
+                    returnTimer
+                );
+
+                returnTimer = null;
+            }
+
+
+            clearFocusClasses();
+
+
+            orgTree.classList.add(
+                "branch-focus"
+            );
+
+
+            node.classList.add(
+                "branch-active"
+            );
+
+
+            node.classList.add(
+                "branch-hover-root"
+            );
+
+
+            var currentLi =
+                node.closest(
+                    "li"
+                );
+
+
+            if (!currentLi) {
+
+                return;
+            }
+
+
+            currentLi.classList.add(
+                "branch-active-li"
+            );
+
+
+            var descendants =
+                currentLi.querySelectorAll(
+                    ".org-node"
+                );
+
+
+            Array.prototype.forEach.call(
+                descendants,
+                function (childNode) {
+
+                    childNode.classList.add(
+                        "branch-active"
+                    );
+
+                }
+            );
+
+
+            var descendantLis =
+                currentLi.querySelectorAll(
+                    "li"
+                );
+
+
+            Array.prototype.forEach.call(
+                descendantLis,
+                function (childLi) {
+
+                    childLi.classList.add(
+                        "branch-active-li"
+                    );
+
+                }
+            );
+        }
+
+
+        // =====================================================
+        // MDR 1.3.8
+        // OPEN DRAWER
+        // =====================================================
+
+        function openDrawer(
+            node
+        ) {
+
+            if (selectedNode) {
+
+                selectedNode.classList.remove(
+                    "selected"
+                );
+            }
+
+
+            selectedNode =
+                node;
+
+
+            selectedNode.classList.add(
+                "selected"
+            );
+
+
+            var name =
+                node.getAttribute(
+                    "data-name"
+                )
+                || "-";
+
+
+            var job =
+                node.getAttribute(
+                    "data-job"
+                )
+                || "-";
+
+
+            var unit =
+                node.getAttribute(
+                    "data-unit"
+                )
+                || "-";
+
+
+            // =====================================================
+            // MDR 1.3.8.1
+            // تبدیل نوع واحد سازمانی به عنوان فارسی
+            // =====================================================
+
+            var type =
+                node.getAttribute(
+                    "data-type"
+                )
+                || "-";
+
+            var typeTitles = {
+                "Company": "شرکت / سازمان",
+                "Deputy": "معاونت",
+                "Management": "مدیریت",
+                "Department": "اداره",
+                "Unit": "واحد",
+                "Group": "گروه"
+            };
+
+            var typeTitle =
+                typeTitles[type] || type;
+
+
+            var parent =
+                node.getAttribute(
+                    "data-parent"
+                )
+                || "-";
+
+
+            var count =
+                node.getAttribute(
+                    "data-count"
+                )
+                || "0";
+
+
+            document
+                .getElementById(
+                    "drawerName"
+                )
+                .innerText =
+                name;
+
+
+            document
+                .getElementById(
+                    "drawerJob"
+                )
+                .innerText =
+                job;
+
+
+            document
+                .getElementById(
+                    "drawerUnitSmall"
+                )
+                .innerText =
+                unit;
+
+
+            document
+                .getElementById(
+                    "drawerUnit"
+                )
+                .innerText =
+                unit;
+
+
+            document
+                .getElementById(
+                    "drawerType"
+                )
+                .innerText =
+                typeTitle;
+
+
+            document
+                .getElementById(
+                    "drawerParent"
+                )
+                .innerText =
+                parent;
+
+
+            document
+                .getElementById(
+                    "drawerCount"
+                )
+                .innerText =
+                count;
+
+
+            document
+                .getElementById(
+                    "btnEditUnit"
+                )
+                .setAttribute(
+                    "data-id",
+                    node.getAttribute(
+                        "data-id"
+                    )
+                );
+
+
+            document
+                .getElementById(
+                    "btnAddChild"
+                )
+                .setAttribute(
+                    "data-id",
+                    node.getAttribute(
+                        "data-id"
+                    )
+                );
+
+
+            document
+                .getElementById(
+                    "btnDeleteUnit"
+                )
+                .setAttribute(
+                    "data-id",
+                    node.getAttribute(
+                        "data-id"
+                    )
+                );
+
+
+            // -----------------------------------------
+            // PHOTO
+            // -----------------------------------------
+
+            var nodeImage =
+                node.querySelector(
+                    ".org-node-photo img"
+                );
+
+
+            var drawerImage =
+                document.getElementById(
+                    "drawerPhoto"
+                );
+
+
+            var drawerIcon =
+                document.getElementById(
+                    "drawerPhotoIcon"
+                );
+
+
+            if (
+                nodeImage &&
+                nodeImage.getAttribute(
+                    "src"
+                )
+            ) {
+
+                drawerImage.src =
+                    nodeImage.src;
+
+                drawerImage.style.display =
+                    "block";
+
+                drawerIcon.style.display =
+                    "none";
+
+            }
+            else {
+
+                drawerImage.removeAttribute(
+                    "src"
+                );
+
+                drawerImage.style.display =
+                    "none";
+
+                drawerIcon.style.display =
+                    "block";
+            }
+
+
+            document.body.classList.add(
+                "org-drawer-open"
+            );
+
+
+            overlay.classList.add(
+                "open"
+            );
+
+
+            drawer.classList.add(
+                "open"
+            );
+        }
+
+
+        // =====================================================
+        // MDR 1.3.8
+        // CLOSE DRAWER
+        // =====================================================
+
+        function closeDrawer() {
+
+            drawer.classList.remove(
+                "open"
+            );
+
+
+            overlay.classList.remove(
+                "open"
+            );
+
+
+            document.body.classList.remove(
+                "org-drawer-open"
+            );
+        }
+
+
+        // =====================================================
+        // MDR 1.3.3
+        // OPEN ADD UNIT MODAL
+        // =====================================================
+
+        function openAddOrganizationUnitModal() {
+
+            organizationModal.dataset.mode =
+                "add";
+            delete organizationModal.dataset.id;
+
+            document
+                .getElementById(
+                    "organizationModalTitle"
+                )
+                .textContent =
+                "افزودن واحد سازمانی";
+
+
+            document
+                .getElementById(
+                    "organizationModalSubtitle"
+                )
+                .textContent =
+                "اطلاعات واحد جدید را وارد کنید";
+
+
+            document
+                .getElementById(
+                    "OrganizationUnitName"
+                )
+                .value = "";
+
+
+            document
+                .getElementById(
+                    "OrganizationUnitType"
+                )
+                .value = "";
+
+
+            document
+                .getElementById(
+                    "OrganizationParentId"
+                )
+                .value = "";
+
+
+            document
+                .getElementById(
+                    "OrganizationManagerId"
+                )
+                .value = "";
+
+
+            document
+                .getElementById(
+                    "OrganizationSortOrder"
+                )
+                .value = "";
+
+
+            loadOrganizationFormData();
+
+
+            organizationModal.style.display =
+                "flex";
+
+
+            setTimeout(
+                function () {
+
+                    document
+                        .getElementById(
+                            "OrganizationUnitName"
+                        )
+                        .focus();
+
+                },
+                100
+            );
+        }
+
+
+        // =====================================================
+        // MDR 1.3.3.3
+        // LOAD DROPDOWNS
+        // =====================================================
+
+        function loadOrganizationFormData(callback) {
+
+            var parentSelect =
+                document.getElementById(
+                    "OrganizationParentId"
+                );
+
+
+            var managerSelect =
+                document.getElementById(
+                    "OrganizationManagerId"
+                );
+
+
+            fetch(
+                '@Url.Action("GetOrganizationFormData", "AG", new { area = "Mdr" })'
+            )
+            .then(function (response) {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "خطا در ارتباط با سرور"
+                    );
+                }
+
+                return response.json();
+
+            })
+            .then(function (result) {
+
+                if (!result.success) {
+
+                    console.error(
+                        "GetOrganizationFormData:",
+                        result.message
+                    );
+
+                    return;
+                }
+
+
+                parentSelect.innerHTML =
+                    '<option value="">بدون واحد بالادستی</option>';
+
+
+                result.units.forEach(
+                    function (unit) {
+
+                        var option =
+                            document.createElement(
+                                "option"
+                            );
+
+                        option.value =
+                            unit.id;
+
+                        option.textContent =
+                            unit.text;
+
+                        parentSelect.appendChild(
+                            option
+                        );
+
+                    }
+                );
+
+
+                managerSelect.innerHTML =
+                    '<option value="">انتخاب نشده</option>';
+
+
+                result.users.forEach(
+                    function (user) {
+
+                        var option =
+                            document.createElement(
+                                "option"
+                            );
+
+                        option.value =
+                            user.id;
+
+                        option.textContent =
+                            user.text;
+
+                        managerSelect.appendChild(
+                            option
+                        );
+
+                    }
+                );
+                if (
+                    typeof callback ===
+                    "function"
+                ) {
+                    callback();
+                }
+
+            })
+            .catch(function (error) {
+
+                console.error(
+                    "MDR Organization Form Error:",
+                    error
+                );
+
+            });
+        }
+
+
+        // =====================================================
+        // MDR 1.3.3.4
+        // SAVE UNIT
+        // =====================================================
+
+        btnSaveOrganizationUnit.addEventListener(
+            "click",
+            function () {
+
+                var unitName =
+                    document
+                        .getElementById(
+                            "OrganizationUnitName"
+                        )
+                        .value
+                        .trim();
+
+
+                var unitType =
+                    document
+                        .getElementById(
+                            "OrganizationUnitType"
+                        )
+                        .value;
+
+
+                var parentId =
+                    document
+                        .getElementById(
+                            "OrganizationParentId"
+                        )
+                        .value;
+
+
+                var managerUserId =
+                    document
+                        .getElementById(
+                            "OrganizationManagerId"
+                        )
+                        .value;
+
+
+                var sortOrder =
+                    document
+                        .getElementById(
+                            "OrganizationSortOrder"
+                        )
+                        .value;
+
+
+                if (!unitName) {
+
+                    showAlert(
+                        "warning",
+                        "توجه",
+                        "نام واحد سازمانی را وارد کنید."
+                    );
+
+                    document
+                        .getElementById(
+                            "OrganizationUnitName"
+                        )
+                        .focus();
+
+                    return;
+                }
+
+
+                if (!unitType) {
+
+                    showAlert(
+                        "warning",
+                        "توجه",
+                        "نوع واحد سازمانی را انتخاب کنید."
+                    );
+
+                    document
+                        .getElementById(
+                            "OrganizationUnitType"
+                        )
+                        .focus();
+
+                    return;
+                }
+
+
+                if (
+                    sortOrder &&
+                    parseInt(
+                        sortOrder,
+                        10
+                    ) < 1
+                ) {
+
+                    showAlert(
+                        "warning",
+                        "توجه",
+                        "ترتیب نمایش باید بزرگ‌تر از صفر باشد."
+                    );
+
+                    return;
+                }
+
+
+                btnSaveOrganizationUnit.disabled =
+                    true;
+
+                // =====================================================
+                // MDR 1.3.4.2
+                // تشخیص حالت افزودن یا ویرایش
+                // =====================================================
+
+                var modalMode =
+                    organizationModal.dataset.mode ||
+                    "add";
+
+                var organizationUnitId =
+                    organizationModal.dataset.id ||
+                    "";
+
+                var formData =
+                    new FormData();
+                if (
+                    modalMode === "edit"
+                ) {
+
+                    formData.append(
+                        "organizationUnitId",
+                        organizationUnitId
+                    );
+                }
+
+                formData.append(
+                    "unitName",
+                    unitName
+                );
+
+
+                formData.append(
+                    "unitType",
+                    unitType
+                );
+
+
+                if (parentId) {
+
+                    formData.append(
+                        "parentId",
+                        parentId
+                    );
+                }
+
+
+                if (managerUserId) {
+
+                    formData.append(
+                        "managerUserId",
+                        managerUserId
+                    );
+                }
+
+
+                if (sortOrder) {
+
+                    formData.append(
+                        "sortOrder",
+                        sortOrder
+                    );
+                }
+
+
+                var saveUrl =
+                    modalMode === "edit"
+                        ? '@Url.Action("UpdateOrganizationUnit", "AG", new { area = "Mdr" })'
+                        : '@Url.Action("SaveOrganizationUnit", "AG", new { area = "Mdr" })';
+
+
+                fetch(
+                    saveUrl,
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                )
+                .then(function (response) {
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            "خطا در ارتباط با سرور"
+                        );
+                    }
+
+                    return response.json();
+
+                })
+                .then(function (result) {
+
+                    if (!result.success) {
+
+                        showAlert(
+                            "error",
+                            "عملیات ناموفق",
+                            result.message
+                        );
+
+                        return;
+                    }
+
+
+                    showAlert(
+                        "success",
+                        "عملیات موفق",
+                        result.message
+                    );
+
+
+                    closeOrganizationUnitModal();
+
+
+                    console.log(
+                        modalMode === "edit"
+                            ? "MDR Organization Unit Updated:"
+                            : "MDR Organization Unit Created:",
+                        result.id
+                    );
+
+
+                    // =========================================
+                    // MDR 1.3.2.5
+                    // Refresh Chart بدون Reload صفحه
+                    // =========================================
+
+                    loadOrganizationChart();
+
+                })
+                .catch(function (error) {
+
+                    console.error(
+                        "MDR Save Organization Error:",
+                        error
+                    );
+
+
+                    showAlert(
+                        "error",
+                        "عملیات ناموفق",
+                        "در ثبت واحد سازمانی خطایی رخ داد."
+                    );
+
+                })
+                .finally(function () {
+
+                    btnSaveOrganizationUnit.disabled =
+                        false;
+
+                });
+
+            }
+        );
+
+
+        // =====================================================
+        // MODAL CLOSE
+        // =====================================================
+
+        function closeOrganizationUnitModal() {
+
+            organizationModal.style.display =
+                "none";
+        }
+
+
+        btnAddOrganizationUnit.addEventListener(
+            "click",
+            openAddOrganizationUnitModal
+        );
+
+
+        btnCloseOrganizationModal.addEventListener(
+            "click",
+            closeOrganizationUnitModal
+        );
+
+
+        btnCancelOrganizationUnit.addEventListener(
+            "click",
+            closeOrganizationUnitModal
+        );
+
+
+        organizationModal.addEventListener(
+            "click",
+            function (event) {
+
+                if (
+                    event.target ===
+                    organizationModal
+                ) {
+
+                    closeOrganizationUnitModal();
+                }
+
+            }
+        );
+
+
+        // =====================================================
+        // DRAWER CLOSE
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnCloseDrawer"
+            )
+            .addEventListener(
+                "click",
+                closeDrawer
+            );
+
+
+        overlay.addEventListener(
+            "click",
+            closeDrawer
+        );
+
+
+        // =====================================================
+        // ESCAPE
+        // =====================================================
+
+        document.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (
+                    event.key !==
+                    "Escape"
+                ) {
+
+                    return;
+                }
+
+
+                if (
+                    organizationModal.style.display ===
+                    "flex"
+                ) {
+
+                    closeOrganizationUnitModal();
+                }
+
+
+                closeDrawer();
+
+                clearBranchFocusImmediate();
+
+            }
+        );
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // ZOOM IN
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnZoomIn"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    currentZoom =
+                        Math.min(
+                            maxZoom,
+                            currentZoom +
+                            zoomStep
+                        );
+
+
+                    applyZoom();
+                }
+            );
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // ZOOM OUT
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnZoomOut"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    currentZoom =
+                        Math.max(
+                            minZoom,
+                            currentZoom -
+                            zoomStep
+                        );
+
+
+                    applyZoom();
+                }
+            );
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // FIT
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnFitTree"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    fitTreeToScreen();
+
+                }
+            );
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // SEARCH
+        // =====================================================
+
+        searchInput.addEventListener(
+            "keyup",
+            function () {
+
+                var value =
+                    this.value
+                        .trim()
+                        .toLowerCase();
+
+
+                nodes.forEach(
+                    function (node) {
+
+                        node.classList.remove(
+                            "search-found"
+                        );
+
+                    }
+                );
+
+
+                if (!value) {
+
+                    clearBranchFocusImmediate();
+
+                    return;
+                }
+
+
+                var found =
+                    null;
+
+
+                for (
+                    var i = 0;
+                    i < nodes.length;
+                    i++
+                ) {
+
+                    var node =
+                        nodes[i];
+
+
+                    var searchText =
+                        (
+                            (
+                                node.getAttribute(
+                                    "data-name"
+                                )
+                                || ""
+                            )
+                            +
+                            " "
+                            +
+                            (
+                                node.getAttribute(
+                                    "data-job"
+                                )
+                                || ""
+                            )
+                            +
+                            " "
+                            +
+                            (
+                                node.getAttribute(
+                                    "data-unit"
+                                )
+                                || ""
+                            )
+                        )
+                        .toLowerCase();
+
+
+                    if (
+                        searchText.indexOf(
+                            value
+                        ) !== -1
+                    ) {
+
+                        found =
+                            node;
+
+                        break;
+                    }
+                }
+
+
+                if (found) {
+
+                    found.classList.add(
+                        "search-found"
+                    );
+
+
+                    activateBranch(
+                        found
+                    );
+
+
+                    var nodeRect =
+                        found.getBoundingClientRect();
+
+
+                    var wrapperRect =
+                        chartWrapper.getBoundingClientRect();
+
+
+                    var desiredTop =
+                        chartWrapper.scrollTop
+                        +
+                        (
+                            nodeRect.top -
+                            wrapperRect.top
+                        )
+                        -
+                        (
+                            chartWrapper.clientHeight /
+                            2
+                        )
+                        +
+                        (
+                            nodeRect.height /
+                            2
+                        );
+
+
+                    chartWrapper.scrollTo({
+
+                        top:
+                            Math.max(
+                                0,
+                                desiredTop
+                            ),
+
+                        behavior:
+                            "smooth"
+
+                    });
+                }
+
+            }
+        );
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // RESET
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnResetTree"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    searchInput.value =
+                        "";
+
+
+                    nodes.forEach(
+                        function (node) {
+
+                            node.classList.remove(
+                                "selected"
+                            );
+
+                            node.classList.remove(
+                                "search-found"
+                            );
+
+                        }
+                    );
+
+
+                    selectedNode =
+                        null;
+
+
+                    clearBranchFocusImmediate();
+
+                    closeDrawer();
+
+                    fitTreeToScreen();
+
+                    chartWrapper.scrollTop =
+                        0;
+
+                }
+            );
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // FULLSCREEN
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnFullScreen"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    if (
+                        document.fullscreenElement
+                    ) {
+
+                        if (
+                            document.exitFullscreen
+                        ) {
+
+                            document.exitFullscreen();
+                        }
+
+                        return;
+                    }
+
+
+                    if (
+                        chartWrapper.requestFullscreen
+                    ) {
+
+                        chartWrapper.requestFullscreen();
+                    }
+
+                }
+            );
+
+
+        document.addEventListener(
+            "fullscreenchange",
+            function () {
+
+                setTimeout(
+                    function () {
+
+                        fitTreeToScreen();
+
+                    },
+                    100
+                );
+
+            }
+        );
+
+        // =====================================================
+        // MDR 1.3.4.1
+        // OPEN EDIT UNIT MODAL
+        // =====================================================
+
+        function openEditOrganizationUnitModal(
+            node
+        ) {
+
+            if (!node) {
+                return;
+            }
+
+
+            var organizationUnitId =
+                node.getAttribute(
+                    "data-id"
+                );
+
+            var unitName =
+                node.getAttribute(
+                    "data-unit"
+                ) || "";
+
+            var unitType =
+                node.getAttribute(
+                    "data-type"
+                ) || "";
+
+            var parentId =
+                node.getAttribute(
+                    "data-parent-id"
+                ) || "";
+
+            var managerUserId =
+                node.getAttribute(
+                    "data-manager-id"
+                ) || "";
+
+            var sortOrder =
+                node.getAttribute(
+                    "data-sort-order"
+                ) || "";
+
+
+            // -----------------------------------------
+            // حالت Modal = Edit
+            // -----------------------------------------
+
+            organizationModal.dataset.mode =
+                "edit";
+
+            organizationModal.dataset.id =
+                organizationUnitId;
+
+
+            document
+                .getElementById(
+                    "organizationModalTitle"
+                )
+                .textContent =
+                "ویرایش واحد سازمانی";
+
+
+            document
+                .getElementById(
+                    "organizationModalSubtitle"
+                )
+                .textContent =
+                "اطلاعات واحد سازمانی را ویرایش کنید";
+
+
+            // -----------------------------------------
+            // ابتدا Dropdownها بارگذاری شوند
+            // -----------------------------------------
+
+            loadOrganizationFormData(
+                function () {
+
+                    document
+                        .getElementById(
+                            "OrganizationUnitName"
+                        )
+                        .value =
+                        unitName;
+
+
+                    document
+                        .getElementById(
+                            "OrganizationUnitType"
+                        )
+                        .value =
+                        unitType;
+
+
+                    document
+                        .getElementById(
+                            "OrganizationParentId"
+                        )
+                        .value =
+                        parentId;
+
+
+                    document
+                        .getElementById(
+                            "OrganizationManagerId"
+                        )
+                        .value =
+                        managerUserId;
+
+
+                    document
+                        .getElementById(
+                            "OrganizationSortOrder"
+                        )
+                        .value =
+                        sortOrder;
+
+
+                    // ---------------------------------
+                    // واحد نمی‌تواند Parent خودش باشد
+                    // ---------------------------------
+
+                    var parentSelect =
+                        document.getElementById(
+                            "OrganizationParentId"
+                        );
+
+                    var selfOption =
+                        parentSelect.querySelector(
+                            'option[value="' +
+                            organizationUnitId +
+                            '"]'
+                        );
+
+                    if (selfOption) {
+                        selfOption.remove();
+                    }
+
+                }
+            );
+
+
+            organizationModal.style.display =
+                "flex";
+
+
+            closeDrawer();
+        }
+        // =====================================================
+        // MDR 1.3.4
+        // EDIT UNIT
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnEditUnit"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    if (!selectedNode) {
+                        return;
+                    }
+
+                    openEditOrganizationUnitModal(
+                        selectedNode
+                    );
+
+                }
+            );
+
+        // =====================================================
+        // MDR 1.3.5.1
+        // OPEN ADD CHILD UNIT MODAL
+        // =====================================================
+
+        function openAddChildOrganizationUnitModal(
+            node
+        ) {
+
+            if (!node) {
+                return;
+            }
+
+
+            var parentId =
+                node.getAttribute(
+                    "data-id"
+                );
+
+            var parentName =
+                node.getAttribute(
+                    "data-unit"
+                ) || "-";
+
+
+            // -----------------------------------------
+            // Modal در حالت افزودن
+            // -----------------------------------------
+
+            organizationModal.dataset.mode =
+                "add";
+
+            delete organizationModal.dataset.id;
+
+
+            document
+                .getElementById(
+                    "organizationModalTitle"
+                )
+                .textContent =
+                "افزودن زیرمجموعه";
+
+
+            document
+                .getElementById(
+                    "organizationModalSubtitle"
+                )
+                .textContent =
+                "افزودن واحد جدید زیرمجموعه «" +
+                parentName +
+                "»";
+
+
+            // -----------------------------------------
+            // پاک کردن اطلاعات فرم
+            // -----------------------------------------
+
+            document
+                .getElementById(
+                    "OrganizationUnitName"
+                )
+                .value = "";
+
+
+            document
+                .getElementById(
+                    "OrganizationUnitType"
+                )
+                .value = "";
+
+
+            document
+                .getElementById(
+                    "OrganizationManagerId"
+                )
+                .value = "";
+
+
+            document
+                .getElementById(
+                    "OrganizationSortOrder"
+                )
+                .value = "";
+
+
+            // -----------------------------------------
+            // بارگذاری Dropdownها
+            // سپس انتخاب خودکار Parent
+            // -----------------------------------------
+
+            loadOrganizationFormData(
+                function () {
+
+                    document
+                        .getElementById(
+                            "OrganizationParentId"
+                        )
+                        .value =
+                        parentId;
+
+                }
+            );
+
+
+            organizationModal.style.display =
+                "flex";
+
+
+            closeDrawer();
+
+
+            setTimeout(
+                function () {
+
+                    document
+                        .getElementById(
+                            "OrganizationUnitName"
+                        )
+                        .focus();
+
+                },
+                100
+            );
+        }
+        // =====================================================
+        // MDR 1.3.5
+        // ADD CHILD
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnAddChild"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    if (!selectedNode) {
+                        return;
+                    }
+
+
+                    openAddChildOrganizationUnitModal(
+                        selectedNode
+                    );
+
+                }
+            );
+
+
+        // =====================================================
+        // MDR 1.3.4.1
+        // DELETE UNIT
+        // =====================================================
+
+        document
+            .getElementById(
+                "btnDeleteUnit"
+            )
+            .addEventListener(
+                "click",
+                function () {
+
+                    if (!selectedNode) {
+                        return;
+                    }
+
+
+                    var btnDelete =
+                        this;
+
+                    var unitId =
+                        btnDelete.getAttribute(
+                            "data-id"
+                        );
+
+                    var unitName =
+                        document
+                            .getElementById(
+                                "drawerUnit"
+                            )
+                            .innerText
+                            .trim();
+
+
+                    // -----------------------------------------
+                    // تأیید حذف با Alert اختصاصی (هم‌سبک DashbordJalasat)
+                    // -----------------------------------------
+
+                    showAlert(
+                        "warning",
+                        "حذف واحد",
+                        "آیا از حذف واحد «" + unitName + "» مطمئن هستید؟ این عملیات قابل بازگشت نیست.",
+                        0
+                    );
+
+
+                    var confirmActions =
+                        document.createElement("div");
+
+                    confirmActions.className =
+                        "cancel-alert-actions unit-delete-actions";
+
+                    confirmActions.innerHTML =
+                        '<button type="button" ' +
+                        'class="global-alert-confirm action-confirm" ' +
+                        'id="ConfirmDeleteUnit" ' +
+                        'title="تأیید حذف">' +
+                        '<i class="bi bi-check-lg"></i>' +
+                        '</button>';
+
+                    confirmActions
+                        .querySelector("#ConfirmDeleteUnit")
+                        .setAttribute(
+                            "data-id",
+                            unitId
+                        );
+
+
+                    document
+                        .getElementById(
+                            "GlobalAlertWarning"
+                        )
+                        .appendChild(
+                            confirmActions
+                        );
+
+                }
+            );
+
+
+        // =====================================================
+        // MDR 1.3.4.1
+        // CONFIRM DELETE UNIT
+        // =====================================================
+
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                var confirmButton =
+                    event.target.closest(
+                        "#ConfirmDeleteUnit"
+                    );
+
+                if (!confirmButton) {
+                    return;
+                }
+
+
+                event.preventDefault();
+
+
+                var unitId =
+                    confirmButton.getAttribute(
+                        "data-id"
+                    );
+
+                var btnDelete =
+                    document.getElementById(
+                        "btnDeleteUnit"
+                    );
+
+
+                // بستن هشدار و حذف دکمه تأیید
+
+                var warningAlert =
+                    document.getElementById(
+                        "GlobalAlertWarning"
+                    );
+
+                warningAlert.classList.remove(
+                    "show"
+                );
+
+                warningAlert
+                    .querySelectorAll(".cancel-alert-actions")
+                    .forEach(function (actions) {
+                        actions.remove();
+                    });
+
+
+                    var formData =
+                        new FormData();
+
+                    formData.append(
+                        "organizationUnitId",
+                        unitId
+                    );
+
+
+                    btnDelete.disabled =
+                        true;
+
+
+                    fetch(
+                        '@Url.Action("DeleteOrganizationUnit", "AG", new { area = "Mdr" })',
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    )
+                    .then(function (response) {
+
+                        if (!response.ok) {
+
+                            throw new Error(
+                                "خطا در ارتباط با سرور"
+                            );
+                        }
+
+                        return response.json();
+
+                    })
+                    .then(function (result) {
+
+                        showAlert(
+                            result.success ? "success" : "error",
+                            result.success ? "عملیات موفق" : "عملیات ناموفق",
+                            result.message
+                        );
+
+
+                        if (!result.success) {
+                            return;
+                        }
+
+
+                        console.log(
+                            "MDR Organization Unit Deleted:",
+                            result.id
+                        );
+
+
+                        closeDrawer();
+
+                        loadOrganizationChart();
+
+                    })
+                    .catch(function (error) {
+
+                        console.error(
+                            "MDR Delete Organization Error:",
+                            error
+                        );
+
+
+                        showAlert(
+                            "error",
+                            "عملیات ناموفق",
+                            "در حذف واحد سازمانی خطایی رخ داد."
+                        );
+
+                    })
+                    .finally(function () {
+
+                        btnDelete.disabled =
+                            false;
+
+                    });
+
+                }
+            );
+
+
+        // =====================================================
+        // RESPONSIVE FIT
+        // =====================================================
+
+        var resizeTimer =
+            null;
+
+
+        window.addEventListener(
+            "resize",
+            function () {
+
+                clearTimeout(
+                    resizeTimer
+                );
+
+
+                resizeTimer =
+                    setTimeout(
+                        function () {
+
+                            fitTreeToScreen();
+
+                        },
+                        120
+                    );
+
+            }
+        );
+
+
+        // =====================================================
+        // MDR 1.3.2
+        // INITIAL LOAD
+        // مهم: بعد از تعریف تمام توابع اجرا می‌شود
+        // =====================================================
+
+        loadOrganizationChart();
+
+    }
+);
+
+</script>
+
+
+
+
+</body>
+</html>

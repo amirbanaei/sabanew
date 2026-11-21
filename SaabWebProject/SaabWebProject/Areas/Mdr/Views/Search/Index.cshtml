@@ -1,0 +1,165 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("srch.title");
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-search", MdrText.T("srch.title"), MdrText.T("srch.hdr.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-search"></i></div>
+            <div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("srch.go")</div></div>
+        </div>
+        <div class="glass-field-body">
+            <form id="sform" autocomplete="off">
+                <div class="row row-input-AG">
+                    <div class="col-xl-7 col-md-12">
+                        <label class="glass-label-ag">@MdrText.T("srch.title")</label>
+                        <input id="q" class="glass-input-ag" placeholder="@MdrText.T("srch.placeholder")" maxlength="100" />
+                    </div>
+                    <div class="col-xl-2 col-md-6 d-flex align-items-end">
+                        <button class="glass-btn-ag glass-btn-ag-primary" type="submit"><i class="bi bi-search"></i><p>@MdrText.T("srch.go")</p></button>
+                    </div>
+                    <div class="col-xl-3 col-md-6 d-flex align-items-end">
+                        <button class="glass-btn-ag" type="button" id="advbtn"><i class="bi bi-sliders"></i><p>@MdrText.T("srch.filters")</p></button>
+                    </div>
+                </div>
+            </form>
+            <div id="adv" class="row row-input-AG" hidden>
+                <div class="col-xl-3 col-md-6"><label class="glass-label-ag">@MdrText.T("srch.from")</label><input id="from" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" /></div>
+                <div class="col-xl-3 col-md-6"><label class="glass-label-ag">@MdrText.T("srch.to")</label><input id="to" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" /></div>
+            </div>
+            <div class="row row-input-AG">
+                <div class="col-xl-4 col-md-6">
+                    <label class="glass-label-ag">@MdrText.T("srch.saved")</label>
+                    <select id="savedsel" class="glass-select-search"><option value="">@MdrText.T("srch.saved")</option></select>
+                </div>
+                <div class="col-xl-2 col-md-3 d-flex align-items-end">
+                    <button class="glass-btn-ag" type="button" id="savebtn"><i class="bi bi-bookmark-plus"></i><p>@MdrText.T("srch.save")</p></button>
+                </div>
+                <div class="col-xl-2 col-md-3 d-flex align-items-end">
+                    <button class="glass-btn-ag glass-btn-text-reject" type="button" id="delsaved" hidden><i class="bi bi-trash"></i><p>@MdrText.T("wf.act.remove")</p></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="msg" class="mdr-msg" hidden></div>
+    <div id="facets" class="mdr-facets" hidden></div>
+    <div id="state" class="mdr-state">@MdrText.T("srch.hint")</div>
+    <div id="results"></div>
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var L = @Html.Raw(Json.Encode(new {
+        none = MdrText.T("srch.none"), error = MdrText.T("wf.error"), loading = MdrText.T("wf.loading"), hint = MdrText.T("srch.hint"), more = MdrText.T("srch.more"), all = MdrText.T("srch.all"),
+        capped = MdrText.T("srch.capped"), skipped = MdrText.T("srch.skipped"), promptName = MdrText.T("srch.prompt.name"), confirmDelete = MdrText.T("srch.confirm.delete"),
+        src = new { req = MdrText.T("srch.src.req"), tsk = MdrText.T("srch.src.tsk"), ltr = MdrText.T("srch.src.ltr"), doc = MdrText.T("srch.src.doc"), wf = MdrText.T("srch.src.wf"), ctr = MdrText.T("srch.src.ctr") } }));
+    var u = @Html.Raw(Json.Encode(new {
+        run = Url.Action("Run", "Search", new { area = "Mdr" }), saved = Url.Action("SavedQueries", "Search", new { area = "Mdr" }),
+        save = Url.Action("SaveQuery", "Search", new { area = "Mdr" }), del = Url.Action("DeleteQuery", "Search", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var KEYS = ["req", "tsk", "ltr", "doc", "wf", "ctr"], source = "", saved = [], loaded = {}, words = [];
+
+    function msg(t, bad) { var m = $("msg"); m.hidden = !t; m.textContent = t || ""; m.className = "mdr-msg" + (bad ? " is-bad" : ""); }
+    function norm(s) { return s.replace(/[۰-۹]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x06F0 + 48); }).replace(/[٠-٩]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x0660 + 48); }); }
+    function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+    // برجسته‌سازی روی متن escape‌شده (ی/ي و ک/ك هم‌ارز)
+    function hl(text) {
+        var out = E(text || "");
+        words.forEach(function (w) {
+            var re = esc(E(w)).replace(/ی|ي/g, "[یي]").replace(/ک|ك/g, "[کك]");
+            out = out.replace(new RegExp(re, "gi"), function (m) { return "<mark>" + m + "</mark>"; });
+        });
+        return out;
+    }
+
+    function hitHtml(h) {
+        return '<li class="mdr-hit"><a href="' + E(h.Url) + '"><b>' + hl(h.Title) + "</b></a>" + (h.Status ? ' <span class="mdr-badge">' + E(h.Status) + "</span>" : "") +
+            (h.Snippet ? "<p>" + hl(h.Snippet) + "</p>" : "") + "<small>" + E(h.Date || "") + "</small></li>";
+    }
+
+    function currentQuery() {
+        return "?q=" + encodeURIComponent($("q").value) + "&from=" + encodeURIComponent(mdr.jd.get("from")) + "&to=" + encodeURIComponent(mdr.jd.get("to"));
+    }
+    function writeHash() { history.replaceState(null, "", "#q=" + encodeURIComponent($("q").value) + (source ? "&src=" + source : "") + (mdr.jd.get("from") ? "&from=" + mdr.jd.get("from") : "") + (mdr.jd.get("to") ? "&to=" + mdr.jd.get("to") : "")); }
+
+    function render(data) {
+        var html = "", facets = '<button class="mdr-btn' + (source === "" ? " mdr-primary" : "") + '" data-src="">' + E(L.all) + "</button>", any = false;
+        data.sources.forEach(function (s) {
+            facets += '<button class="mdr-btn' + (source === s.Key ? " mdr-primary" : "") + '" data-src="' + s.Key + '">' + E(L.src[s.Key]) + " (" + s.Total + (s.Capped ? "+" : "") + ")</button>";
+            if (!s.Total) return; any = true;
+            loaded[s.Key] = s.Items.length;
+            html += '<section class="mdr-group" data-g="' + s.Key + '"><h3>' + E(L.src[s.Key]) + " <small>" + s.Total + (s.Capped ? "+" : "") + '</small></h3><ul class="mdr-hits">' + s.Items.map(hitHtml).join("") + "</ul>" +
+                (s.Total > s.Items.length ? '<button class="mdr-btn" data-more="' + s.Key + '" data-total="' + s.Total + '">' + E(L.more) + "</button>" : "") + "</section>";
+        });
+        $("facets").innerHTML = facets; $("facets").hidden = false;
+        $("results").innerHTML = html;
+        $("state").hidden = any; if (!any) $("state").textContent = L.none;
+        var notes = []; if (data.capped) notes.push(L.capped);
+        if (data.skipped && data.skipped.length) notes.push(L.skipped + " " + data.skipped.map(function (k) { return L.src[k]; }).join("، "));
+        msg(notes.join(" "), false);
+    }
+
+    function run() {
+        var q = $("q").value.trim(); words = norm(q).split(/[\s‌]+/).filter(Boolean);
+        if (!q) { msg(""); $("results").innerHTML = ""; $("facets").hidden = true; $("state").hidden = false; $("state").textContent = L.hint; return; }
+        $("state").hidden = false; $("state").textContent = L.loading; writeHash();
+        mdr.get(u.run + currentQuery() + "&source=" + source + "&take=" + (source ? 20 : 10)).then(function (d) {
+            if (!d.success) { $("results").innerHTML = ""; $("facets").hidden = true; $("state").hidden = true; msg(d.message || L.error, true); return; }
+            render(d);
+        }).catch(function () { $("state").hidden = false; $("state").textContent = L.error; });
+    }
+
+    $("sform").addEventListener("submit", function (e) { e.preventDefault(); source = ""; run(); });
+    $("advbtn").onclick = function () { $("adv").hidden = !$("adv").hidden; };
+    $("facets").addEventListener("click", function (e) { var b = e.target.closest("button[data-src]"); if (!b) return; source = b.getAttribute("data-src"); run(); });
+    $("results").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-more]"); if (!b) return;
+        var key = b.getAttribute("data-more"), skip = loaded[key] || 0;
+        mdr.get(u.run + currentQuery() + "&source=" + key + "&skip=" + skip + "&take=20").then(function (d) {
+            if (!d.success) { msg(d.message || L.error, true); return; }
+            var s = d.sources[0]; if (!s) return; loaded[key] = skip + s.Items.length;
+            var ul = document.querySelector('[data-g="' + key + '"] .mdr-hits'); ul.insertAdjacentHTML("beforeend", s.Items.map(hitHtml).join(""));
+            if (loaded[key] >= s.Total) b.remove();
+        });
+    });
+
+    // ---- جستجوهای ذخیره‌شده ----
+    function loadSaved(select) {
+        mdr.get(u.saved).then(function (d) {
+            saved = d.items || [];
+            $("savedsel").innerHTML = '<option value="">' + E(@Html.Raw(Json.Encode(MdrText.T("srch.saved")))) + "</option>" + saved.map(function (s) { return '<option value="' + s.SearchID + '"' + (String(s.SearchID) === String(select) ? " selected" : "") + ">" + E(s.Name) + "</option>"; }).join("");
+            $("delsaved").hidden = !$("savedsel").value;
+        });
+    }
+    $("savedsel").onchange = function () {
+        var s = saved.filter(function (x) { return String(x.SearchID) === $("savedsel").value; })[0]; $("delsaved").hidden = !s; if (!s) return;
+        $("q").value = s.QueryText; mdr.jd.set("from", s.DateFrom || ""); mdr.jd.set("to", s.DateTo || ""); source = s.Source || ""; if (s.DateFrom || s.DateTo) $("adv").hidden = false; run();
+    };
+    $("savebtn").onclick = function () {
+        var n = prompt(L.promptName); if (!n) return;
+        mdr.post(u.save, { name: n, q: $("q").value, source: source, from: mdr.jd.get("from"), to: mdr.jd.get("to") }).then(function (r) { if (!r.success) msg(r.message || L.error, true); else loadSaved(r.id); });
+    };
+    $("delsaved").onclick = function () {
+        if (!confirm(L.confirmDelete)) return;
+        mdr.post(u.del, { id: $("savedsel").value }).then(function (r) { if (!r.success) msg(r.message || L.error, true); else loadSaved(""); });
+    };
+
+    var h = location.hash.replace(/^#/, ""), p = {}; h.split("&").forEach(function (kv) { var i = kv.indexOf("="); if (i > 0) p[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); });
+    loadSaved("");
+    if (p.q) { $("q").value = p.q; source = p.src || ""; mdr.jd.set("from", p.from || ""); mdr.jd.set("to", p.to || ""); if (p.from || p.to) $("adv").hidden = false; run(); }
+    else $("q").focus();
+})();
+</script>
+}

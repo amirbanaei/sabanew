@@ -1,0 +1,9 @@
+﻿@model string[]
+@* MDR | هدر صفحه به سبک AG (هم‌سبک AuditLogs). Model = { آیکن Bootstrap، عنوان، زیرعنوان } *@
+<div class="mdr-ag-header">
+    <div class="mdr-ag-header-icon"><i class="bi @Model[0]"></i></div>
+    <div class="mdr-ag-header-text">
+        <h4>@Model[1]</h4>
+        <p>@Model[2]</p>
+    </div>
+</div>

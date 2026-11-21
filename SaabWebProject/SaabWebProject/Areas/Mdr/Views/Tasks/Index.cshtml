@@ -1,0 +1,308 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("tsk.title");
+    bool canInsert = ViewBag.CanInsert == true;
+    bool isManager = ViewBag.IsManager == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE (نمونه‌ی آزمایشی؛ منتظر تأیید)
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+    <link href="@Url.Content("~/Areas/Mdr/Content/mdr-ag.css")" rel="stylesheet" />
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+
+    @* ---------- هدر ---------- *@
+    <div class="mdr-ag-header">
+        <div class="mdr-ag-header-icon"><i class="bi bi-check2-square"></i></div>
+        <div class="mdr-ag-header-text">
+            <h4>@MdrText.T("tsk.title")</h4>
+            <p>@MdrText.T("tsk.hdr.sub")</p>
+        </div>
+    </div>
+
+    @* ---------- آمار ---------- *@
+    <div class="mdr-ag-stats">
+        <div class="mdr-ag-stat mdr-ag-stat-info"><div class="mdr-ag-stat-icon"><i class="bi bi-list-task"></i></div><div><div class="mdr-ag-stat-value" id="st-total">-</div><div class="mdr-ag-stat-label">@MdrText.T("tsk.stat.total")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-info"><div class="mdr-ag-stat-icon"><i class="bi bi-circle"></i></div><div><div class="mdr-ag-stat-value" id="st-todo">-</div><div class="mdr-ag-stat-label">@MdrText.T("tsk.st.Todo")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-warning"><div class="mdr-ag-stat-icon"><i class="bi bi-play-circle"></i></div><div><div class="mdr-ag-stat-value" id="st-prog">-</div><div class="mdr-ag-stat-label">@MdrText.T("tsk.st.InProgress")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-danger"><div class="mdr-ag-stat-icon"><i class="bi bi-slash-circle"></i></div><div><div class="mdr-ag-stat-value" id="st-block">-</div><div class="mdr-ag-stat-label">@MdrText.T("tsk.st.Blocked")</div></div></div>
+        <div class="mdr-ag-stat mdr-ag-stat-danger"><div class="mdr-ag-stat-icon"><i class="bi bi-alarm"></i></div><div><div class="mdr-ag-stat-value" id="st-over">-</div><div class="mdr-ag-stat-label">@MdrText.T("tsk.stat.overdue")</div></div></div>
+    </div>
+
+    @* ---------- فیلترها ---------- *@
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading">
+                <div class="glass-field-title">@MdrText.T("tsk.filters")</div>
+                <div class="glass-field-subtitle">@MdrText.T("tsk.filters.sub")</div>
+            </div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-2 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("tsk.f.scope")</label>
+                    <select id="scope" class="glass-select-search">
+                        <option value="mine">@MdrText.T("tsk.scope.mine")</option>
+                        @if (isManager) { <option value="all">@MdrText.T("tsk.scope.all")</option> }
+                    </select>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("tsk.f.status")</label>
+                    <select id="status" class="glass-select-search">
+                        <option value="open">@MdrText.T("tsk.f.open")</option>
+                        <option value="">@MdrText.T("tsk.f.all")</option>
+                        <option value="Todo">@MdrText.T("tsk.st.Todo")</option><option value="InProgress">@MdrText.T("tsk.st.InProgress")</option>
+                        <option value="Blocked">@MdrText.T("tsk.st.Blocked")</option><option value="Done">@MdrText.T("tsk.st.Done")</option>
+                        <option value="Cancelled">@MdrText.T("tsk.st.Cancelled")</option>
+                    </select>
+                </div>
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("tsk.f.q")</label>
+                    <input id="q" class="glass-input-ag" placeholder="@MdrText.T("tsk.search")" autocomplete="off" />
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <div class="box-glass-checkbox-ag">
+                        <input id="overdue" type="checkbox" class="glass-checkbox-ag" />
+                        <label for="overdue" class="glass-label-ag" style="margin-top:0">@MdrText.T("tsk.f.overdue")</label>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-md-8 d-flex align-items-end gap-2" style="justify-content:flex-start">
+                    <button type="button" class="glass-btn-ag is-on" id="vb"><i class="bi bi-kanban"></i><p>@MdrText.T("tsk.view.board")</p></button>
+                    <button type="button" class="glass-btn-ag" id="vl"><i class="bi bi-table"></i><p>@MdrText.T("tsk.view.list")</p></button>
+                    @if (canInsert)
+                    {
+                        <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newtask"><i class="bi bi-plus-lg"></i><p>@MdrText.T("tsk.new")</p></button>
+                    }
+                </div>
+            </div>
+            <div class="row row-btn-AG row-ltr-AG">
+                <div class="col-xl-2 col-md-4">
+                    <a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("denied.back")</p></a>
+                </div>
+                <div class="col-xl-2 col-md-4">
+                    <button type="button" class="glass-btn-ag" id="refresh"><i class="bi bi-arrow-repeat"></i><p>@MdrText.T("tsk.act.refresh")</p></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+
+    @* ---------- برد ---------- *@
+    <div id="board" class="row" hidden></div>
+
+    @* ---------- فهرست ---------- *@
+    <div id="listwrap" class="glass-field-ag" hidden>
+        <div class="glass-field-body">
+            <table class="glass-table-ag">
+                <thead><tr>
+                    <th>@MdrText.T("tsk.f.title")</th><th>@MdrText.T("wf.col.status")</th><th>@MdrText.T("tsk.f.priority")</th><th>@MdrText.T("tsk.f.assignee")</th><th>@MdrText.T("tsk.f.due")</th>
+                </tr></thead>
+                <tbody id="list" class="scrollbar"></tbody>
+            </table>
+        </div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-check2-square", MdrText.T("tsk.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canInsert = @(canInsert ? "true" : "false"), isManager = @(isManager ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), empty = MdrText.T("wf.empty"), error = MdrText.T("wf.error"), overdue = MdrText.T("tsk.overdue"),
+        st = new { Todo = MdrText.T("tsk.st.Todo"), InProgress = MdrText.T("tsk.st.InProgress"), Blocked = MdrText.T("tsk.st.Blocked"), Done = MdrText.T("tsk.st.Done"), Cancelled = MdrText.T("tsk.st.Cancelled") },
+        pr = new { Low = MdrText.T("tsk.pr.Low"), Normal = MdrText.T("tsk.pr.Normal"), High = MdrText.T("tsk.pr.High"), Urgent = MdrText.T("tsk.pr.Urgent") },
+        f = new { title = MdrText.T("tsk.f.title"), desc = MdrText.T("tsk.f.desc"), assignee = MdrText.T("tsk.f.assignee"), due = MdrText.T("tsk.f.due"),
+                  priority = MdrText.T("tsk.f.priority"), creator = MdrText.T("tsk.f.creator"), result = MdrText.T("tsk.f.result"),
+                  blocked = MdrText.T("tsk.f.blocked"), source = MdrText.T("tsk.f.source"), searchUser = MdrText.T("tsk.f.searchuser") },
+        act = new { Start = MdrText.T("tsk.act.Start"), Complete = MdrText.T("tsk.act.Complete"), Block = MdrText.T("tsk.act.Block"), Unblock = MdrText.T("tsk.act.Unblock"),
+                    Cancel = MdrText.T("tsk.act.Cancel"), Delegate = MdrText.T("tsk.act.Delegate"), Save = MdrText.T("tsk.act.Save"),
+                    AddSub = MdrText.T("tsk.act.AddSub"), Comment = MdrText.T("tsk.act.Comment") },
+        prompt = new { Complete = MdrText.T("tsk.prompt.Complete"), Block = MdrText.T("tsk.prompt.Block"), Cancel = MdrText.T("tsk.prompt.Cancel") },
+        confirmCancel = MdrText.T("tsk.confirm.Cancel"), sub = MdrText.T("tsk.sub"), comments = MdrText.T("tsk.comments"), history = MdrText.T("tsk.history"),
+        newTask = MdrText.T("tsk.new"), info = MdrText.T("ltr.sec.info") }));
+    var u = @Html.Raw(Json.Encode(new {
+        list = Url.Action("GetList", "Tasks", new { area = "Mdr" }), get = Url.Action("GetTask", "Tasks", new { area = "Mdr" }),
+        save = Url.Action("Save", "Tasks", new { area = "Mdr" }), act = Url.Action("Act", "Tasks", new { area = "Mdr" }),
+        comment = Url.Action("Comment", "Tasks", new { area = "Mdr" }), users = Url.Action("SearchUsers", "Tasks", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+    var view = "board", COLS = ["Todo", "InProgress", "Blocked", "Done"], cur = null;
+    var COL_ICON = { Todo: "bi-circle", InProgress: "bi-play-circle", Blocked: "bi-slash-circle", Done: "bi-check-circle" };
+    var ST_CLS = { Todo: "glass-status-info", InProgress: "glass-status-warning", Blocked: "glass-status-danger", Done: "glass-status-success", Cancelled: "glass-status-info" };
+    var PR_CLS = { Low: "glass-status-info", Normal: "glass-status-info", High: "glass-status-warning", Urgent: "glass-status-danger" };
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.textContent = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + (attrs || "") + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+
+    function filters() {
+        return "?scope=" + $("scope").value + "&status=" + encodeURIComponent($("status").value) + "&q=" + encodeURIComponent($("q").value) + "&overdue=" + $("overdue").checked;
+    }
+
+    function card(t) {
+        return '<article class="mdr-ag-card' + (t.Overdue ? " is-overdue" : "") + '" data-id="' + t.TaskID + '"><b>' + E(t.Title) + "</b><small>" + E(t.Assignee || "—") +
+            (t.DueAt ? " · " + E(t.DueAt) : "") + '</small><div><span class="mdr-ag-badge ' + (PR_CLS[t.Priority] || "") + '">' + E(L.pr[t.Priority] || t.Priority) + "</span>" +
+            (t.Overdue ? '<span class="mdr-ag-badge glass-status-danger">' + E(L.overdue) + "</span>" : "") + "</div></article>";
+    }
+
+    function stats(items) {
+        var c = function (s) { return items.filter(function (t) { return t.Status === s; }).length; };
+        $("st-total").textContent = items.length; $("st-todo").textContent = c("Todo"); $("st-prog").textContent = c("InProgress");
+        $("st-block").textContent = c("Blocked"); $("st-over").textContent = items.filter(function (t) { return t.Overdue; }).length;
+    }
+
+    function load() {
+        $("state").hidden = false; $("state").textContent = L.loading; $("board").hidden = true; $("listwrap").hidden = true;
+        mdr.get(u.list + filters()).then(function (d) {
+            if (!d.success) { $("state").textContent = L.error; return; }
+            stats(d.items);
+            if (!d.items.length) { $("state").textContent = L.empty; return; }
+            $("state").hidden = true;
+            if (view === "board") {
+                $("board").hidden = false;
+                $("board").innerHTML = COLS.map(function (c) {
+                    var items = d.items.filter(function (t) { return t.Status === c || (c === "Done" && t.Status === "Cancelled"); });
+                    return '<div class="col-xl-3 col-md-6"><div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + COL_ICON[c] + '"></i></div>' +
+                        '<div class="glass-field-heading"><div class="glass-field-title">' + E(L.st[c]) + " (" + items.length + ')</div></div></div><div class="mdr-ag-col-body scrollbar">' +
+                        (items.length ? items.map(card).join("") : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>") + "</div></div></div>";
+                }).join("");
+            } else {
+                $("listwrap").hidden = false;
+                $("list").innerHTML = d.items.map(function (t) {
+                    return '<tr class="' + (t.Overdue ? "is-overdue" : "") + '" data-id="' + t.TaskID + '"><td>' + E(t.Title) + '</td><td><span class="meeting-status ' + (ST_CLS[t.Status] || "") + '">' + E(L.st[t.Status]) +
+                        '</span></td><td><span class="meeting-status ' + (PR_CLS[t.Priority] || "") + '">' + E(L.pr[t.Priority]) + "</span></td><td>" + E(t.Assignee || "—") + "</td><td>" + E(t.DueAt || "") + "</td></tr>";
+                }).join("");
+            }
+        }).catch(function () { $("state").hidden = false; $("state").textContent = L.error; });
+    }
+
+    // ---- انتخاب مسئول (جستجوی نام) ----
+    function picker(id, onPick) {
+        var inp = $(id + "-q"), box = $(id + "-r"), timer;
+        inp.oninput = function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                if (inp.value.trim().length < 2) { box.innerHTML = ""; return; }
+                mdr.get(u.users + "?q=" + encodeURIComponent(inp.value.trim())).then(function (d) {
+                    box.innerHTML = d.items.map(function (x) { return '<button type="button" class="glass-btn-ag" data-u="' + x.Id + '">' + E(x.Name) + "</button>"; }).join("");
+                });
+            }, 300);
+        };
+        box.onclick = function (e) {
+            var b = e.target.closest("button[data-u]"); if (!b) return;
+            onPick(+b.getAttribute("data-u"), b.textContent); box.innerHTML = ""; inp.value = b.textContent;
+        };
+    }
+
+    // ---- فرم ایجاد / ویرایش ----
+    function form(t, parentId) {
+        var isNew = !t, v = t || { Title: "", Description: "", Priority: "Normal", AssigneeUserID: null, DueAt: "", Assignee: "" };
+        var pick = v.AssigneeUserID;
+        $("mtitle").textContent = isNew ? (parentId ? L.act.AddSub : L.newTask) : L.f.title; $("msub").textContent = "";
+        $("dbody").innerHTML =
+            '<div class="glass-field-ag"><div class="glass-field-body"><div class="row row-input-AG">' +
+            '<div class="col-xl-8 col-md-12"><label class="glass-label-ag">' + E(L.f.title) + ' *</label><input id="f-title" class="glass-input-ag" maxlength="300" value="' + E(v.Title) + '"></div>' +
+            '<div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.priority) + '</label><select id="f-pr" class="glass-select-search">' +
+            ["Low", "Normal", "High", "Urgent"].map(function (p) { return '<option value="' + p + '"' + (p === v.Priority ? " selected" : "") + ">" + E(L.pr[p]) + "</option>"; }).join("") + "</select></div></div>" +
+            '<div class="row row-input-AG"><div class="col-xl-12"><label class="glass-label-ag">' + E(L.f.desc) + '</label><textarea id="f-desc" class="glass-textarea-ag" rows="3" maxlength="4000" style="height:5rem">' + E(v.Description || "") + "</textarea></div></div>" +
+            '<div class="row row-input-AG"><div class="col-xl-3 col-md-6"><label class="glass-label-ag">' + E(L.f.due) + '</label>' + mdr.jd.html("f-due", v.DueAt) + '</div><div class="col-xl-2 col-md-6"><label class="glass-label-ag">' + mdr.jd.L.time + '</label>' + mdr.jd.timeHtml("f-due-t", v.DueAt) + '</div>' +
+            '<div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.assignee) + '</label><input id="pk-q" class="glass-input-ag" placeholder="' + E(L.f.searchUser) + '" value="' + E(v.Assignee || "") + '"><div id="pk-r" class="mdr-ag-picks"></div></div></div>' +
+            '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.Save, 'id="f-save"') + "</div></div></div>";
+        picker("pk", function (id) { pick = id; });
+        $("pk-q").addEventListener("input", function () { if (!this.value.trim()) pick = null; });
+        $("f-save").onclick = function () {
+            mdr.post(u.save, { id: isNew ? 0 : t.TaskID, parentId: parentId || null, title: $("f-title").value, description: $("f-desc").value, priority: $("f-pr").value,
+                assigneeUserId: pick, dueAt: mdr.jd.getDT("f-due", "f-due-t", "23:59"), rowVer: isNew ? null : t.RowVer }).then(function (r) {
+                if (!r.success) { toast(r.message || L.error, true); return; }
+                toast(""); load(); open(r.id);
+            });
+        };
+        toast(""); showModal(true);
+    }
+
+    function field(icon, title, bodyHtml) {
+        return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) +
+            '</div></div></div><div class="glass-field-body">' + bodyHtml + "</div></div>";
+    }
+
+    // ---- جزئیات ----
+    function open(id) {
+        mdr.get(u.get + "?id=" + id).then(function (d) {
+            showModal(true);
+            if (!d.success) { toast(d.message || L.error, true); $("dbody").innerHTML = ""; return; }
+            cur = d.task; var t = d.task; location.hash = "id=" + id; toast("");
+            $("mtitle").textContent = t.Title; $("msub").textContent = (t.Creator || "") + (t.CreatedAt ? " · " + t.CreatedAt : "");
+
+            var acts = "";
+            if (t.CanWork && t.Status === "Todo") acts += btn("glass-btn-ag-primary", "bi-play-fill", L.act.Start, 'data-a="Start"');
+            if (t.CanWork && (t.Status === "Todo" || t.Status === "InProgress")) acts += btn("glass-btn-ag-primary", "bi-check2-circle", L.act.Complete, 'data-a="Complete"') + btn("", "bi-slash-circle", L.act.Block, 'data-a="Block"');
+            if (t.CanWork && t.Status === "Blocked") acts += btn("", "bi-unlock", L.act.Unblock, 'data-a="Unblock"');
+            if (t.CanEdit) acts += btn("", "bi-pencil", L.act.Save + "…", 'data-a="Edit"');
+            if (canInsert && (t.CanEdit || t.CanWork)) acts += btn("", "bi-diagram-2", L.act.AddSub, 'data-a="AddSub"');
+            if (t.CanCancel) acts += btn("glass-btn-text-reject", "bi-x-circle", L.act.Cancel, 'data-a="Cancel"');
+
+            var info = '<div style="margin-bottom:.6rem"><span class="mdr-ag-badge ' + (ST_CLS[t.Status] || "") + '">' + E(L.st[t.Status]) + '</span><span class="mdr-ag-badge ' + (PR_CLS[t.Priority] || "") + '">' + E(L.pr[t.Priority]) + "</span></div>" +
+                (t.Description ? '<div class="mdr-ag-text">' + E(t.Description) + "</div>" : "") + '<dl class="mdr-ag-dl" style="margin-top:.6rem"><dt>' + E(L.f.assignee) + "</dt><dd>" + E(t.Assignee || "—") + "</dd><dt>" + E(L.f.due) + "</dt><dd>" +
+                E((t.DueAt || "—").replace("T", " ")) + "</dd>" + (t.BlockedReason ? "<dt>" + E(L.f.blocked) + "</dt><dd>" + E(t.BlockedReason) + "</dd>" : "") + (t.ResultText ? "<dt>" + E(L.f.result) + "</dt><dd>" + E(t.ResultText) + "</dd>" : "") +
+                (t.SourceUrl ? "<dt>" + E(L.f.source) + '</dt><dd><a href="' + E(t.SourceUrl) + '">' + E(t.SourceType || t.SourceUrl) + "</a></dd>" : "") + "</dl>" +
+                (acts ? '<div class="row row-btn-AG row-ltr-AG">' + acts + "</div>" : "") +
+                (t.CanDelegate ? '<div class="row row-input-AG" style="margin-top:.8rem"><div class="col-xl-12"><label class="glass-label-ag">' + E(L.act.Delegate) + '</label><input id="dl-q" class="glass-input-ag" placeholder="' + E(L.f.searchUser) + '"><div id="dl-r" class="mdr-ag-picks"></div></div></div>' : "");
+
+            var subs = d.subtasks.length ? '<ul class="mdr-ag-list">' + d.subtasks.map(function (s) {
+                return '<li><a href="#id=' + s.TaskID + '" data-sub="' + s.TaskID + '">' + E(s.Title) + '</a> <span class="mdr-ag-badge ' + (ST_CLS[s.Status] || "") + '">' + E(L.st[s.Status]) + "</span>" + (s.Assignee ? " <small>" + E(s.Assignee) + "</small>" : "") + "</li>"; }).join("") + "</ul>"
+                : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+
+            var comments = (d.comments.length ? '<ul class="mdr-ag-list">' + d.comments.map(function (c) { return "<li><b>" + E(c.User || "") + "</b> <small>" + E(c.CreatedAt) + "</small><br>" + E(c.Body) + "</li>"; }).join("") + "</ul>" : "") +
+                '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-xl-10 col-md-9"><textarea id="cm" class="glass-textarea-ag" rows="2" maxlength="1000" style="height:3rem"></textarea></div>' +
+                '<div class="col-xl-2 col-md-3 d-flex align-items-end"><button type="button" class="glass-btn-ag" id="cm-send"><i class="bi bi-chat-dots"></i><p>' + E(L.act.Comment) + "</p></button></div></div>";
+
+            var hist = '<div class="meeting-timeline" style="max-height:16rem">' + d.history.map(function (h) {
+                return '<div class="timeline-item completed"><div class="timeline-icon"></div><div class="timeline-content"><div class="timeline-title">' + E(h.ActionKey) + " — " + E(h.Actor || "") +
+                    '</div><div class="timeline-description">' + E(h.CreatedAt) + (h.Detail ? " — " + E(h.Detail) : "") + " · " + E(h.CorrelationID) + "</div></div></div>"; }).join("") + "</div>";
+
+            $("dbody").innerHTML = field("bi-info-circle", L.info, info) + '<div class="glass-field-ag"><div class="glass-field-body"><div id="att"></div></div></div>' + field("bi-diagram-2", L.sub, subs) + field("bi-chat-left-text", L.comments, comments) + field("bi-clock-history", L.history, hist);
+            mdr.attach($("att"), "MDR_Tasks", t.TaskID);
+            if (t.CanDelegate) picker("dl", function (uid) {
+                mdr.post(u.act, { id: t.TaskID, action: "Delegate", text: uid, rowVer: t.RowVer }).then(function (r) { if (!r.success) toast(r.message || L.error, true); else { load(); open(t.TaskID); } });
+            });
+            $("cm-send").onclick = function () {
+                mdr.post(u.comment, { id: t.TaskID, body: $("cm").value }).then(function (r) { if (!r.success) toast(r.message || L.error, true); else open(t.TaskID); });
+            };
+        });
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        var s = e.target.closest("a[data-sub]"); if (s) { e.preventDefault(); open(s.getAttribute("data-sub")); return; }
+        var b = e.target.closest("button[data-a]"); if (!b || !cur) return;
+        var a = b.getAttribute("data-a");
+        if (a === "Edit") return form(cur);
+        if (a === "AddSub") return form(null, cur.TaskID);
+        var text = null;
+        if (a === "Cancel" && !confirm(L.confirmCancel)) return;
+        if (a === "Complete" || a === "Block" || a === "Cancel") { text = prompt(L.prompt[a]); if (!text) return; }
+        mdr.post(u.act, { id: cur.TaskID, action: a, text: text, rowVer: cur.RowVer }).then(function (r) {
+            if (!r.success) { toast(r.message || L.error, true); return; }
+            load(); open(cur.TaskID);
+        });
+    });
+
+    function bindOpen(e) { var x = e.target.closest("[data-id]"); if (x) open(x.getAttribute("data-id")); }
+    $("board").addEventListener("click", bindOpen); $("list").addEventListener("click", bindOpen);
+    $("dclose").onclick = function () { showModal(false); history.replaceState(null, "", location.pathname); };
+    $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) $("dclose").onclick(); });
+    ["scope", "status", "overdue"].forEach(function (x) { $(x).onchange = load; });
+    var qt; $("q").oninput = function () { clearTimeout(qt); qt = setTimeout(load, 350); };
+    function setView(v) { view = v; $("vb").classList.toggle("is-on", v === "board"); $("vl").classList.toggle("is-on", v === "list"); load(); }
+    $("vb").onclick = function () { setView("board"); }; $("vl").onclick = function () { setView("list"); };
+    $("refresh").onclick = load;
+    if ($("newtask")) $("newtask").onclick = function () { cur = null; form(null, null); };
+    var m = /id=(\d+)/.exec(location.hash); load(); if (m) open(m[1]);
+})();
+</script>
+}

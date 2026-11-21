@@ -1,0 +1,1725 @@
+﻿﻿@* =========================================================
+    MDR
+    Phase 1    : زیرساخت مشترک
+    Step 1.6   : اعلان‌ها و Notification
+
+    Part 1.6.5 : صفحه مرکز اعلان (طبق سند جامع، بخش ۳)
+    - کارت‌های آمار (کلیک = فیلتر)
+    - گروه‌بندی بر اساس منبع (ستون کناری)
+    - فیلتر وضعیت / سطح / جستجو
+    - لیست گروه‌بندی‌شده بر اساس تاریخ
+    - عملیات: رفتن به منبع، خوانده شد، تأیید، Snooze، حذف از لیست
+    هر کاربر فقط اعلان‌های خودش را می‌بیند.
+    ========================================================= *@
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = "مرکز اعلان‌ها";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Notifications</title>
+
+    <style>
+
+        /* =========================================================
+            MDR 1.6.5 — HEADER / STATS (هم‌سبک صفحات MDR)
+            ========================================================= */
+
+        .nt-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .nt-header-icon {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            color: #00ffff;
+            font-size: 22px;
+            background: rgba(0,255,255,.08);
+            border: 1px solid rgba(0,255,255,.25);
+            box-shadow: 0 0 18px rgba(0,255,255,.08), inset 0 0 12px rgba(0,255,255,.03);
+        }
+
+        .nt-header-text h4 {
+            margin: 0 0 4px 0;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .nt-header-text p {
+            margin: 0;
+            color: rgba(255,255,255,.52);
+            font-size: 11px;
+        }
+
+        /* دکمه «همه خوانده شد» در هدر باکس اعلان‌ها */
+        .nt-list-box .glass-field-header {
+            display: flex;
+            align-items: center;
+        }
+
+        .nt-list-actions {
+            margin-right: auto;
+        }
+
+            .nt-list-actions .glass-btn-text {
+                width: auto;
+                white-space: nowrap;
+            }
+
+        .nt-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .6rem;
+            margin-bottom: 1rem;
+        }
+
+        .nt-stat {
+            display: flex;
+            align-items: center;
+            gap: .65rem;
+            padding: .7rem .8rem;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: .55rem;
+            background: rgba(255,255,255,.035);
+            backdrop-filter: blur(12px) saturate(150%);
+            -webkit-backdrop-filter: blur(12px) saturate(150%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+            cursor: pointer;
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+            .nt-stat:hover,
+            .nt-stat.active {
+                border-color: rgba(0,255,255,.4);
+                box-shadow: 0 0 14px rgba(0,255,255,.10), inset 0 1px 0 rgba(255,255,255,.12);
+            }
+
+        .nt-stat-icon {
+            width: 2.2rem;
+            height: 2.2rem;
+            flex: 0 0 2.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .6rem;
+            font-size: 1rem;
+            border: 1px solid currentColor;
+            background: rgba(255,255,255,.03);
+        }
+
+        .nt-stat-value {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .nt-stat-label {
+            font-size: .62rem;
+            color: rgba(255,255,255,.55);
+        }
+
+        .nt-c-info { color: #00ffff; }
+        .nt-c-danger { color: #ff5a4f; }
+        .nt-c-warning { color: #ffc857; }
+        .nt-c-users { color: #b692f6; }
+
+
+        /* =========================================================
+            MDR 1.6.5 — LAYOUT: منابع + لیست
+            ========================================================= */
+
+        .nt-body {
+            display: grid;
+            grid-template-columns: 15rem minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
+        }
+
+        .nt-sources .glass-field-body {
+            padding: .5rem;
+        }
+
+        .nt-source {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .4rem;
+            width: 100%;
+            padding: .5rem .6rem;
+            margin-bottom: .2rem;
+            border: 1px solid transparent;
+            border-radius: .5rem;
+            background: transparent;
+            color: rgba(255,255,255,.8);
+            font-size: .68rem;
+            text-align: right;
+            cursor: pointer;
+            transition: background .15s ease, border-color .15s ease;
+        }
+
+            .nt-source:hover {
+                background: rgba(0,255,255,.05);
+            }
+
+            .nt-source.active {
+                border-color: rgba(0,255,255,.35);
+                background: rgba(0,255,255,.08);
+                color: #00ffff;
+            }
+
+            .nt-source i {
+                margin-left: .35rem;
+            }
+
+        .nt-source-count {
+            display: flex;
+            gap: .25rem;
+            align-items: center;
+            font-size: .58rem;
+            color: rgba(255,255,255,.45);
+        }
+
+        .nt-unread-pill {
+            min-width: 1.2rem;
+            padding: 0 .3rem;
+            border-radius: 1rem;
+            background: rgba(0,255,255,.15);
+            color: #00ffff;
+            text-align: center;
+        }
+
+
+        /* فیلترها (داخل باکس گلس مثل بقیه صفحات MDR) */
+        .nt-filters {
+            margin-bottom: .8rem;
+        }
+
+            .nt-filters .glass-field-body {
+                padding: .7rem;
+            }
+
+            .nt-filters .row > div {
+                margin-bottom: .45rem;
+            }
+
+            .nt-filters .glass-input-ag,
+            .nt-filters .glass-select-ag {
+                width: 100%;
+                margin-bottom: 0 !important;
+            }
+
+
+        /* =========================================================
+            MDR 1.6.5 — LIST
+            ========================================================= */
+
+        .nt-list-box .glass-field-body {
+            padding: .4rem .2rem .7rem;
+        }
+
+        .nt-list {
+            max-height: calc(100vh - 27rem);
+            min-height: 10rem;
+            overflow-y: auto;
+        }
+
+        .nt-list-box .nt-pagination {
+            padding: 0 .6rem;
+        }
+
+        /* هر اعلان = یک کارت ساده هم‌سبک کارت‌های گلس صفحه
+           (همان بردر و پس‌زمینه کارت‌های آمار)
+           خوانده‌نشده: فقط برچسب «جدید» + عنوان پررنگ
+           مهمِ تأییدنشده: بردر قرمز ملایم */
+        .nt-item {
+            position: relative;
+            display: flex;
+            gap: .7rem;
+            margin: .5rem .6rem;
+            padding: .75rem .9rem;
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: .55rem;
+            background: rgba(255,255,255,.035);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+            transition: border-color .2s ease, box-shadow .2s ease;
+        }
+
+            .nt-item:hover {
+                border-color: rgba(0,255,255,.4);
+                box-shadow: 0 0 14px rgba(0,255,255,.10), inset 0 1px 0 rgba(255,255,255,.12);
+            }
+
+            /* خوانده‌شده: متن ملایم‌تر */
+            .nt-item .nt-title,
+            .nt-item .nt-msg {
+                opacity: .72;
+            }
+
+            .nt-item.unread .nt-title,
+            .nt-item.unread .nt-msg,
+            .nt-item.pending .nt-title,
+            .nt-item.pending .nt-msg {
+                opacity: 1;
+            }
+
+            /* مهمِ تأییدنشده */
+            .nt-item.pending {
+                border-color: rgba(255,90,79,.45);
+            }
+
+                .nt-item.pending:hover {
+                    border-color: rgba(255,90,79,.75);
+                    box-shadow: 0 0 14px rgba(255,90,79,.10), inset 0 1px 0 rgba(255,255,255,.12);
+                }
+
+        .nt-new-badge {
+            display: inline-block;
+            margin-right: .35rem;
+            padding: 0 .4rem;
+            border-radius: .3rem;
+            font-size: .55rem;
+            font-weight: 700;
+            color: #07111b;
+            background: #00ffff;
+            box-shadow: 0 0 8px rgba(0,255,255,.5);
+            vertical-align: middle;
+        }
+
+        .nt-sev {
+            flex: 0 0 auto;
+            width: 36px;
+            height: 36px;
+            border-radius: .6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            border: 1px solid currentColor;
+            background: rgba(255,255,255,.03);
+        }
+
+            .nt-sev.Info { color: #00ffff; }
+            .nt-sev.Success { color: #32d583; }
+            .nt-sev.Warning { color: #ffc857; }
+            .nt-sev.Danger { color: #ff5a4f; }
+
+        .nt-text {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .nt-title {
+            font-size: .78rem;
+            color: #fff;
+        }
+
+        .nt-item.unread .nt-title {
+            font-weight: 700;
+        }
+
+        .nt-msg {
+            margin-top: .2rem;
+            font-size: .68rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,.62);
+            white-space: pre-line;
+        }
+
+        .nt-meta {
+            margin-top: .3rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem .6rem;
+            align-items: center;
+            font-size: .58rem;
+            color: rgba(255,255,255,.42);
+        }
+
+        .nt-badge {
+            display: inline-block;
+            padding: 0 .35rem;
+            border-radius: .3rem;
+            font-size: .55rem;
+            border: 1px solid currentColor;
+        }
+
+            .nt-badge.danger { color: #ff5a4f; }
+            .nt-badge.success { color: #32d583; }
+            .nt-badge.warning { color: #ffc857; }
+
+        .nt-actions {
+            flex: 0 0 auto;
+            display: flex;
+            gap: .3rem;
+            align-items: flex-start;
+        }
+
+            .nt-actions .glass-btn-icon {
+                width: 1.9rem;
+                height: 1.9rem;
+            }
+
+        .nt-actions .glass-btn-text {
+            width: auto;
+            height: 1.9rem;
+            white-space: nowrap;
+        }
+
+        .nt-empty {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: rgba(255,255,255,.45);
+            font-size: .72rem;
+        }
+
+            .nt-empty i {
+                display: block;
+                font-size: 1.8rem;
+                color: rgba(0,255,255,.4);
+                margin-bottom: .4rem;
+            }
+
+
+        /* منوی Snooze */
+        .nt-snooze-menu {
+            position: fixed;
+            z-index: 100600;
+            display: none;
+            min-width: 9rem;
+            padding: .3rem;
+            direction: rtl;
+            border: 1px solid rgba(0,255,255,.25);
+            border-radius: .55rem;
+            background: rgba(7,17,27,.98);
+            box-shadow: 0 10px 25px rgba(0,0,0,.45);
+        }
+
+            .nt-snooze-menu.open {
+                display: block;
+            }
+
+            .nt-snooze-menu button {
+                display: block;
+                width: 100%;
+                padding: .35rem .5rem;
+                border: 0;
+                border-radius: .35rem;
+                background: transparent;
+                color: #edfaff;
+                font-size: .64rem;
+                text-align: right;
+                cursor: pointer;
+            }
+
+                .nt-snooze-menu button:hover {
+                    background: rgba(0,255,255,.08);
+                    color: #00ffff;
+                }
+
+
+        /* صفحه‌بندی */
+        .nt-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .6rem;
+            flex-wrap: wrap;
+            margin-top: .75rem;
+            font-size: .65rem;
+            color: rgba(255,255,255,.6);
+        }
+
+        .nt-pages {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+            .nt-pages .glass-btn-icon {
+                width: 2rem;
+                height: 2rem;
+            }
+
+        .nt-page-number {
+            min-width: 5.5rem;
+            text-align: center;
+        }
+
+
+        /* MDR 1.6.5.4 — مودال تنظیم یادآوری */
+        .nt-snooze-modal {
+            max-width: 34rem;
+        }
+
+        .nt-time-input {
+            direction: ltr;
+            text-align: center;
+        }
+
+        .nt-snooze-hint {
+            margin: .2rem 0 .6rem;
+            font-size: .62rem;
+            line-height: 1.8;
+            color: rgba(255,255,255,.5);
+        }
+
+        /* MDR 1.6.5.5 — تأیید دومرحله‌ای حذف از لیست */
+        .nt-actions .nt-confirm-delete {
+            width: auto;
+            height: 1.9rem;
+            white-space: nowrap;
+        }
+
+        @@media (max-width: 992px) {
+
+            .nt-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .nt-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+    @* =============================================================
+        GLOBAL ALERTS (استایل در Layout)
+        ============================================================= *@
+
+    <div class="global-alert-container">
+
+        <div class="global-alert global-alert-success" id="GlobalAlertSuccess">
+            <div class="global-alert-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="global-alert-content">
+                <div class="global-alert-title">عملیات موفق</div>
+                <div class="global-alert-message">-</div>
+            </div>
+            <button type="button" class="global-alert-close action-reject" aria-label="بستن">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="global-alert global-alert-error" id="GlobalAlertError">
+            <div class="global-alert-icon"><i class="bi bi-x-circle-fill"></i></div>
+            <div class="global-alert-content">
+                <div class="global-alert-title">عملیات ناموفق</div>
+                <div class="global-alert-message">-</div>
+            </div>
+            <button type="button" class="global-alert-close action-reject" aria-label="بستن">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+    </div>
+
+
+    <div class="tab-content tab-AG">
+
+
+        @* =====================================================
+            MDR 1.6.5 — HEADER
+            ===================================================== *@
+
+        <div class="nt-header">
+
+            <div class="nt-header-icon">
+                <i class="bi bi-bell"></i>
+            </div>
+
+            <div class="nt-header-text">
+                <h4>مرکز اعلان‌ها</h4>
+                <p>همه اعلان‌های شما از همه بخش‌های سامانه؛ خواندن، تأیید، تعویق و رفتن به منبع</p>
+            </div>
+
+        </div>
+
+
+        @* =====================================================
+            MDR 1.6.5 — STATS (کلیک = فیلتر وضعیت)
+            ===================================================== *@
+
+        <div class="nt-stats">
+
+            <div class="nt-stat" data-status="unread" title="نمایش خوانده‌نشده‌ها">
+                <div class="nt-stat-icon nt-c-info"><i class="bi bi-envelope"></i></div>
+                <div>
+                    <div class="nt-stat-value" id="statUnread">-</div>
+                    <div class="nt-stat-label">خوانده‌نشده</div>
+                </div>
+            </div>
+
+            <div class="nt-stat" data-status="pending" title="نمایش اعلان‌های مهمِ تأییدنشده">
+                <div class="nt-stat-icon nt-c-danger"><i class="bi bi-exclamation-octagon"></i></div>
+                <div>
+                    <div class="nt-stat-value" id="statPending">-</div>
+                    <div class="nt-stat-label">مهم و تأییدنشده</div>
+                </div>
+            </div>
+
+            <div class="nt-stat" data-status="snoozed" title="نمایش اعلان‌های به تعویق افتاده">
+                <div class="nt-stat-icon nt-c-warning"><i class="bi bi-alarm"></i></div>
+                <div>
+                    <div class="nt-stat-value" id="statSnoozed">-</div>
+                    <div class="nt-stat-label">به تعویق افتاده</div>
+                </div>
+            </div>
+
+            <div class="nt-stat" data-status="" title="نمایش همه">
+                <div class="nt-stat-icon nt-c-users"><i class="bi bi-calendar-day"></i></div>
+                <div>
+                    <div class="nt-stat-value" id="statToday">-</div>
+                    <div class="nt-stat-label">اعلان‌های امروز</div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="nt-body">
+
+
+            @* =====================================================
+                MDR 1.6.5 — SOURCES (گروه‌بندی بر اساس منبع)
+                ===================================================== *@
+
+            <div class="glass-field-ag nt-sources">
+
+                <div class="glass-field-header">
+                    <div class="glass-field-icon">
+                        <i class="bi bi-diagram-3"></i>
+                    </div>
+                    <div class="glass-field-heading">
+                        <div class="glass-field-title">منبع اعلان</div>
+                        <div class="glass-field-subtitle">بخش فرستنده</div>
+                    </div>
+                </div>
+
+                <div class="glass-field-body" id="ntSources">
+                    <div class="nt-empty">در حال بارگذاری...</div>
+                </div>
+
+            </div>
+
+
+            @* =====================================================
+                MDR 1.6.5 — FILTERS + LIST
+                ===================================================== *@
+
+            <div>
+
+                @* =====================================================
+                    MDR 1.6.5 — FILTERS (هم‌سبک صفحات MDR)
+                    ===================================================== *@
+
+                <div class="glass-field-ag nt-filters">
+
+                    <div class="glass-field-header">
+
+                        <div class="glass-field-icon">
+                            <i class="bi bi-funnel"></i>
+                        </div>
+
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title">فیلترها</div>
+                            <div class="glass-field-subtitle">وضعیت، سطح و جستجو در متن اعلان</div>
+                        </div>
+
+                    </div>
+
+                    <div class="glass-field-body">
+
+                        <div class="row row-input-AG">
+
+                            <div class="col-xl-3 col-md-6">
+                                <label class="glass-label-ag">وضعیت</label>
+                                <select id="fltStatus" class="glass-select-search">
+                                    <option value="">همه</option>
+                                    <option value="unread">خوانده‌نشده</option>
+                                    <option value="read">خوانده‌شده</option>
+                                    <option value="pending">مهم و تأییدنشده</option>
+                                    <option value="snoozed">به تعویق افتاده</option>
+                                </select>
+                            </div>
+
+                            <div class="col-xl-3 col-md-6">
+                                <label class="glass-label-ag">سطح</label>
+                                <select id="fltSeverity" class="glass-select-search">
+                                    <option value="">همه</option>
+                                    <option value="Info">اطلاع</option>
+                                    <option value="Success">موفق</option>
+                                    <option value="Warning">هشدار</option>
+                                    <option value="Danger">خطر</option>
+                                </select>
+                            </div>
+
+                            <div class="col-xl-4 col-md-8">
+                                <label class="glass-label-ag">جستجو</label>
+                                <input id="fltSearch"
+                                       class="glass-input-ag"
+                                       placeholder="عنوان یا متن اعلان..."
+                                       autocomplete="off" />
+                            </div>
+
+                            <div class="col-xl-2 col-md-4">
+                                <button type="button" id="btnNtReset" class="glass-btn-ag glass-btn-text-reject">
+                                    <i class="bi bi-trash"></i>
+                                    پاک کردن
+                                </button>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                @* =====================================================
+                    MDR 1.6.5 — LIST (داخل باکس گلس مثل بقیه صفحات MDR)
+                    ===================================================== *@
+
+                <div class="glass-field-ag nt-list-box">
+
+                    <div class="glass-field-header">
+
+                        <div class="glass-field-icon">
+                            <i class="bi bi-bell"></i>
+                        </div>
+
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title">اعلان‌ها</div>
+                            <div class="glass-field-subtitle" id="ntListSubtitle">جدیدترین‌ها در بالا</div>
+                        </div>
+
+                        @* همه خوانده شد — سمت چپ هدر *@
+                        <div class="nt-list-actions">
+                            <button type="button" id="btnNtReadAll" class="glass-btn-text glass-btn-text-suggest">
+                                <i class="bi bi-check2-all"></i>
+                                <p>همه خوانده شوند</p>
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <div class="glass-field-body">
+
+                        <div class="nt-list scrollbar" id="ntList">
+                            <div class="nt-empty">در حال بارگذاری...</div>
+                        </div>
+
+
+                        <div class="nt-pagination">
+
+                            <div id="ntTotalText">-</div>
+
+                            <div class="nt-pages">
+
+                                <button type="button" id="btnNtPrev" class="glass-btn-icon" title="صفحه قبل">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+
+                                <span class="nt-page-number" id="ntPageText">-</span>
+
+                                <button type="button" id="btnNtNext" class="glass-btn-icon" title="صفحه بعد">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+
+                                <select id="ntPageSize"
+                                        data-search="false"
+                                        class="glass-select-search"
+                                        style="width:5.5rem !important; margin-bottom:0 !important;">
+                                    <option value="20">۲۰ ردیف</option>
+                                    <option value="50">۵۰ ردیف</option>
+                                    <option value="100">۱۰۰ ردیف</option>
+                                </select>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    @* MDR 1.6.5 — منوی Snooze *@
+    <div class="nt-snooze-menu" id="ntSnoozeMenu">
+        <button type="button" data-min="60"><i class="bi bi-clock"></i> ۱ ساعت بعد</button>
+        <button type="button" data-min="180"><i class="bi bi-clock"></i> ۳ ساعت بعد</button>
+        <button type="button" data-min="tomorrow"><i class="bi bi-sunrise"></i> فردا ساعت ۸ صبح</button>
+        <button type="button" data-min="10080"><i class="bi bi-calendar-week"></i> هفته بعد</button>
+        <button type="button" data-min="custom"><i class="bi bi-calendar-event"></i> زمان دلخواه...</button>
+    </div>
+
+
+    @* =============================================================
+        MDR 1.6.5.4 — مودال «تنظیم یادآوری» (طبق سند: Modal تنظیم یادآوری)
+        ============================================================= *@
+
+    <div id="NtSnoozeModalAG" class="ModalAG">
+
+        <div class="ContentModalAG nt-snooze-modal">
+
+            <div class="BtnCloseAG action-reject" id="btnCloseSnoozeModal">
+                <i class="bi bi-x"></i>
+            </div>
+
+            <div class="tab-content scrollbar">
+
+                <div class="glass-field-ag">
+
+                    <div class="glass-field-header">
+
+                        <div class="glass-field-icon">
+                            <i class="bi bi-alarm"></i>
+                        </div>
+
+                        <div class="glass-field-heading">
+                            <div class="glass-field-title">تنظیم یادآوری</div>
+                            <div class="glass-field-subtitle" id="ntSnoozeSubtitle">-</div>
+                        </div>
+
+                    </div>
+
+                    <div class="glass-field-body">
+
+                        <div class="row row-input-AG">
+
+                            <div class="col-xl-6">
+                                <label class="glass-label-ag">تاریخ یادآوری</label>
+                                <input id="ntSnoozeDate"
+                                       class="glass-input-ag pdate"
+                                       data-jdp
+                                       jdp-btn-close
+                                       autocomplete="off" />
+                            </div>
+
+                            <div class="col-xl-6">
+                                <label class="glass-label-ag">ساعت</label>
+                                <input id="ntSnoozeTime"
+                                       type="time"
+                                       class="glass-input-ag glass-time-ag nt-time-input"
+                                       autocomplete="off" />
+                            </div>
+
+                        </div>
+
+                        <div class="nt-snooze-hint">
+                            اعلان تا این زمان در زنگوله نمایش داده نمی‌شود و بعد از آن دوباره با برچسب «جدید» برمی‌گردد.
+                            (حداکثر ۳۰ روز)
+                        </div>
+
+                        <div class="row row-btn-AG row-ltr-AG">
+                            <div class="col-xl-3">
+                                <button type="button" id="btnNtSnoozeCancel" class="glass-btn-ag glass-btn-text-reject">
+                                    <i class="bi bi-x-circle"></i>
+                                    انصراف
+                                </button>
+                            </div>
+                            <div class="col-xl-3">
+                                <button type="button" id="btnNtSnoozeSave" class="glass-btn-ag glass-btn-text-confirm">
+                                    <i class="bi bi-check2-circle"></i>
+                                    ثبت یادآوری
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    @* MDR 1.6.5.4 — تقویم جلالی (همان قالب صفحه تاریخچه رویدادها) *@
+    <link href="~/Assets/css/jalalidatepicker.min.css" rel="stylesheet" />
+    <link href="~/MyStyles/jalalidatepicker.css" rel="stylesheet" />
+    <script data-cfasync="false" src="~/Assets/js/jalalidatepicker.min.js"></script>
+
+    <script data-cfasync="false">
+
+        if (!window.__mdrNtJdpInit) {
+
+            window.__mdrNtJdpInit = true;
+
+            jalaliDatepicker.startWatch({
+                time: false,
+                days: ["شنبه", "1شنبه", "2شنبه", "3شنبه", "4شنبه", "5شنبه", "جمعه"],
+                persianDigits: true,
+                autoClose: true,
+                autocomplete: true,
+                showEmptyBtn: false,
+                showCloseBtn: true,
+                zIndex: 100000
+            });
+        }
+
+    </script>
+
+
+    <script data-cfasync="false">
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        // =====================================================
+        // MDR — جلوگیری از اجرای دوباره (Rocket Loader)
+        // =====================================================
+
+        if (window.__mdrNtInit) {
+            return;
+        }
+
+        window.__mdrNtInit = true;
+
+
+        // =====================================================
+        // URLs
+        // =====================================================
+
+        var urls = {
+            list: '@Url.Action("GetMyNotifications", "AG", new { area = "Mdr" })',
+            open: '@Url.Action("OpenNotification", "AG", new { area = "Mdr" })',
+            read: '@Url.Action("MarkNotificationRead", "AG", new { area = "Mdr" })',
+            readAll: '@Url.Action("MarkAllNotificationsRead", "AG", new { area = "Mdr" })',
+            ack: '@Url.Action("AcknowledgeNotification", "AG", new { area = "Mdr" })',
+            snooze: '@Url.Action("SnoozeNotification", "AG", new { area = "Mdr" })',
+            snoozeAt: '@Url.Action("SnoozeNotificationAt", "AG", new { area = "Mdr" })',
+            cancelSnooze: '@Url.Action("CancelSnoozeNotification", "AG", new { area = "Mdr" })',
+            archive: '@Url.Action("ArchiveNotification", "AG", new { area = "Mdr" })'
+        };
+
+        var state = {
+            page: 1,
+            totalPages: 1,
+            moduleName: "",
+            snoozeId: null
+        };
+
+        var $ = function (id) { return document.getElementById(id); };
+
+        // منوی Snooze به body منتقل شود (position:fixed مستقل از والد)
+        document.body.appendChild($("ntSnoozeMenu"));
+        document.body.appendChild($("NtSnoozeModalAG"));
+
+
+        // =====================================================
+        // Helpers
+        // =====================================================
+
+        function esc(value) {
+
+            if (value === null || value === undefined) {
+                return "";
+            }
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function fa(value) {
+            return String(value === null || value === undefined ? "" : value)
+                .replace(/\d/g, function (d) { return "۰۱۲۳۴۵۶۷۸۹"[d]; });
+        }
+
+        var alertTimer = null;
+
+        function notify(type, message) {
+
+            if (!message) {
+                return;
+            }
+
+            var box = $(type === "success" ? "GlobalAlertSuccess" : "GlobalAlertError");
+
+            document.querySelectorAll(".global-alert").forEach(function (a) {
+                a.classList.remove("show");
+            });
+
+            box.querySelector(".global-alert-message").textContent = message;
+            box.classList.add("show");
+
+            clearTimeout(alertTimer);
+            alertTimer = setTimeout(function () {
+                box.classList.remove("show");
+            }, 4000);
+        }
+
+        document.addEventListener("click", function (e) {
+
+            var closeButton = e.target.closest(".global-alert-close");
+
+            if (closeButton) {
+                closeButton.closest(".global-alert").classList.remove("show");
+            }
+        });
+
+        function post(url, data) {
+
+            var form = new FormData();
+
+            Object.keys(data || {}).forEach(function (k) {
+                form.append(k, data[k]);
+            });
+
+            return fetch(url, { method: "POST", body: form, credentials: "same-origin" })
+                .then(function (r) { return r.json(); });
+        }
+
+        // اجرای عملیات روی یک اعلان + مدیریت تغییر همزمان (طبق سند: Concurrent update)
+        // اگر سرور success=false داد (اعلان در تب/دستگاه دیگر تغییر کرده)،
+        // پیام نمایش داده می‌شود و لیست از سرور به‌روز می‌شود
+        function runAction(button, url, data, showSuccess) {
+
+            if (button) {
+                button.disabled = true;
+            }
+
+            return post(url, data)
+                .then(function (result) {
+
+                    if (!result || !result.success) {
+                        notify("error", (result && result.message) || "عملیات انجام نشد.");
+                    }
+                    else if (showSuccess) {
+                        notify("success", result.message);
+                    }
+
+                    reloadAll();
+                })
+                .catch(function () {
+
+                    notify("error", "خطا در ارتباط با سرور");
+
+                    if (button) {
+                        button.disabled = false;
+                    }
+                });
+        }
+
+
+        // بعد از هر تغییر: لیست صفحه + زنگوله هدر
+        function reloadAll() {
+
+            loadList();
+
+            if (window.MdrBell && typeof window.MdrBell.refresh === "function") {
+                window.MdrBell.refresh();
+            }
+        }
+
+
+        var sevIcons = {
+            Info: "bi-info-circle",
+            Success: "bi-check-circle",
+            Warning: "bi-exclamation-triangle",
+            Danger: "bi-exclamation-octagon"
+        };
+
+        // نام خوانای منبع (هم‌نام صفحه تاریخچه رویدادها)
+        var moduleNames = {
+            System: "سیستم",
+            OrganizationStructure: "ساختار سازمانی",
+            Users: "کاربران",
+            Roles: "نقش‌ها",
+            Meetings: "جلسات",
+            Tasks: "وظایف",
+            Requests: "درخواست‌ها"
+        };
+
+        var moduleIcons = {
+            System: "bi-cpu",
+            OrganizationStructure: "bi-diagram-3",
+            Meetings: "bi-people",
+            Tasks: "bi-list-check",
+            Requests: "bi-inbox"
+        };
+
+        function moduleName(module) {
+            return moduleNames[module || "System"] || module;
+        }
+
+
+        // =====================================================
+        // MDR 1.6.5.1 — LOAD
+        // =====================================================
+
+        function buildQuery() {
+
+            var params = new URLSearchParams();
+
+            params.append("page", state.page);
+            params.append("pageSize", $("ntPageSize").value);
+
+            var fields = {
+                status: $("fltStatus").value,
+                severity: $("fltSeverity").value,
+                moduleName: state.moduleName,
+                search: $("fltSearch").value.trim()
+            };
+
+            Object.keys(fields).forEach(function (key) {
+
+                if (fields[key]) {
+                    params.append(key, fields[key]);
+                }
+            });
+
+            return params.toString();
+        }
+
+
+        function loadList() {
+
+            fetch(urls.list + "?" + buildQuery(), { credentials: "same-origin" })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+
+                    if (!result.success) {
+                        notify("error", result.message);
+                        $("ntList").innerHTML = '<div class="nt-empty">' + esc(result.message) + '</div>';
+                        return;
+                    }
+
+                    renderStats(result.stats);
+                    renderSources(result.sources || []);
+                    renderList(result.items || []);
+                    renderPagination(result);
+                    afterRender();
+                })
+                .catch(function (error) {
+
+                    console.error("MDR Notifications Error:", error);
+                    $("ntList").innerHTML = '<div class="nt-empty">خطا در دریافت اعلان‌ها</div>';
+                });
+        }
+
+
+        function renderStats(stats) {
+
+            if (!stats) {
+                return;
+            }
+
+            $("statUnread").textContent = fa(stats.unread);
+            $("statPending").textContent = fa(stats.pending);
+            $("statSnoozed").textContent = fa(stats.snoozed);
+            $("statToday").textContent = fa(stats.today);
+
+            var status = $("fltStatus").value;
+
+            document.querySelectorAll(".nt-stat").forEach(function (card) {
+                card.classList.toggle("active",
+                    !!status && card.getAttribute("data-status") === status);
+            });
+        }
+
+
+        function renderSources(sources) {
+
+            var totalAll = 0;
+            var unreadAll = 0;
+
+            sources.forEach(function (s) {
+                totalAll += s.total;
+                unreadAll += s.unread;
+            });
+
+            function item(module, title, icon, total, unread) {
+
+                return '' +
+                    '<button type="button" class="nt-source' + (state.moduleName === module ? ' active' : '') + '" data-module="' + esc(module) + '">' +
+                        '<span><i class="bi ' + icon + '"></i>' + esc(title) + '</span>' +
+                        '<span class="nt-source-count">' +
+                            (unread > 0 ? '<span class="nt-unread-pill">' + fa(unread) + '</span>' : '') +
+                            fa(total) +
+                        '</span>' +
+                    '</button>';
+            }
+
+            $("ntSources").innerHTML =
+                item("", "همه منابع", "bi-collection", totalAll, unreadAll) +
+                sources.map(function (s) {
+                    return item(s.module, moduleName(s.module), moduleIcons[s.module] || "bi-app", s.total, s.unread);
+                }).join("");
+        }
+
+
+        function renderList(items) {
+
+            var list = $("ntList");
+
+            if (!items.length) {
+
+                list.innerHTML =
+                    '<div class="nt-empty"><i class="bi bi-bell-slash"></i>اعلانی با این فیلترها وجود ندارد</div>';
+
+                return;
+            }
+
+            var html = "";
+
+            items.forEach(function (x) {
+
+                var pending = x.important && !x.isAcknowledged;
+
+                // اعلان در حال تعویق «جدید» حساب نمی‌شود (بعد از پایان تعویق دوباره جدید می‌شود)
+                var isNew = !x.isRead && !x.isSnoozed;
+
+                // نشان‌ها
+                var badges = "";
+
+                if (pending) {
+                    badges += '<span class="nt-badge danger">مهم — نیازمند تأیید</span>';
+                }
+                else if (x.important) {
+                    badges += '<span class="nt-badge success">مهم — تأییدشده</span>';
+                }
+
+                if (x.isSnoozed) {
+                    badges += '<span class="nt-badge warning"><i class="bi bi-alarm"></i> تعویق تا ' + esc(fa(x.snoozedUntil)) + '</span>';
+                }
+
+                // عملیات
+                var actions = "";
+
+                if (pending) {
+                    actions += '<button type="button" class="glass-btn-text glass-btn-text-confirm" data-act="ack" data-id="' + x.id + '">' +
+                               '<i class="bi bi-check2-circle"></i><p>مطالعه کردم</p></button>';
+                }
+
+                if (x.hasLink) {
+                    actions += '<a class="glass-btn-icon glass-btn-icon-suggest" href="' + urls.open + '?id=' + x.id + '" title="رفتن به منبع">' +
+                               '<i class="bi bi-box-arrow-up-left"></i></a>';
+                }
+
+                if (isNew) {
+                    actions += '<button type="button" class="glass-btn-icon glass-btn-icon-confirm" data-act="read" data-id="' + x.id + '" title="خوانده شد">' +
+                               '<i class="bi bi-check2"></i></button>';
+                }
+
+                if (!pending) {
+
+                    actions += x.isSnoozed
+                        ? '<button type="button" class="glass-btn-icon glass-btn-icon-suggest" data-act="unsnooze" data-id="' + x.id + '" title="لغو تعویق">' +
+                          '<i class="bi bi-alarm-fill"></i></button>'
+                        : '<button type="button" class="glass-btn-icon glass-btn-icon-suggest" data-act="snooze" data-id="' + x.id + '" data-title="' + esc(x.title) + '" title="یادآوری بعداً (Snooze)">' +
+                          '<i class="bi bi-alarm"></i></button>';
+
+                    actions += '<button type="button" class="glass-btn-icon glass-btn-icon-reject" data-act="archive" data-id="' + x.id + '" title="حذف از لیست">' +
+                               '<i class="bi bi-x-lg"></i></button>';
+                }
+
+                html += '' +
+                    '<div class="nt-item' + (isNew ? ' unread' : '') + (pending ? ' pending' : '') + '">' +
+                        '<div class="nt-sev ' + esc(x.severity) + '"><i class="bi ' + (sevIcons[x.severity] || sevIcons.Info) + '"></i></div>' +
+                        '<div class="nt-text">' +
+                            '<div class="nt-title">' + esc(x.title) +
+                                (isNew ? '<span class="nt-new-badge">جدید</span>' : '') +
+                            '</div>' +
+                            (x.message ? '<div class="nt-msg">' + esc(x.message) + '</div>' : '') +
+                            '<div class="nt-meta">' +
+                                '<span><i class="bi bi-clock"></i> ' + esc(fa((x.date || "") + " " + (x.time || ""))) + '</span>' +
+                                '<span><i class="bi ' + (moduleIcons[x.module || "System"] || "bi-app") + '"></i> ' + esc(moduleName(x.module)) + '</span>' +
+                                (x.sender ? '<span><i class="bi bi-person"></i> ' + esc(x.sender) + '</span>' : '') +
+                                badges +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="nt-actions">' + actions + '</div>' +
+                    '</div>';
+            });
+
+            list.innerHTML = html;
+        }
+
+
+        function renderPagination(result) {
+
+            state.page = result.page;
+            state.totalPages = Math.max(result.totalPages, 1);
+
+            $("ntTotalText").textContent = "مجموع: " + fa(result.total) + " اعلان";
+            $("ntListSubtitle").textContent = fa(result.total) + " اعلان — جدیدترین‌ها در بالا";
+            $("ntPageText").textContent = "صفحه " + fa(state.page) + " از " + fa(state.totalPages);
+
+            $("btnNtPrev").disabled = state.page <= 1;
+            $("btnNtNext").disabled = state.page >= state.totalPages;
+        }
+
+
+        // =====================================================
+        // MDR 1.6.5.6 — ReturnContext (طبق سند)
+        // فیلتر، منبع، صفحه، تعداد ردیف و اسکرول لیست در آدرس صفحه
+        // ذخیره می‌شود؛ بعد از «رفتن به منبع» و برگشت (Back مرورگر)
+        // صفحه دقیقاً به همان حالت قبل برمی‌گردد.
+        // =====================================================
+
+        var pendingScroll = null;
+
+        function saveContext() {
+
+            try {
+
+                var params = new URLSearchParams();
+
+                var values = {
+                    status: $("fltStatus").value,
+                    severity: $("fltSeverity").value,
+                    q: $("fltSearch").value.trim(),
+                    source: state.moduleName,
+                    page: state.page > 1 ? state.page : "",
+                    size: $("ntPageSize").value !== "20" ? $("ntPageSize").value : "",
+                    scroll: $("ntList").scrollTop > 0 ? Math.round($("ntList").scrollTop) : ""
+                };
+
+                Object.keys(values).forEach(function (key) {
+
+                    if (values[key] !== "" && values[key] !== null && values[key] !== undefined) {
+                        params.append(key, values[key]);
+                    }
+                });
+
+                var query = params.toString();
+
+                history.replaceState(
+                    history.state,
+                    "",
+                    window.location.pathname + (query ? "?" + query : ""));
+            }
+            catch (e) {
+            }
+        }
+
+        function restoreContext() {
+
+            try {
+
+                var params = new URLSearchParams(window.location.search);
+
+                if (params.get("status") !== null) $("fltStatus").value = params.get("status");
+                if (params.get("severity") !== null) $("fltSeverity").value = params.get("severity");
+                if (params.get("q") !== null) $("fltSearch").value = params.get("q");
+                if (params.get("size") !== null) $("ntPageSize").value = params.get("size");
+
+                state.moduleName = params.get("source") || "";
+                state.page = parseInt(params.get("page"), 10) || 1;
+
+                var scroll = parseInt(params.get("scroll"), 10);
+                pendingScroll = scroll > 0 ? scroll : null;
+            }
+            catch (e) {
+            }
+        }
+
+        // بعد از هر بارگذاری لیست
+        function afterRender() {
+
+            if (pendingScroll !== null) {
+                $("ntList").scrollTop = pendingScroll;
+                pendingScroll = null;
+            }
+
+            saveContext();
+        }
+
+        var scrollSaveTimer = null;
+
+        $("ntList").addEventListener("scroll", function () {
+
+            clearTimeout(scrollSaveTimer);
+            scrollSaveTimer = setTimeout(saveContext, 200);
+        });
+
+
+        // =====================================================
+        // MDR 1.6.5.2 — ACTIONS
+        // =====================================================
+
+        function placeMenu(menu, anchor) {
+
+            var rect = anchor.getBoundingClientRect();
+
+            menu.classList.add("open");
+
+            var left = Math.max(10, Math.min(rect.left, window.innerWidth - menu.offsetWidth - 10));
+            var top = rect.bottom + 6;
+
+            if (top + menu.offsetHeight > window.innerHeight - 10) {
+                top = rect.top - menu.offsetHeight - 6;
+            }
+
+            menu.style.left = left + "px";
+            menu.style.top = top + "px";
+        }
+
+        function closeSnooze() {
+            $("ntSnoozeMenu").classList.remove("open");
+            state.snoozeId = null;
+        }
+
+
+        $("ntList").addEventListener("click", function (e) {
+
+            // رفتن به منبع: اول وضعیت فعلی ذخیره شود (برای برگشت)
+            if (e.target.closest("a")) {
+                saveContext();
+                return;
+            }
+
+            var button = e.target.closest("[data-act]");
+
+            if (!button) {
+                return;
+            }
+
+            var id = button.getAttribute("data-id");
+            var act = button.getAttribute("data-act");
+
+            if (act === "read") {
+                runAction(button, urls.read, { id: id }, false);
+            }
+            else if (act === "ack") {
+                runAction(button, urls.ack, { id: id }, true);
+            }
+            else if (act === "unsnooze") {
+                runAction(button, urls.cancelSnooze, { id: id }, true);
+            }
+            else if (act === "archive") {
+
+                // طبق سند: عملیات حذفی نیازمند تأیید
+                // کلیک اول: «حذف شود؟» — کلیک دوم ظرف ۳ ثانیه: حذف
+                if (!button.classList.contains("nt-confirm-delete")) {
+
+                    button.classList.add("nt-confirm-delete");
+                    button.className = "glass-btn-text glass-btn-text-reject nt-confirm-delete";
+                    button.innerHTML = '<i class="bi bi-exclamation-triangle"></i><p>حذف شود؟</p>';
+
+                    button._ntTimer = setTimeout(function () {
+                        button.className = "glass-btn-icon glass-btn-icon-reject";
+                        button.innerHTML = '<i class="bi bi-x-lg"></i>';
+                    }, 3000);
+
+                    return;
+                }
+
+                clearTimeout(button._ntTimer);
+                runAction(button, urls.archive, { id: id }, true);
+            }
+            else if (act === "snooze") {
+
+                e.stopPropagation();
+                state.snoozeId = id;
+                state.snoozeTitle = button.getAttribute("data-title") || "";
+                placeMenu($("ntSnoozeMenu"), button);
+            }
+        });
+
+
+        $("ntSnoozeMenu").addEventListener("click", function (e) {
+
+            var button = e.target.closest("button[data-min]");
+
+            if (!button || !state.snoozeId) {
+                return;
+            }
+
+            var value = button.getAttribute("data-min");
+            var minutes;
+
+            if (value === "custom") {
+                openSnoozeModal(state.snoozeId, state.snoozeTitle);
+                closeSnooze();
+                return;
+            }
+
+            if (value === "tomorrow") {
+
+                var tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(8, 0, 0, 0);
+
+                minutes = Math.max(15, Math.round((tomorrow - new Date()) / 60000));
+            }
+            else {
+                minutes = parseInt(value, 10);
+            }
+
+            var id = state.snoozeId;
+            closeSnooze();
+
+            runAction(null, urls.snooze, { id: id, minutes: minutes }, true);
+        });
+
+
+        // =====================================================
+        // MDR 1.6.5.4 — مودال تنظیم یادآوری (زمان دلخواه)
+        // =====================================================
+
+        var snoozeModalId = null;
+
+        function pad2(n) {
+            return (n < 10 ? "0" : "") + n;
+        }
+
+        function todayPersian(date) {
+
+            try {
+                return date.toLocaleDateString("fa-IR-u-nu-latn", {
+                    year: "numeric", month: "2-digit", day: "2-digit"
+                });
+            }
+            catch (e) {
+                return "";
+            }
+        }
+
+        function toLatin(value) {
+
+            return String(value || "")
+                .replace(/[۰-۹]/g, function (d) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(d); })
+                .replace(/[٠-٩]/g, function (d) { return "٠١٢٣٤٥٦٧٨٩".indexOf(d); });
+        }
+
+        function openSnoozeModal(id, title) {
+
+            snoozeModalId = id;
+
+            // پیش‌فرض: یک ساعت بعد
+            var next = new Date(Date.now() + 60 * 60000);
+
+            $("ntSnoozeSubtitle").textContent = title || "-";
+            $("ntSnoozeDate").value = fa(todayPersian(next));
+            $("ntSnoozeTime").value = pad2(next.getHours()) + ":" + pad2(next.getMinutes());
+            $("btnNtSnoozeSave").disabled = false;
+
+            var modal = $("NtSnoozeModalAG");
+            modal.classList.add("fade-in");
+            modal.style.display = "flex";
+        }
+
+        function closeSnoozeModal() {
+
+            var modal = $("NtSnoozeModalAG");
+            modal.style.display = "none";
+            modal.classList.remove("fade-in");
+            snoozeModalId = null;
+        }
+
+        $("btnCloseSnoozeModal").addEventListener("click", closeSnoozeModal);
+        $("btnNtSnoozeCancel").addEventListener("click", closeSnoozeModal);
+
+        $("NtSnoozeModalAG").addEventListener("click", function (e) {
+
+            if (e.target === this) {
+                closeSnoozeModal();
+            }
+        });
+
+        document.addEventListener("keydown", function (e) {
+
+            if (e.key === "Escape" && snoozeModalId) {
+                closeSnoozeModal();
+            }
+        });
+
+        $("btnNtSnoozeSave").addEventListener("click", function () {
+
+            var date = toLatin($("ntSnoozeDate").value.trim());
+            var time = $("ntSnoozeTime").value.trim();
+
+            if (!date || !time) {
+                notify("error", "تاریخ و ساعت یادآوری را وارد کنید.");
+                return;
+            }
+
+            var id = snoozeModalId;
+            var button = this;
+
+            button.disabled = true;
+
+            post(urls.snoozeAt, { id: id, date: date, time: time })
+                .then(function (result) {
+
+                    if (!result || !result.success) {
+                        notify("error", (result && result.message) || "عملیات انجام نشد.");
+                        button.disabled = false;
+                        return;
+                    }
+
+                    notify("success", result.message);
+                    closeSnoozeModal();
+                    reloadAll();
+                })
+                .catch(function () {
+                    notify("error", "خطا در ارتباط با سرور");
+                    button.disabled = false;
+                });
+        });
+
+        document.addEventListener("click", function (e) {
+
+            if (!e.target.closest("#ntSnoozeMenu") && !e.target.closest("[data-act='snooze']")) {
+                closeSnooze();
+            }
+        });
+
+        window.addEventListener("scroll", closeSnooze, true);
+
+
+        // همه خوانده شد (اعلان‌های در حال تعویق دست نمی‌خورند)
+        $("btnNtReadAll").addEventListener("click", function () {
+
+            var button = this;
+            button.disabled = true;
+
+            post(urls.readAll, {})
+                .then(function (result) {
+                    notify(result.success ? "success" : "error", result.message);
+                    reloadAll();
+                })
+                .catch(function () {
+                    notify("error", "خطا در ارتباط با سرور");
+                })
+                .then(function () {
+                    button.disabled = false;
+                });
+        });
+
+
+        // =====================================================
+        // MDR 1.6.5.3 — FILTERS
+        // =====================================================
+
+        // منبع
+        $("ntSources").addEventListener("click", function (e) {
+
+            var item = e.target.closest("[data-module]");
+
+            if (item) {
+                state.moduleName = item.getAttribute("data-module");
+                state.page = 1;
+                loadList();
+            }
+        });
+
+        // کارت‌های آمار = فیلتر وضعیت
+        document.querySelectorAll(".nt-stat").forEach(function (card) {
+
+            card.addEventListener("click", function () {
+
+                $("fltStatus").value = card.getAttribute("data-status");
+                $("fltStatus").dispatchEvent(new Event("change"));
+            });
+        });
+
+        var reloadTimer = null;
+
+        ["fltStatus", "fltSeverity", "ntPageSize"].forEach(function (id) {
+
+            $(id).addEventListener("change", function () {
+
+                clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(function () {
+                    state.page = 1;
+                    loadList();
+                }, 50);
+            });
+        });
+
+        // جستجو هنگام تایپ (با تأخیر کوتاه)
+        var searchTimer = null;
+
+        $("fltSearch").addEventListener("input", function () {
+
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () {
+                state.page = 1;
+                loadList();
+            }, 400);
+        });
+
+        $("btnNtReset").addEventListener("click", function () {
+
+            $("fltStatus").value = "";
+            $("fltSeverity").value = "";
+            $("fltSearch").value = "";
+            state.moduleName = "";
+            state.page = 1;
+            loadList();
+        });
+
+        // صفحه‌بندی
+        $("btnNtPrev").addEventListener("click", function () {
+
+            if (state.page > 1) {
+                state.page--;
+                loadList();
+            }
+        });
+
+        $("btnNtNext").addEventListener("click", function () {
+
+            if (state.page < state.totalPages) {
+                state.page++;
+                loadList();
+            }
+        });
+
+
+        // =====================================================
+        // INITIAL LOAD + به‌روزرسانی هر ۶۰ ثانیه
+        // =====================================================
+
+        restoreContext();
+        loadList();
+
+        setInterval(function () {
+
+            if (!document.hidden &&
+                !$("ntSnoozeMenu").classList.contains("open") &&
+                !snoozeModalId) {
+                loadList();
+            }
+        }, 60000);
+
+    }
+);
+
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("asset.title");
+    bool isManager = ViewBag.IsManager == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-laptop", MdrText.T("asset.title"), MdrText.T("asset.hdr.sub") })
+
+    @if (isManager)
+    {
+        <div class="glass-field-ag">
+            <div class="glass-field-header"><div class="glass-field-icon"><i class="bi bi-pie-chart"></i></div><div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("asset.sec.summary")</div></div></div>
+            <div class="glass-field-body"><div id="summary"></div></div>
+        </div>
+    }
+
+    <div class="glass-field-ag">
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-3 col-md-4"><label class="glass-label-ag">@MdrText.T("asset.f.scope")</label>
+                    <select id="scope" class="glass-select-search"><option value="mine">@MdrText.T("asset.scope.mine")</option>@if (isManager) { <option value="all">@MdrText.T("asset.scope.all")</option> }</select></div>
+                <div class="col-xl-3 col-md-4"><label class="glass-label-ag">@MdrText.T("asset.f.status")</label>
+                    <select id="status" class="glass-select-search"><option value="">@MdrText.T("asset.f.all")</option><option value="InStock">@MdrText.T("asset.st.InStock")</option><option value="Assigned">@MdrText.T("asset.st.Assigned")</option><option value="InRepair">@MdrText.T("asset.st.InRepair")</option><option value="Disposed">@MdrText.T("asset.st.Disposed")</option></select></div>
+                <div class="col-xl-3 col-md-4"><label class="glass-label-ag">@MdrText.T("asset.f.category")</label><select id="category" class="glass-select-search"><option value="">@MdrText.T("asset.f.all")</option></select></div>
+                <div class="col-xl-3 col-md-12"><label class="glass-label-ag">@MdrText.T("fin.f.q")</label><input id="q" class="glass-input-ag" placeholder="@MdrText.T("asset.f.q")" autocomplete="off" /></div>
+            </div>
+            <div class="row row-btn-AG row-ltr-AG">
+                <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("asset.act.back")</p></a></div>
+                @if (isManager) { <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="newasset"><i class="bi bi-plus-lg"></i><p>@MdrText.T("asset.act.register")</p></button></div> }
+            </div>
+        </div>
+    </div>
+
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+    <div id="listwrap" class="glass-field-ag" hidden><div class="glass-field-body">
+        <table class="glass-table-ag"><thead><tr><th>@MdrText.T("asset.col.tag")</th><th>@MdrText.T("asset.col.name")</th><th>@MdrText.T("asset.col.category")</th><th>@MdrText.T("asset.col.status")</th><th>@MdrText.T("asset.col.holder")</th><th>@MdrText.T("asset.col.location")</th></tr></thead><tbody id="list" class="scrollbar"></tbody></table>
+    </div></div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-laptop", MdrText.T("asset.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var isManager = @(isManager ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("wf.empty"),
+        st = new { InStock = MdrText.T("asset.st.InStock"), Assigned = MdrText.T("asset.st.Assigned"), InRepair = MdrText.T("asset.st.InRepair"), Disposed = MdrText.T("asset.st.Disposed") },
+        ev = new { Register = MdrText.T("asset.ev.Register"), Assign = MdrText.T("asset.ev.Assign"), Return = MdrText.T("asset.ev.Return"), Transfer = MdrText.T("asset.ev.Transfer"), RepairStart = MdrText.T("asset.ev.RepairStart"), RepairEnd = MdrText.T("asset.ev.RepairEnd"), Dispose = MdrText.T("asset.ev.Dispose") },
+        f = new { tag = MdrText.T("asset.f.tag"), name = MdrText.T("asset.f.name"), cat = MdrText.T("asset.f.cat"), loc = MdrText.T("asset.f.loc"), acq = MdrText.T("asset.f.acq"), cost = MdrText.T("asset.f.cost"), note = MdrText.T("asset.f.note"), user = MdrText.T("asset.f.user"), holder = MdrText.T("asset.f.holder") },
+        act = new { register = MdrText.T("asset.act.register"), assign = MdrText.T("asset.act.assign"), ret = MdrText.T("asset.act.return"), transfer = MdrText.T("asset.act.transfer"), move = MdrText.T("asset.act.move"), repairStart = MdrText.T("asset.act.repairstart"),
+                    repairEnd = MdrText.T("asset.act.repairend"), dispose = MdrText.T("asset.act.dispose"), save = MdrText.T("asset.act.save") },
+        sec = new { info = MdrText.T("asset.sec.info"), history = MdrText.T("asset.sec.history"), byCat = MdrText.T("asset.sec.bycat"), byHolder = MdrText.T("asset.sec.byholder") },
+        warnCommit = MdrText.T("asset.warn.commitment"), warnDispose = MdrText.T("asset.warn.dispose"),
+        prompt = new { reason = MdrText.T("asset.prompt.reason"), location = MdrText.T("asset.prompt.location"), note = MdrText.T("asset.prompt.note") },
+        loc = MdrText.T("asset.col.location"), cost = MdrText.T("asset.f.cost") }));
+    var u = @Html.Raw(Json.Encode(new {
+        list = Url.Action("GetList", "Assets", new { area = "Mdr" }), get = Url.Action("GetAsset", "Assets", new { area = "Mdr" }), summary = Url.Action("GetSummary", "Assets", new { area = "Mdr" }),
+        users = Url.Action("SearchUsers", "Assets", new { area = "Mdr" }), register = Url.Action("Register", "Assets", new { area = "Mdr" }), assign = Url.Action("Assign", "Assets", new { area = "Mdr" }),
+        ret = Url.Action("Return", "Assets", new { area = "Mdr" }), transfer = Url.Action("Transfer", "Assets", new { area = "Mdr" }), move = Url.Action("Move", "Assets", new { area = "Mdr" }),
+        repairStart = Url.Action("RepairStart", "Assets", new { area = "Mdr" }), repairEnd = Url.Action("RepairEnd", "Assets", new { area = "Mdr" }), dispose = Url.Action("Dispose", "Assets", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc, cur = null, curAsset = null;
+    var ST_CLS = { InStock: "glass-status-success", Assigned: "glass-status-info", InRepair: "glass-status-warning", Disposed: "glass-status-danger" };
+
+    function money(v) { return v === null || v === undefined ? "—" : Math.round(Number(v)).toLocaleString("fa-IR"); }
+    function latin(s) { return String(s == null ? "" : s).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }).replace(/[٬,\s]/g, ""); }
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function setHash() { history.replaceState(null, "", location.pathname + (cur ? "#id=" + cur : "")); }
+    function field(icon, title, body) { return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) + '</div></div></div><div class="glass-field-body">' + body + "</div></div>"; }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + (attrs || "") + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function post(url, p, then) { mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); then(r); }); }
+
+    function load() {
+        $("state").hidden = false; $("state").textContent = L.loading; $("listwrap").hidden = true;
+        mdr.get(u.list + "?scope=" + $("scope").value + "&status=" + $("status").value + "&category=" + encodeURIComponent($("category").value) + "&q=" + encodeURIComponent($("q").value)).then(function (r) {
+            if (!r.success) { $("state").textContent = L.error; return; }
+            var sel = $("category"), keep = sel.value; if (sel.options.length <= 1) r.categories.forEach(function (c) { var o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); }); sel.value = keep;
+            if (!r.items.length) { $("state").textContent = L.empty; return; }
+            $("state").hidden = true; $("listwrap").hidden = false;
+            $("list").innerHTML = r.items.map(function (a) { return '<tr data-id="' + a.AssetID + '"><td>' + E(a.Tag) + "</td><td>" + E(a.Name) + "</td><td>" + E(a.Category || "—") + '</td><td><span class="meeting-status ' + (ST_CLS[a.Status] || "") + '">' + E(L.st[a.Status]) + "</span></td><td>" + E(a.Holder || "—") + "</td><td>" + E(a.Location || "—") + "</td></tr>"; }).join("");
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    function summary() {
+        if (!isManager) return;
+        mdr.get(u.summary).then(function (r) {
+            if (!r.success) return;
+            var s = r.summary, st = '<div class="mdr-ag-stats" style="grid-template-columns:repeat(4,minmax(0,1fr))">' + ["InStock", "Assigned", "InRepair", "Disposed"].map(function (k, i) {
+                return '<div class="mdr-ag-stat mdr-ag-stat-' + ["success", "info", "warning", "danger"][i] + '"><div><div class="mdr-ag-stat-value">' + s.ByStatus[k] + '</div><div class="mdr-ag-stat-label">' + E(L.st[k]) + "</div></div></div>"; }).join("") + "</div>";
+            function bars(list) { var max = Math.max.apply(null, list.map(function (x) { return x.Count; })) || 1; return list.length ? '<ul class="mdr-ag-bars">' + list.map(function (x) { return '<li><span class="mdr-ag-bars-name">' + E(x.Name) + '</span><span class="mdr-ag-bars-track"><i style="width:' + Math.round(100 * x.Count / max) + '%"></i></span><b>' + x.Count + "</b></li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.empty) + "</div>"; }
+            $("summary").innerHTML = st + '<div class="row"><div class="col-xl-6 col-md-6"><h4>' + E(L.sec.byCat) + "</h4>" + bars(s.ByCategory) + '</div><div class="col-xl-6 col-md-6"><h4>' + E(L.sec.byHolder) + "</h4>" + bars(s.ByHolder) + "</div></div>";
+        });
+    }
+
+    function userPick(inputId, boxId, onPick) {
+        var inp = $(inputId), box = $(boxId), t;
+        inp.oninput = function () { clearTimeout(t); t = setTimeout(function () { if (inp.value.trim().length < 2) { box.innerHTML = ""; return; } mdr.get(u.users + "?q=" + encodeURIComponent(inp.value.trim())).then(function (d) { box.innerHTML = d.items.map(function (x) { return '<button type="button" class="glass-btn-ag" data-u="' + x.Id + '">' + E(x.Name) + "</button>"; }).join(""); }); }, 300); };
+        box.onclick = function (e) { var b = e.target.closest("button[data-u]"); if (b) { onPick(+b.getAttribute("data-u")); inp.value = b.textContent; box.innerHTML = ""; } };
+    }
+
+    function regForm() {
+        $("mtitle").textContent = L.act.register; $("msub").textContent = ""; toast("");
+        $("dbody").innerHTML = field("bi-laptop", L.act.register, '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.tag) + ' *</label><input id="g-tag" class="glass-input-ag" maxlength="40"></div><div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.name) + ' *</label><input id="g-name" class="glass-input-ag" maxlength="200"></div></div>' +
+            '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.cat) + '</label><input id="g-cat" class="glass-input-ag" maxlength="60"></div><div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.loc) + '</label><input id="g-loc" class="glass-input-ag" maxlength="200"></div></div>' +
+            '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.acq) + '</label>' + mdr.jd.html("g-acq", "") + '</div><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.cost) + '</label><input id="g-cost" class="glass-input-ag" inputmode="numeric"></div><div class="col-xl-4 col-md-12"><label class="glass-label-ag">' + E(L.f.note) + '</label><input id="g-note" class="glass-input-ag" maxlength="500"></div></div>' +
+            '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="g-go"') + "</div>");
+        $("g-go").onclick = function () { post(u.register, { tag: $("g-tag").value, name: $("g-name").value, category: $("g-cat").value, location: $("g-loc").value, acquiredAt: mdr.jd.get("g-acq"), cost: latin($("g-cost").value), note: $("g-note").value }, function (r) { load(); summary(); openAsset(r.id); }); };
+        showModal(true);
+    }
+
+    function openAsset(id) {
+        cur = id;
+        mdr.get(u.get + "?id=" + id).then(function (r) {
+            showModal(true);
+            if (!r.success) { cur = null; setHash(); toast(E(r.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            var a = r.asset; curAsset = a; setHash(); toast("");
+            $("mtitle").textContent = a.Tag + " — " + a.Name; $("msub").textContent = a.Category || "";
+            var acts = (a.CanAssign ? btn("glass-btn-ag-primary", "bi-person-check", L.act.assign, 'data-a="assign"') : "") + (a.CanReturn ? btn("", "bi-box-arrow-in-left", L.act.ret, 'data-a="return"') : "") + (a.CanTransfer ? btn("", "bi-arrow-left-right", L.act.transfer, 'data-a="transfer"') : "") +
+                (a.CanMove ? btn("", "bi-geo-alt", L.act.move, 'data-a="move"') : "") + (a.CanRepairStart ? btn("", "bi-tools", L.act.repairStart, 'data-a="repairstart"') : "") + (a.CanRepairEnd ? btn("glass-btn-ag-primary", "bi-check2-circle", L.act.repairEnd, 'data-a="repairend"') : "") +
+                (a.CanDispose ? btn("glass-btn-text-reject", "bi-trash", L.act.dispose, 'data-a="dispose"') : "");
+            var info = '<div style="margin-bottom:.6rem"><span class="mdr-ag-badge ' + (ST_CLS[a.Status] || "") + '">' + E(L.st[a.Status]) + "</span></div>" + (a.Commitment && a.Status !== "Disposed" ? '<div class="mdr-ag-msg" style="margin-bottom:.6rem">' + E(L.warnCommit) + "</div>" : "") +
+                '<dl class="mdr-ag-dl"><dt>' + E(L.f.holder) + "</dt><dd>" + E(a.Holder || "—") + "</dd><dt>" + E(L.loc) + "</dt><dd>" + E(a.Location || "—") + "</dd>" + (a.AcquiredAt ? "<dt>" + E(L.f.acq) + "</dt><dd>" + E(a.AcquiredAt) + "</dd>" : "") + (a.Cost !== null ? "<dt>" + E(L.cost) + "</dt><dd>" + money(a.Cost) + "</dd>" : "") + (a.Note ? "<dt>" + E(L.f.note) + "</dt><dd>" + E(a.Note) + "</dd>" : "") + "</dl>" +
+                (acts ? '<div class="row row-btn-AG row-ltr-AG">' + acts + "</div>" : "") + '<div id="pick"></div>';
+            var hist = '<div class="meeting-timeline" style="max-height:18rem">' + a.Events.map(function (h) {
+                var d = (h.From ? h.From + " → " : "") + (h.To || "") + (h.FromLocation || h.ToLocation ? " [" + (h.FromLocation || "") + " → " + (h.ToLocation || "") + "]" : "") + (h.Reason ? " — " + h.Reason : "");
+                return '<div class="timeline-item completed"><div class="timeline-icon"></div><div class="timeline-content"><div class="timeline-title">' + E(L.ev[h.EventType]) + " — " + E(h.Actor || "") + '</div><div class="timeline-description">' + E(h.At) + (d ? " — " + E(d) : "") + " · " + E(h.CorrelationID) + "</div></div></div>"; }).join("") + "</div>";
+            $("dbody").innerHTML = field("bi-info-circle", L.sec.info, info) + field("bi-clock-history", L.sec.history, hist);
+        });
+    }
+
+    function pickUser(then, label) {
+        $("pick").innerHTML = '<div class="row row-input-AG" style="margin-top:.6rem"><div class="col-12"><label class="glass-label-ag">' + E(label) + '</label><input id="pu-q" class="glass-input-ag" placeholder="' + E(L.f.user) + '" autocomplete="off"><div id="pu-r" class="mdr-ag-picks"></div></div></div>';
+        userPick("pu-q", "pu-r", then);
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        var b = e.target.closest("button[data-a]"); if (!b || !curAsset) return;
+        var a = b.getAttribute("data-a"), d = curAsset, after = function () { load(); summary(); openAsset(d.AssetID); };
+        if (a === "assign") return pickUser(function (uid) { var n = prompt(L.prompt.note); if (n === null) return; post(u.assign, { id: d.AssetID, toUser: uid, note: n, rowVer: d.RowVer }, after); }, L.act.assign);
+        if (a === "return") { var loc = prompt(L.prompt.location, d.Location || ""); if (loc === null) return; return post(u.ret, { id: d.AssetID, location: loc, rowVer: d.RowVer }, after); }
+        if (a === "transfer") return pickUser(function (uid) { var rs = prompt(L.prompt.reason); if (!rs) return; post(u.transfer, { id: d.AssetID, toUser: uid, reason: rs, rowVer: d.RowVer }, after); }, L.act.transfer);
+        if (a === "move") { var nl = prompt(L.prompt.location, d.Location || ""); if (!nl) return; return post(u.move, { id: d.AssetID, location: nl, reason: "", rowVer: d.RowVer }, after); }
+        if (a === "repairstart") { var r1 = prompt(L.prompt.reason); if (!r1) return; return post(u.repairStart, { id: d.AssetID, reason: r1, rowVer: d.RowVer }, after); }
+        if (a === "repairend") { var n2 = prompt(L.prompt.note); if (n2 === null) return; return post(u.repairEnd, { id: d.AssetID, note: n2, rowVer: d.RowVer }, after); }
+        if (a === "dispose") { if (!confirm(L.warnDispose)) return; var r2 = prompt(L.prompt.reason); if (!r2) return; post(u.dispose, { id: d.AssetID, reason: r2, rowVer: d.RowVer }, after); }
+    });
+    $("list").addEventListener("click", function (e) { var r = e.target.closest("tr[data-id]"); if (r) openAsset(r.getAttribute("data-id")); });
+    $("dclose").onclick = function () { showModal(false); cur = null; setHash(); }; $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) $("dclose").onclick(); });
+    ["scope", "status", "category"].forEach(function (x) { $(x).onchange = load; });
+    var qt; $("q").oninput = function () { clearTimeout(qt); qt = setTimeout(load, 350); };
+    if ($("newasset")) $("newasset").onclick = function () { cur = null; setHash(); regForm(); };
+    var m = /id=(\d+)/.exec(location.hash); load(); summary(); if (m) openAsset(m[1]);
+})();
+</script>
+}

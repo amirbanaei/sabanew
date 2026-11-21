@@ -1,0 +1,929 @@
+﻿@* =========================================================
+    MDR
+    Phase 1    : زیرساخت مشترک
+    Step 1.6   : اعلان‌ها و Notification
+    Part 1.6.4 : زنگوله هدر + مودال اعلان مهم (Partial)
+    ---------------------------------------------------------
+    یک بار در _Layout (هدر) استفاده می‌شود:
+        @Html.Partial("_MdrNotificationBell")
+
+    - عدد خوانده‌نشده‌ها روی زنگوله
+    - لیست کشویی ۸ اعلان آخر: رفتن به منبع، خوانده‌شده، Snooze
+    - اعلان مهم: مودال وسط صفحه که تا «مطالعه کردم» بسته نمی‌شود
+    - به‌روزرسانی هر ۶۰ ثانیه و هنگام برگشت به تب
+    - اگر مودال «هشدار» قبلی (SweetAlert) باز باشد، صبر می‌کند
+    ========================================================= *@
+
+<style>
+
+    /* =====================================================
+       MDR 1.6.4 — BELL
+       ===================================================== */
+
+    .mdr-bell-btn {
+        position: relative;
+    }
+
+        .mdr-bell-btn .bi-bell-fill {
+            color: rgba(var(--bs-app-header-link-color-rgb), .55);
+        }
+
+        .mdr-bell-btn.has-unread .bi-bell-fill {
+            color: #00ffff;
+            animation: mdrBellRing 2.4s ease-in-out infinite;
+        }
+
+    .mdr-bell-count {
+        color: #2faa92;
+        font-weight: bold;
+    }
+
+    .mdr-bell-btn.has-unread .mdr-bell-count {
+        color: #00ffff;
+    }
+
+    @@keyframes mdrBellRing {
+        0%, 88%, 100% { transform: rotate(0); }
+        90% { transform: rotate(14deg); }
+        93% { transform: rotate(-12deg); }
+        96% { transform: rotate(8deg); }
+    }
+
+
+    /* =====================================================
+       MDR 1.6.4 — DROPDOWN
+       ===================================================== */
+
+    .mdr-bell-panel {
+        position: fixed;
+        z-index: 100500;
+        width: min(23rem, calc(100vw - 20px));
+        max-height: min(32rem, calc(100vh - 80px));
+        display: none;
+        flex-direction: column;
+        direction: rtl;
+        border: 1px solid rgba(0, 255, 255, .22);
+        border-radius: .8rem;
+        background: rgba(7, 17, 27, .97);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, .45), 0 0 18px rgba(0, 255, 255, .08);
+        color: #edfaff;
+        overflow: hidden;
+    }
+
+        .mdr-bell-panel.open {
+            display: flex;
+        }
+
+    .mdr-bell-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: .6rem .75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, .08);
+        font-size: .78rem;
+    }
+
+        .mdr-bell-head b {
+            color: #00ffff;
+            font-weight: 700;
+        }
+
+    .mdr-bell-link {
+        background: none;
+        border: 0;
+        color: #91a9b7;
+        font-size: .64rem;
+        cursor: pointer;
+        padding: 0;
+    }
+
+        .mdr-bell-link:hover {
+            color: #00ffff;
+        }
+
+    .mdr-bell-list {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        min-height: 4rem;
+    }
+
+    .mdr-bell-empty {
+        padding: 2rem .5rem;
+        text-align: center;
+        color: #91a9b7;
+        font-size: .68rem;
+    }
+
+        .mdr-bell-empty i {
+            display: block;
+            font-size: 1.4rem;
+            color: rgba(0, 255, 255, .4);
+            margin-bottom: .3rem;
+        }
+
+    .mdr-bell-item {
+        position: relative;
+        display: flex;
+        gap: .55rem;
+        padding: .6rem .75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, .05);
+        cursor: pointer;
+        transition: background .15s ease;
+    }
+
+        .mdr-bell-item:hover {
+            background: rgba(0, 255, 255, .05);
+        }
+
+        .mdr-bell-item.unread {
+            background: rgba(0, 255, 255, .035);
+        }
+
+            .mdr-bell-item.unread::before {
+                content: "";
+                position: absolute;
+                right: .3rem;
+                top: 50%;
+                width: 5px;
+                height: 5px;
+                margin-top: -2.5px;
+                border-radius: 50%;
+                background: #00ffff;
+                box-shadow: 0 0 6px #00ffff;
+            }
+
+    .mdr-sev-icon {
+        flex: 0 0 auto;
+        width: 30px;
+        height: 30px;
+        border-radius: .55rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .9rem;
+        border: 1px solid currentColor;
+        background: rgba(255, 255, 255, .03);
+    }
+
+        .mdr-sev-icon.Info { color: #00ffff; }
+        .mdr-sev-icon.Success { color: #32d583; }
+        .mdr-sev-icon.Warning { color: #ffc857; }
+        .mdr-sev-icon.Danger { color: #ff5a4f; }
+
+    .mdr-bell-text {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .mdr-bell-title {
+        font-size: .72rem;
+        color: #edfaff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .mdr-bell-item.unread .mdr-bell-title {
+        font-weight: 700;
+    }
+
+    .mdr-bell-msg {
+        margin-top: .15rem;
+        font-size: .62rem;
+        color: #91a9b7;
+        line-height: 1.6;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .mdr-bell-meta {
+        margin-top: .2rem;
+        font-size: .56rem;
+        color: #6f8795;
+    }
+
+    .mdr-bell-badge-important {
+        display: inline-block;
+        margin-right: .25rem;
+        padding: 0 .3rem;
+        border-radius: .3rem;
+        font-size: .52rem;
+        color: #ff5a4f;
+        border: 1px solid rgba(255, 90, 79, .45);
+    }
+
+    /* عملیات هر اعلان */
+    .mdr-bell-actions {
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: .2rem;
+        opacity: 0;
+        transition: opacity .15s ease;
+    }
+
+    .mdr-bell-item:hover .mdr-bell-actions {
+        opacity: 1;
+    }
+
+    .mdr-bell-act {
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, .10);
+        border-radius: .35rem;
+        background: rgba(255, 255, 255, .03);
+        color: #91a9b7;
+        font-size: .62rem;
+        cursor: pointer;
+    }
+
+        .mdr-bell-act:hover {
+            color: #00ffff;
+            border-color: rgba(0, 255, 255, .35);
+        }
+
+    /* منوی Snooze */
+    .mdr-snooze-menu {
+        position: fixed;
+        z-index: 100600;
+        display: none;
+        min-width: 9rem;
+        padding: .3rem;
+        direction: rtl;
+        border: 1px solid rgba(0, 255, 255, .25);
+        border-radius: .55rem;
+        background: rgba(7, 17, 27, .98);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, .45);
+    }
+
+        .mdr-snooze-menu.open {
+            display: block;
+        }
+
+        .mdr-snooze-menu button {
+            display: block;
+            width: 100%;
+            padding: .35rem .5rem;
+            border: 0;
+            border-radius: .35rem;
+            background: transparent;
+            color: #edfaff;
+            font-size: .64rem;
+            text-align: right;
+            cursor: pointer;
+        }
+
+            .mdr-snooze-menu button:hover {
+                background: rgba(0, 255, 255, .08);
+                color: #00ffff;
+            }
+
+    .mdr-bell-foot {
+        padding: .5rem;
+        border-top: 1px solid rgba(255, 255, 255, .08);
+        text-align: center;
+    }
+
+        .mdr-bell-foot a {
+            color: #00ffff;
+            font-size: .66rem;
+            text-decoration: none;
+        }
+
+
+    /* =====================================================
+       MDR 1.6.4 — IMPORTANT MODAL (وسط صفحه + تأیید اجباری)
+       ===================================================== */
+
+    .mdr-imp-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100700;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(0, 0, 0, .55);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        direction: rtl;
+    }
+
+        .mdr-imp-overlay.open {
+            display: flex;
+        }
+
+    .mdr-imp-card {
+        width: min(30rem, 100%);
+        border: 1px solid rgba(255, 255, 255, .14);
+        border-top: 3px solid var(--mdr-imp-color, #ff5a4f);
+        border-radius: .9rem;
+        background: rgba(7, 17, 27, .97);
+        box-shadow: 0 25px 60px rgba(0, 0, 0, .55), 0 0 30px color-mix(in srgb, var(--mdr-imp-color, #ff5a4f) 25%, transparent);
+        color: #edfaff;
+        overflow: hidden;
+        animation: mdrImpIn .25s ease-out;
+    }
+
+    @@keyframes mdrImpIn {
+        from { transform: translateY(12px) scale(.98); opacity: 0; }
+        to { transform: none; opacity: 1; }
+    }
+
+    .mdr-imp-head {
+        display: flex;
+        align-items: center;
+        gap: .7rem;
+        padding: 1rem 1.1rem .6rem;
+    }
+
+        .mdr-imp-head .mdr-sev-icon {
+            width: 42px;
+            height: 42px;
+            font-size: 1.2rem;
+            border-radius: .7rem;
+        }
+
+    .mdr-imp-label {
+        font-size: .6rem;
+        color: var(--mdr-imp-color, #ff5a4f);
+        margin-bottom: .15rem;
+    }
+
+    .mdr-imp-title {
+        font-size: .95rem;
+        font-weight: 700;
+    }
+
+    .mdr-imp-body {
+        padding: .3rem 1.1rem 1rem;
+        font-size: .76rem;
+        line-height: 2;
+        color: #d3e6ef;
+        white-space: pre-line;
+        max-height: 50vh;
+        overflow-y: auto;
+    }
+
+    .mdr-imp-meta {
+        padding: 0 1.1rem .8rem;
+        font-size: .6rem;
+        color: #6f8795;
+    }
+
+    .mdr-imp-foot {
+        display: flex;
+        gap: .5rem;
+        justify-content: flex-start;
+        padding: .8rem 1.1rem;
+        border-top: 1px solid rgba(255, 255, 255, .08);
+        background: rgba(255, 255, 255, .02);
+    }
+
+    .mdr-imp-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        padding: .45rem .9rem;
+        border-radius: .55rem;
+        font-size: .7rem;
+        cursor: pointer;
+        border: 1px solid rgba(255, 255, 255, .14);
+        background: rgba(255, 255, 255, .04);
+        color: #edfaff;
+    }
+
+        .mdr-imp-btn.primary {
+            border-color: rgba(50, 213, 131, .5);
+            background: rgba(50, 213, 131, .12);
+            color: #32d583;
+        }
+
+            .mdr-imp-btn.primary:hover:not(:disabled) {
+                box-shadow: 0 0 12px rgba(50, 213, 131, .35);
+            }
+
+        .mdr-imp-btn:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+</style>
+
+
+@* ========== دکمه زنگوله (هم‌سبک دکمه‌های هدر) ========== *@
+
+<button type="button"
+        id="mdrBellBtn"
+        class="btnhome btnbacfow btnbacfowM mdr-bell-btn"
+        title="اعلان‌ها">
+    <i class="bi bi-bell-fill"></i>
+    <span class="mdr-bell-count" id="mdrBellCount">0</span>
+</button>
+
+
+@* ========== لیست کشویی ========== *@
+
+<div class="mdr-bell-panel" id="mdrBellPanel" role="dialog" aria-label="اعلان‌ها">
+
+    <div class="mdr-bell-head">
+        <b><i class="bi bi-bell"></i> اعلان‌ها</b>
+        <button type="button" class="mdr-bell-link" id="mdrBellReadAll">
+            <i class="bi bi-check2-all"></i> همه خوانده شد
+        </button>
+    </div>
+
+    <div class="mdr-bell-list" id="mdrBellList">
+        <div class="mdr-bell-empty">در حال بارگذاری...</div>
+    </div>
+
+    <div class="mdr-bell-foot">
+        <a href="@Url.Action("Notifications", "AG", new { area = "Mdr" })">
+            مشاهده همه اعلان‌ها <i class="bi bi-arrow-left-short"></i>
+        </a>
+    </div>
+
+</div>
+
+
+@* ========== منوی Snooze ========== *@
+
+<div class="mdr-snooze-menu" id="mdrSnoozeMenu">
+    <button type="button" data-min="60"><i class="bi bi-clock"></i> ۱ ساعت بعد</button>
+    <button type="button" data-min="180"><i class="bi bi-clock"></i> ۳ ساعت بعد</button>
+    <button type="button" data-min="tomorrow"><i class="bi bi-sunrise"></i> فردا ساعت ۸ صبح</button>
+    <button type="button" data-min="10080"><i class="bi bi-calendar-week"></i> هفته بعد</button>
+</div>
+
+
+@* ========== مودال اعلان مهم ========== *@
+
+<div class="mdr-imp-overlay" id="mdrImpOverlay" role="alertdialog" aria-modal="true">
+
+    <div class="mdr-imp-card">
+
+        <div class="mdr-imp-head">
+            <div class="mdr-sev-icon" id="mdrImpIcon"><i class="bi bi-exclamation-octagon"></i></div>
+            <div>
+                <div class="mdr-imp-label">اعلان مهم — نیازمند تأیید</div>
+                <div class="mdr-imp-title" id="mdrImpTitle">-</div>
+            </div>
+        </div>
+
+        <div class="mdr-imp-body" id="mdrImpBody"></div>
+        <div class="mdr-imp-meta" id="mdrImpMeta"></div>
+
+        <div class="mdr-imp-foot">
+            <button type="button" class="mdr-imp-btn primary" id="mdrImpAck">
+                <i class="bi bi-check2-circle"></i> مطالعه کردم
+            </button>
+            <button type="button" class="mdr-imp-btn" id="mdrImpOpen" style="display:none">
+                <i class="bi bi-box-arrow-up-left"></i> تأیید و رفتن به منبع
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+
+<script data-cfasync="false">
+
+    // =====================================================
+    // MDR 1.6.4 — زنگوله و مودال اعلان مهم
+    // =====================================================
+
+    (function () {
+
+        if (window.__mdrBellInit) {
+            return;
+        }
+
+        window.__mdrBellInit = true;
+
+        // پنل‌ها به body منتقل شوند تا position:fixed تحت تأثیر
+        // استایل‌های هدر (transform / backdrop-filter) قرار نگیرد
+        ["mdrBellPanel", "mdrSnoozeMenu", "mdrImpOverlay"].forEach(function (id) {
+
+            var element = document.getElementById(id);
+
+            if (element && element.parentNode !== document.body) {
+                document.body.appendChild(element);
+            }
+        });
+
+        var urls = {
+            summary: '@Url.Action("GetNotificationSummary", "AG", new { area = "Mdr" })',
+            open: '@Url.Action("OpenNotification", "AG", new { area = "Mdr" })',
+            read: '@Url.Action("MarkNotificationRead", "AG", new { area = "Mdr" })',
+            readAll: '@Url.Action("MarkAllNotificationsRead", "AG", new { area = "Mdr" })',
+            ack: '@Url.Action("AcknowledgeNotification", "AG", new { area = "Mdr" })',
+            snooze: '@Url.Action("SnoozeNotification", "AG", new { area = "Mdr" })'
+        };
+
+        var POLL_MS = 60000;
+
+        var $ = function (id) { return document.getElementById(id); };
+
+        var state = {
+            importantShown: null,   // شناسه اعلان مهمی که الان در مودال است
+            snoozeId: null
+        };
+
+        var sevIcons = {
+            Info: "bi-info-circle",
+            Success: "bi-check-circle",
+            Warning: "bi-exclamation-triangle",
+            Danger: "bi-exclamation-octagon"
+        };
+
+        var sevColors = {
+            Info: "#00ffff",
+            Success: "#32d583",
+            Warning: "#ffc857",
+            Danger: "#ff5a4f"
+        };
+
+        // نام خوانای منبع (هم‌نام صفحه تاریخچه رویدادها)
+        var moduleNames = {
+            OrganizationStructure: "ساختار سازمانی",
+            Users: "کاربران",
+            Roles: "نقش‌ها",
+            Meetings: "جلسات",
+            Tasks: "وظایف",
+            Requests: "درخواست‌ها"
+        };
+
+
+        function esc(value) {
+
+            if (value === null || value === undefined) {
+                return "";
+            }
+
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function fa(value) {
+            return String(value === null || value === undefined ? "" : value)
+                .replace(/\d/g, function (d) { return "۰۱۲۳۴۵۶۷۸۹"[d]; });
+        }
+
+        function post(url, data) {
+
+            var form = new FormData();
+
+            Object.keys(data || {}).forEach(function (k) {
+                form.append(k, data[k]);
+            });
+
+            return fetch(url, { method: "POST", body: form, credentials: "same-origin" })
+                .then(function (r) { return r.json(); });
+        }
+
+        function openUrl(id) {
+            return urls.open + "?id=" + encodeURIComponent(id);
+        }
+
+
+        // -------------------------------------------------
+        // بارگذاری خلاصه
+        // -------------------------------------------------
+
+        function refresh() {
+
+            fetch(urls.summary, { credentials: "same-origin" })
+                .then(function (r) { return r.json(); })
+                .then(function (result) {
+
+                    if (!result || !result.success) {
+                        renderCount(0);
+                        renderList([]);
+                        return;
+                    }
+
+                    renderCount(result.unreadCount);
+                    renderList(result.items || []);
+                    showImportant(result.pendingImportant);
+                })
+                .catch(function (error) {
+                    console.error("MDR Bell Error:", error);
+                });
+        }
+
+
+        function renderCount(count) {
+
+            var button = $("mdrBellBtn");
+
+            $("mdrBellCount").textContent = count > 99 ? "۹۹+" : fa(count || 0);
+            button.classList.toggle("has-unread", count > 0);
+            button.title = count > 0 ? fa(count) + " اعلان خوانده‌نشده" : "اعلان‌ها";
+        }
+
+
+        function renderList(items) {
+
+            var list = $("mdrBellList");
+
+            if (!items.length) {
+
+                list.innerHTML =
+                    '<div class="mdr-bell-empty"><i class="bi bi-bell-slash"></i>اعلانی وجود ندارد</div>';
+
+                return;
+            }
+
+            list.innerHTML = items.map(function (x) {
+
+                var source = x.module ? (moduleNames[x.module] || x.module) : "سیستم";
+
+                var actions =
+                    (!x.isRead
+                        ? '<button type="button" class="mdr-bell-act" data-act="read" data-id="' + x.id + '" title="خوانده شد"><i class="bi bi-check2"></i></button>'
+                        : '') +
+                    (!(x.important && !x.isAcknowledged)
+                        ? '<button type="button" class="mdr-bell-act" data-act="snooze" data-id="' + x.id + '" title="یادآوری بعداً (Snooze)"><i class="bi bi-alarm"></i></button>'
+                        : '');
+
+                return '' +
+                    '<div class="mdr-bell-item' + (x.isRead ? '' : ' unread') + '" data-id="' + x.id + '">' +
+                        '<div class="mdr-sev-icon ' + esc(x.severity) + '"><i class="bi ' + (sevIcons[x.severity] || sevIcons.Info) + '"></i></div>' +
+                        '<div class="mdr-bell-text">' +
+                            '<div class="mdr-bell-title">' + esc(x.title) + '</div>' +
+                            (x.message ? '<div class="mdr-bell-msg">' + esc(x.message) + '</div>' : '') +
+                            '<div class="mdr-bell-meta">' +
+                                esc(fa((x.date || "") + " " + (x.time || ""))) + ' · ' + esc(source) +
+                                (x.important ? '<span class="mdr-bell-badge-important">مهم</span>' : '') +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="mdr-bell-actions">' + actions + '</div>' +
+                    '</div>';
+
+            }).join("");
+        }
+
+
+        // -------------------------------------------------
+        // باز و بسته کردن لیست
+        // -------------------------------------------------
+
+        function placeFixed(element, anchor) {
+
+            var rect = anchor.getBoundingClientRect();
+            var width = element.offsetWidth;
+
+            var left = rect.left + rect.width / 2 - width / 2;
+            left = Math.max(10, Math.min(left, window.innerWidth - width - 10));
+
+            element.style.top = (rect.bottom + 8) + "px";
+            element.style.left = left + "px";
+        }
+
+        function togglePanel(open) {
+
+            var panel = $("mdrBellPanel");
+            var willOpen = open === undefined ? !panel.classList.contains("open") : open;
+
+            panel.classList.toggle("open", willOpen);
+            closeSnooze();
+
+            if (willOpen) {
+                placeFixed(panel, $("mdrBellBtn"));
+                refresh();
+            }
+        }
+
+        function closeSnooze() {
+            $("mdrSnoozeMenu").classList.remove("open");
+            state.snoozeId = null;
+        }
+
+
+        $("mdrBellBtn").addEventListener("click", function (e) {
+            e.stopPropagation();
+            togglePanel();
+        });
+
+        document.addEventListener("click", function (e) {
+
+            if (!e.target.closest("#mdrBellPanel") &&
+                !e.target.closest("#mdrSnoozeMenu") &&
+                !e.target.closest("#mdrBellBtn")) {
+
+                togglePanel(false);
+            }
+        });
+
+        document.addEventListener("keydown", function (e) {
+
+            if (e.key === "Escape" && !$("mdrImpOverlay").classList.contains("open")) {
+                togglePanel(false);
+            }
+        });
+
+        window.addEventListener("resize", function () {
+            togglePanel(false);
+        });
+
+
+        // -------------------------------------------------
+        // کلیک‌های داخل لیست
+        // -------------------------------------------------
+
+        $("mdrBellList").addEventListener("click", function (e) {
+
+            var act = e.target.closest("[data-act]");
+
+            if (act) {
+
+                e.stopPropagation();
+
+                var id = act.getAttribute("data-id");
+
+                if (act.getAttribute("data-act") === "read") {
+                    post(urls.read, { id: id }).then(refresh);
+                }
+                else {
+                    state.snoozeId = id;
+                    var menu = $("mdrSnoozeMenu");
+                    menu.classList.add("open");
+                    placeFixed(menu, act);
+                }
+
+                return;
+            }
+
+            // رفتن به منبع (سرور: خوانده‌شده + انتقال به لینک یا صفحه اعلان‌ها)
+            var item = e.target.closest(".mdr-bell-item");
+
+            if (item) {
+                window.location.href = openUrl(item.getAttribute("data-id"));
+            }
+        });
+
+        $("mdrBellReadAll").addEventListener("click", function () {
+            post(urls.readAll, {}).then(refresh);
+        });
+
+
+        // Snooze
+        $("mdrSnoozeMenu").addEventListener("click", function (e) {
+
+            var button = e.target.closest("button[data-min]");
+
+            if (!button || !state.snoozeId) {
+                return;
+            }
+
+            var value = button.getAttribute("data-min");
+            var minutes;
+
+            if (value === "tomorrow") {
+
+                var tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(8, 0, 0, 0);
+
+                minutes = Math.max(15, Math.round((tomorrow - new Date()) / 60000));
+            }
+            else {
+                minutes = parseInt(value, 10);
+            }
+
+            var id = state.snoozeId;
+            closeSnooze();
+
+            post(urls.snooze, { id: id, minutes: minutes }).then(function (result) {
+
+                if (result && !result.success && result.message) {
+                    console.warn("MDR Snooze:", result.message);
+                }
+
+                refresh();
+            });
+        });
+
+
+        // -------------------------------------------------
+        // مودال اعلان مهم
+        // -------------------------------------------------
+
+        // مودال «هشدار» قبلی سامانه (SweetAlert) باز است؟
+        function legacyAlertOpen() {
+            return !!(window.Swal && typeof window.Swal.isVisible === "function" && window.Swal.isVisible());
+        }
+
+        var pendingImportant = null;
+
+        function showImportant(item) {
+
+            pendingImportant = item || null;
+
+            if (!item || state.importantShown === item.id) {
+                return;
+            }
+
+            // صبر تا بسته شدن مودال قبلی
+            if (legacyAlertOpen()) {
+                setTimeout(function () { showImportant(pendingImportant); }, 3000);
+                return;
+            }
+
+            state.importantShown = item.id;
+
+            var color = sevColors[item.severity] || sevColors.Danger;
+            var overlay = $("mdrImpOverlay");
+
+            overlay.querySelector(".mdr-imp-card").style.setProperty("--mdr-imp-color", color);
+
+            var icon = $("mdrImpIcon");
+            icon.className = "mdr-sev-icon " + (item.severity || "Danger");
+            icon.innerHTML = '<i class="bi ' + (sevIcons[item.severity] || sevIcons.Danger) + '"></i>';
+
+            $("mdrImpTitle").textContent = item.title || "-";
+            $("mdrImpBody").textContent = item.message || "";
+            $("mdrImpMeta").textContent =
+                fa((item.date || "") + " " + (item.time || "")) +
+                (item.sender ? " — از طرف: " + item.sender : "");
+
+            $("mdrImpOpen").style.display = item.hasLink ? "" : "none";
+            $("mdrImpAck").disabled = false;
+            $("mdrImpOpen").disabled = false;
+
+            togglePanel(false);
+            overlay.classList.add("open");
+            $("mdrImpAck").focus();
+        }
+
+        function acknowledge(thenOpen) {
+
+            var id = state.importantShown;
+
+            if (!id) {
+                return;
+            }
+
+            $("mdrImpAck").disabled = true;
+            $("mdrImpOpen").disabled = true;
+
+            post(urls.ack, { id: id })
+                .then(function () {
+
+                    $("mdrImpOverlay").classList.remove("open");
+                    state.importantShown = null;
+
+                    if (thenOpen) {
+                        window.location.href = openUrl(id);
+                        return;
+                    }
+
+                    // اگر اعلان مهم دیگری مانده، نمایش داده شود
+                    refresh();
+                })
+                .catch(function () {
+                    $("mdrImpAck").disabled = false;
+                    $("mdrImpOpen").disabled = false;
+                });
+        }
+
+        $("mdrImpAck").addEventListener("click", function () { acknowledge(false); });
+        $("mdrImpOpen").addEventListener("click", function () { acknowledge(true); });
+
+
+        // -------------------------------------------------
+        // شروع + به‌روزرسانی دوره‌ای
+        // -------------------------------------------------
+
+        // API عمومی برای صفحه مرکز اعلان
+        window.MdrBell = { refresh: refresh };
+
+        refresh();
+
+        setInterval(function () {
+
+            if (!document.hidden) {
+                refresh();
+            }
+        }, POLL_MS);
+
+        document.addEventListener("visibilitychange", function () {
+
+            if (!document.hidden) {
+                refresh();
+            }
+        });
+
+    })();
+
+</script>

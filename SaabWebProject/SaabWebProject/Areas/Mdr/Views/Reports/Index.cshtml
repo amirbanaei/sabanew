@@ -1,0 +1,245 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("rep.title");
+    bool canExport = ViewBag.CanExport == true;
+    bool isManager = ViewBag.IsManager == true;
+    bool canProcess = ViewBag.CanProcess == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-bar-chart-line", MdrText.T("rep.title"), MdrText.T("rep.hdr.sub") })
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header">
+            <div class="glass-field-icon"><i class="bi bi-funnel"></i></div>
+            <div class="glass-field-heading">
+                <div class="glass-field-title">@MdrText.T("rep.filters")</div>
+                <div class="glass-field-subtitle">@MdrText.T("rep.filters.sub")</div>
+            </div>
+        </div>
+        <div class="glass-field-body">
+            <div class="row row-input-AG">
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("rep.f.from")</label>
+                    <input id="from" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" />
+                </div>
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("rep.f.to")</label>
+                    <input id="to" class="glass-input-ag pdate" data-jdp jdp-btn-close autocomplete="off" />
+                </div>
+                <div class="col-xl-3 col-md-4">
+                    <label class="glass-label-ag">@MdrText.T("rep.f.scope")</label>
+                    <select id="scope" class="glass-select-search">
+                        <option value="mine">@MdrText.T("rep.scope.mine")</option>
+                        @if (isManager) { <option value="all">@MdrText.T("rep.scope.all")</option> }
+                    </select>
+                </div>
+            </div>
+            <div class="row row-btn-AG row-ltr-AG">
+                <div class="col-xl-2 col-md-4">
+                    <a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("rep.act.back")</p></a>
+                </div>
+                @if (canProcess)
+                {
+                    <div class="col-xl-2 col-md-4">
+                        <a class="glass-btn-ag" href="@Url.Action("Process", "Reports", new { area = "Mdr" })"><i class="bi bi-diagram-3"></i><p>@MdrText.T("rep.act.process")</p></a>
+                    </div>
+                }
+                <div class="col-xl-2 col-md-4">
+                    <button type="button" class="glass-btn-ag" id="sched"><i class="bi bi-alarm"></i><p>@MdrText.T("rep.act.schedule")</p></button>
+                </div>
+                @if (canExport)
+                {
+                    <div class="col-xl-2 col-md-4">
+                        <button type="button" class="glass-btn-ag" id="exp"><i class="bi bi-download"></i><p>@MdrText.T("rep.act.export")</p></button>
+                    </div>
+                }
+                <div class="col-xl-2 col-md-4">
+                    <button type="button" class="glass-btn-ag glass-btn-ag-primary" id="apply"><i class="bi bi-arrow-repeat"></i><p>@MdrText.T("rep.act.apply")</p></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="warn" class="mdr-ag-msg" style="margin-bottom:1rem" hidden></div>
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+    <div id="mods"></div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-bar-chart-line", MdrText.T("rep.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canExport = @(canExport ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        loading = MdrText.T("wf.loading"), error = MdrText.T("wf.error"), empty = MdrText.T("wf.empty"),
+        mod = new { req = MdrText.T("rep.mod.req"), tsk = MdrText.T("rep.mod.tsk"), ltr = MdrText.T("rep.mod.ltr"), doc = MdrText.T("rep.mod.doc"), wf = MdrText.T("rep.mod.wf") },
+        k = new {
+            req = new { created = MdrText.T("rep.k.req.created"), submitted = MdrText.T("rep.k.req.submitted"), open = MdrText.T("rep.k.req.open"), approved = MdrText.T("rep.k.req.approved"), rejected = MdrText.T("rep.k.req.rejected"), avgCycleH = MdrText.T("rep.k.req.avgCycleH") },
+            tsk = new { created = MdrText.T("rep.k.tsk.created"), done = MdrText.T("rep.k.tsk.done"), open = MdrText.T("rep.k.tsk.open"), overdue = MdrText.T("rep.k.tsk.overdue"), onTimePct = MdrText.T("rep.k.tsk.onTimePct") },
+            ltr = new { registered = MdrText.T("rep.k.ltr.registered"), noReply = MdrText.T("rep.k.ltr.noReply"), unread = MdrText.T("rep.k.ltr.unread"), avgReplyH = MdrText.T("rep.k.ltr.avgReplyH") },
+            doc = new { created = MdrText.T("rep.k.doc.created"), active = MdrText.T("rep.k.doc.active"), archived = MdrText.T("rep.k.doc.archived") },
+            wf = new { started = MdrText.T("rep.k.wf.started"), running = MdrText.T("rep.k.wf.running"), overdue = MdrText.T("rep.k.wf.overdue"), completed = MdrText.T("rep.k.wf.completed"), avgDurationH = MdrText.T("rep.k.wf.avgDurationH") } },
+        bd = new { req_status = MdrText.T("rep.bd.req.status"), req_type = MdrText.T("rep.bd.req.type"), tsk_status = MdrText.T("rep.bd.tsk.status"), tsk_workload = MdrText.T("rep.bd.tsk.workload"),
+                   ltr_direction = MdrText.T("rep.bd.ltr.direction"), doc_class = MdrText.T("rep.bd.doc.class"), wf_status = MdrText.T("rep.bd.wf.status") },
+        names = new { Incoming = "وارده", Outgoing = "صادره", Internal = "داخلی", Normal = MdrText.T("doc.cls.Normal"), Confidential = MdrText.T("doc.cls.Confidential"), Secret = MdrText.T("doc.cls.Secret"),
+                      Draft = "پیش‌نویس", Submitted = "ارسال‌شده", Approved = "تأییدشده", Rejected = "ردشده", Cancelled = "لغوشده", Todo = MdrText.T("tsk.st.Todo"), InProgress = MdrText.T("tsk.st.InProgress"),
+                      Blocked = MdrText.T("tsk.st.Blocked"), Done = MdrText.T("tsk.st.Done"), Running = "در حال اجرا", Paused = "متوقف", Completed = "تکمیل‌شده", Terminated = "خاتمه‌یافته" },
+        sec = new { trend = MdrText.T("rep.sec.trend"), breakdown = MdrText.T("rep.sec.breakdown") },
+        trend = new { created = MdrText.T("rep.trend.created"), closed = MdrText.T("rep.trend.closed"), empty = MdrText.T("rep.trend.empty") },
+        h = MdrText.T("rep.p.hours"),
+        warn = new { slow = MdrText.T("rep.warn.slow"), incomplete = MdrText.T("rep.warn.incomplete"), skipped = MdrText.T("rep.warn.skipped") },
+        drill = new { title = MdrText.T("rep.drill.title"), total = MdrText.T("rep.drill.total"), first = MdrText.T("rep.drill.first"), empty = MdrText.T("rep.drill.empty") },
+        col = new { title = MdrText.T("rep.col.title"), status = MdrText.T("rep.col.status"), date = MdrText.T("rep.col.date") },
+        act = new { export = MdrText.T("rep.act.export"), add = MdrText.T("rep.act.add"), del = MdrText.T("rep.act.delete") },
+        sched = new { title = MdrText.T("rep.sched.title"), hint = MdrText.T("rep.sched.hint"), freq = MdrText.T("rep.sched.freq"), range = MdrText.T("rep.sched.range"), next = MdrText.T("rep.sched.next"),
+                      last = MdrText.T("rep.sched.last"), empty = MdrText.T("rep.sched.empty"), scope = MdrText.T("rep.sched.scope") },
+        freq = new { Daily = MdrText.T("rep.freq.Daily"), Weekly = MdrText.T("rep.freq.Weekly"), Monthly = MdrText.T("rep.freq.Monthly") },
+        scope = new { mine = MdrText.T("rep.scope.mine"), all = MdrText.T("rep.scope.all") },
+        confirmDelete = MdrText.T("rep.confirm.delete"), srcLabel = MdrText.T("rep.f.scope") }));
+    var u = @Html.Raw(Json.Encode(new {
+        overview = Url.Action("GetOverview", "Reports", new { area = "Mdr" }), drill = Url.Action("GetDrill", "Reports", new { area = "Mdr" }),
+        exp = Url.Action("Export", "Reports", new { area = "Mdr" }), schedules = Url.Action("GetSchedules", "Reports", new { area = "Mdr" }),
+        save = Url.Action("SaveSchedule", "Reports", new { area = "Mdr" }), del = Url.Action("DeleteSchedule", "Reports", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc;
+
+    // ماژول → آیکن و شاخص‌ها: [کلید KPI، کلید drill (یا null)، سبک]
+    var CFG = [
+        ["req", "bi-clipboard-check", [["created", "req.created", "info"], ["submitted", null, "info"], ["open", "req.open", "warning"], ["approved", "req.approved", "success"], ["rejected", "req.rejected", "danger"], ["avgCycleH", null, "info"]], ["req_status", "req_type"]],
+        ["tsk", "bi-check2-square", [["created", "tsk.created", "info"], ["done", "tsk.done", "success"], ["open", "tsk.open", "warning"], ["overdue", "tsk.overdue", "danger"], ["onTimePct", null, "info"]], ["tsk_status", "tsk_workload"]],
+        ["ltr", "bi-envelope", [["registered", "ltr.registered", "info"], ["noReply", "ltr.noReply", "danger"], ["unread", null, "warning"], ["avgReplyH", null, "info"]], ["ltr_direction"]],
+        ["doc", "bi-file-earmark-text", [["created", "doc.created", "info"], ["active", null, "success"], ["archived", "doc.archived", "warning"]], ["doc_class"]],
+        ["wf", "bi-diagram-3", [["started", "wf.started", "info"], ["running", null, "warning"], ["overdue", "wf.overdue", "danger"], ["completed", "wf.completed", "success"], ["avgDurationH", null, "info"]], ["wf_status"]]
+    ];
+    var cur = { from: "", to: "", scope: "mine" };
+
+    function today(d) { var x = new Date(); x.setDate(x.getDate() - (d || 0)); return x.getFullYear() + "-" + ("0" + (x.getMonth() + 1)).slice(-2) + "-" + ("0" + x.getDate()).slice(-2); }
+    function fmt(key, v) {
+        if (v === null || v === undefined) return "—";
+        if (/H$/.test(key)) return v + " " + L.h;
+        if (/Pct$/.test(key)) return v + "٪";
+        return v;
+    }
+    function qs() { return "from=" + cur.from + "&to=" + cur.to + "&scope=" + cur.scope; }
+    function setHash() { history.replaceState(null, "", location.pathname + "#" + qs()); }
+    function readInputs() { cur.from = mdr.jd.get("from") || today(29); cur.to = mdr.jd.get("to") || today(0); cur.scope = $("scope").value; mdr.jd.set("from", cur.from); mdr.jd.set("to", cur.to); }
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function nm(x) { return L.names[x] || x; }
+
+    function stat(mod, k, metric, style, v) {
+        return '<div class="mdr-ag-stat mdr-ag-stat-' + style + (metric ? " mdr-clickable" : "") + '"' + (metric ? ' data-metric="' + metric + '"' : "") + '><div><div class="mdr-ag-stat-value">' + E(fmt(k, v)) +
+            '</div><div class="mdr-ag-stat-label">' + E(L.k[mod][k]) + "</div></div></div>";
+    }
+
+    function bars(list) {
+        if (!list || !list.length) return '<div class="mdr-ag-empty">' + E(L.empty) + "</div>";
+        var max = Math.max.apply(null, list.map(function (x) { return x.Count; })) || 1;
+        return '<ul class="mdr-ag-bars">' + list.map(function (x) {
+            return '<li><span class="mdr-ag-bars-name">' + E(nm(x.Name)) + '</span><span class="mdr-ag-bars-track"><i style="width:' + Math.round(100 * x.Count / max) + '%"></i></span><b>' + x.Count + "</b></li>";
+        }).join("") + "</ul>";
+    }
+
+    function trend(points) {
+        if (!points || !points.length || !points.some(function (p) { return p.Created || p.Closed; })) return '<div class="mdr-ag-empty">' + E(L.trend.empty) + "</div>";
+        var max = Math.max.apply(null, points.map(function (p) { return Math.max(p.Created, p.Closed); })) || 1;
+        return '<div class="mdr-ag-trend">' + points.map(function (p) {
+            return '<div class="mdr-ag-trend-col" title="' + E(p.Label + " — " + L.trend.created + ": " + p.Created + " / " + L.trend.closed + ": " + p.Closed) + '">' +
+                '<span class="is-c" style="height:' + Math.round(100 * p.Created / max) + '%"></span><span class="is-d" style="height:' + Math.round(100 * p.Closed / max) + '%"></span></div>';
+        }).join("") + '</div><div class="mdr-ag-trend-legend"><i class="is-c"></i> ' + E(L.trend.created) + ' <i class="is-d"></i> ' + E(L.trend.closed) + " · " + E(points[0].Label) + " … " + E(points[points.length - 1].Label) + "</div>";
+    }
+
+    function render(d) {
+        var html = "";
+        CFG.forEach(function (c) {
+            var mod = c[0], k = d.Kpi[mod];
+            if (!k) return;
+            var head = '<div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + c[1] + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(L.mod[mod]) + "</div></div></div>";
+            var stats = '<div class="mdr-ag-stats" style="grid-template-columns:repeat(auto-fill,minmax(9.5rem,1fr))">' + c[2].map(function (m) { return stat(mod, m[0], m[1], m[2], k[m[0]]); }).join("") + "</div>";
+            var bd = c[3].map(function (b) { return '<div class="col-xl-6 col-md-6"><h4>' + E(L.bd[b]) + "</h4>" + bars(d.Breakdown[b.replace("_", ".")]) + "</div>"; }).join("");
+            var tr = d.Trend[mod] ? '<div class="col-xl-6 col-md-6"><h4>' + E(L.sec.trend) + "</h4>" + trend(d.Trend[mod]) + "</div>" : "";
+            html += '<div class="glass-field-ag">' + head + '<div class="glass-field-body">' + stats + '<div class="row" style="margin-top:.4rem">' + bd + tr + "</div></div></div>";
+        });
+        $("mods").innerHTML = html;
+
+        var w = [];
+        d.Warnings.forEach(function (x) { if (x === "slow") w.push(L.warn.slow + " (" + d.Ms + "ms)"); else if (x === "incomplete") w.push(L.warn.incomplete); });
+        if (d.Skipped.length) w.push(L.warn.skipped + " " + d.Skipped.map(function (x) { return L.mod[x]; }).join("، "));
+        $("warn").hidden = !w.length; $("warn").innerHTML = w.map(E).join("<br>");
+    }
+
+    function load() {
+        readInputs(); setHash();
+        $("state").hidden = false; $("state").textContent = L.loading; $("mods").innerHTML = ""; $("warn").hidden = true;
+        mdr.get(u.overview + "?" + qs()).then(function (r) {
+            if (!r.success) { $("state").textContent = r.message || L.error; return; }
+            $("state").hidden = true; render(r.data);
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    // ---------- drill-down ----------
+    function drill(metric) {
+        var parts = metric.split(".");
+        mdr.get(u.drill + "?metric=" + metric + "&" + qs()).then(function (r) {
+            showModal(true);
+            $("mtitle").textContent = L.mod[parts[0]] + " — " + L.k[parts[0]][parts[1]]; $("msub").textContent = cur.from + " … " + cur.to;
+            if (!r.success) { toast(E(r.message || L.error), true); $("dbody").innerHTML = ""; return; }
+            toast("");
+            var exp = canExport ? '<a class="glass-btn-ag" style="display:inline-flex;width:auto;padding:0 1rem" href="' + u.exp + "?metric=" + metric + "&" + qs() + '"><i class="bi bi-download"></i><p>' + E(L.act.export) + "</p></a>" : "";
+            var rows = r.items.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.col.title) + "</th><th>" + E(L.col.status) + "</th><th>" + E(L.col.date) + "</th></tr></thead><tbody>" +
+                r.items.map(function (x) {
+                    return '<tr><td><a href="' + E(x.Url) + '" style="color:#00ffff">' + E(x.Title) + "</a></td><td>" + E(nm(x.Status)) + "</td><td>" + E(x.Date || "") + "</td></tr>";
+                }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.drill.empty) + "</div>";
+            $("dbody").innerHTML = '<div style="display:flex;gap:.8rem;align-items:center;margin-bottom:.6rem"><b>' + E(L.drill.total) + ": " + r.total + "</b>" +
+                (r.total > r.items.length ? "<small>" + E(L.drill.first) + "</small>" : "") + exp + "</div>" + rows;
+        });
+    }
+
+    // ---------- زمان‌بندی ----------
+    function schedModal() {
+        mdr.get(u.schedules).then(function (r) {
+            showModal(true); toast("");
+            $("mtitle").textContent = L.sched.title; $("msub").textContent = "";
+            var list = r.items.length ? '<table class="glass-table-ag"><thead><tr><th>' + E(L.sched.freq) + "</th><th>" + E(L.sched.range) + "</th><th>" + E(L.sched.scope) + "</th><th>" + E(L.sched.next) + "</th><th>" + E(L.sched.last) + "</th><th></th></tr></thead><tbody>" +
+                r.items.map(function (s) {
+                    return "<tr><td>" + E(L.freq[s.Frequency]) + "</td><td>" + s.RangeDays + "</td><td>" + E(s.Personal ? L.scope.mine : L.scope.all) + "</td><td>" + E(s.NextRunAt) + "</td><td>" + E(s.LastRunAt || "—") +
+                        '</td><td><button type="button" class="mdr-btn" data-del="' + s.ScheduleID + '">' + E(L.act.del) + "</button></td></tr>"; }).join("") + "</tbody></table>" : '<div class="mdr-ag-empty">' + E(L.sched.empty) + "</div>";
+            var opts = ["Daily", "Weekly", "Monthly"].map(function (f) { return '<option value="' + f + '">' + E(L.freq[f]) + "</option>"; }).join("");
+            var scopes = '<option value="mine">' + E(L.scope.mine) + "</option>" + ($("scope").querySelector('option[value="all"]') ? '<option value="all">' + E(L.scope.all) + "</option>" : "");
+            $("dbody").innerHTML = '<div class="mdr-ag-msg" style="margin-bottom:.8rem">' + E(L.sched.hint) + "</div>" + list +
+                '<div class="glass-field-ag" style="margin-top:.8rem"><div class="glass-field-body"><div class="row row-input-AG">' +
+                '<div class="col-xl-4 col-md-4"><label class="glass-label-ag">' + E(L.sched.freq) + '</label><select id="s-freq" class="glass-select-search">' + opts + "</select></div>" +
+                '<div class="col-xl-3 col-md-4"><label class="glass-label-ag">' + E(L.sched.range) + '</label><input id="s-range" type="number" min="1" max="366" value="30" class="glass-input-ag"></div>' +
+                '<div class="col-xl-5 col-md-4"><label class="glass-label-ag">' + E(L.sched.scope) + '</label><select id="s-scope" class="glass-select-search">' + scopes + "</select></div></div>" +
+                '<div class="row row-btn-AG row-ltr-AG"><div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="s-add"><i class="bi bi-plus-lg"></i><p>' + E(L.act.add) + "</p></button></div></div></div></div>";
+        });
+    }
+
+    $("dbody").addEventListener("click", function (e) {
+        var d = e.target.closest("[data-del]");
+        if (d) { if (!confirm(L.confirmDelete)) return; mdr.post(u.del, { id: d.getAttribute("data-del") }).then(function (r) { if (!r.success) toast(E(r.message || L.error), true); else schedModal(); }); return; }
+        if (e.target.closest("#s-add")) {
+            mdr.post(u.save, { frequency: $("s-freq").value, rangeDays: $("s-range").value, scope: $("s-scope").value }).then(function (r) { if (!r.success) toast(E(r.message || L.error), true); else schedModal(); });
+        }
+    });
+    $("mods").addEventListener("click", function (e) { var c = e.target.closest("[data-metric]"); if (c) drill(c.getAttribute("data-metric")); });
+    $("apply").onclick = load; $("sched").onclick = schedModal;
+    if ($("exp")) $("exp").onclick = function () { readInputs(); location.href = u.exp + "?metric=summary&" + qs(); };
+    $("dclose").onclick = function () { showModal(false); };
+    $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) showModal(false); });
+
+    var h = {}; (location.hash || "").replace(/^#/, "").split("&").forEach(function (p) { var kv = p.split("="); if (kv[0]) h[kv[0]] = decodeURIComponent(kv[1] || ""); });
+    mdr.jd.set("from", /^\d{4}-\d{2}-\d{2}$/.test(h.from || "") ? h.from : today(29));
+    mdr.jd.set("to", /^\d{4}-\d{2}-\d{2}$/.test(h.to || "") ? h.to : today(0));
+    if (h.scope === "all" && $("scope").querySelector('option[value="all"]')) $("scope").value = "all";
+    load();
+})();
+</script>
+}

@@ -1,0 +1,153 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("skill.title");
+    bool isManager = ViewBag.IsManager == true;
+    bool canTraining = ViewBag.CanTraining == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-grid-3x3-gap", MdrText.T("skill.title"), MdrText.T("skill.hdr.sub") })
+
+    <div class="glass-field-ag"><div class="glass-field-body">
+        <div class="row row-input-AG">
+            <div class="col-xl-4 col-md-6"><label class="glass-label-ag">@MdrText.T("skill.f.profile")</label><select id="profile" class="glass-select-search"><option value="">@MdrText.T("skill.f.all")</option></select></div>
+        </div>
+        <div class="row row-btn-AG row-ltr-AG">
+            @if (canTraining) { <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Training", new { area = "Mdr" })"><i class="bi bi-mortarboard"></i><p>@MdrText.T("skill.act.training")</p></a></div> }
+            <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="mysuggest"><i class="bi bi-lightbulb"></i><p>@MdrText.T("skill.act.suggest")</p></button></div>
+            @if (isManager) { <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="manage"><i class="bi bi-sliders"></i><p>@MdrText.T("skill.act.manage")</p></button></div> }
+        </div>
+    </div></div>
+
+    <div id="kpi" class="glass-field-ag" hidden><div class="glass-field-body" id="kpibody"></div></div>
+    <div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div>
+    <div id="matrixwrap" class="glass-field-ag" hidden><div class="glass-field-body" style="overflow-x:auto"><table class="glass-table-ag" id="matrix"></table></div></div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-grid-3x3-gap", MdrText.T("skill.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var isManager = @(isManager ? "true" : "false"), myId = @ViewBag.UserId;
+    var L = @Html.Raw(Json.Encode(new {
+        error = MdrText.T("wf.error"), empty = MdrText.T("skill.empty"),
+        col = new { user = MdrText.T("skill.col.user"), profile = MdrText.T("skill.col.profile") },
+        k = new { gaps = MdrText.T("skill.k.gaps"), nodata = MdrText.T("skill.k.nodata"), conflicts = MdrText.T("skill.k.conflicts") },
+        lv = new[] { MdrText.T("skill.lv.0"), MdrText.T("skill.lv.1"), MdrText.T("skill.lv.2"), MdrText.T("skill.lv.3"), MdrText.T("skill.lv.4"), MdrText.T("skill.lv.5") },
+        cell = new { req = MdrText.T("skill.cell.req"), eff = MdrText.T("skill.cell.eff"), man = MdrText.T("skill.cell.man"), self = MdrText.T("skill.cell.self"), course = MdrText.T("skill.cell.course") },
+        warnNoData = MdrText.T("skill.warn.nodata"), warnConflict = MdrText.T("skill.warn.conflict"),
+        act = new { newSkill = MdrText.T("skill.act.newskill"), newProfile = MdrText.T("skill.act.newprofile"), assign = MdrText.T("skill.act.assign"), save = MdrText.T("skill.act.save"), setLevel = MdrText.T("skill.act.setlevel"), training = MdrText.T("skill.act.training") },
+        f = new { name = MdrText.T("skill.f.name"), category = MdrText.T("skill.f.category"), level = MdrText.T("skill.f.level"), note = MdrText.T("skill.f.note"), skill = MdrText.T("skill.f.skill"), required = MdrText.T("skill.f.required"), profile = MdrText.T("skill.f.profile"), user = MdrText.T("skill.f.user") },
+        sec = new { setLevel = MdrText.T("skill.sec.setlevel"), suggest = MdrText.T("skill.sec.suggest"), manage = MdrText.T("skill.sec.manage") }, none = MdrText.T("skill.suggest.none") }));
+    var u = @Html.Raw(Json.Encode(new {
+        matrix = Url.Action("GetMatrix", "Training", new { area = "Mdr" }), look = Url.Action("GetSkillLookups", "Training", new { area = "Mdr" }), sugg = Url.Action("GetSuggestions", "Training", new { area = "Mdr" }),
+        createSkill = Url.Action("CreateSkill", "Training", new { area = "Mdr" }), createProfile = Url.Action("CreateProfile", "Training", new { area = "Mdr" }), setProfileSkill = Url.Action("SetProfileSkill", "Training", new { area = "Mdr" }),
+        assign = Url.Action("AssignProfile", "Training", new { area = "Mdr" }), unassign = Url.Action("UnassignProfile", "Training", new { area = "Mdr" }), assess = Url.Action("Assess", "Training", new { area = "Mdr" }),
+        users = Url.Action("SearchUsers", "Training", new { area = "Mdr" }), course = Url.Action("Index", "Training", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc, M = null, look = { Skills: [], Profiles: [] };
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function field(icon, title, body) { return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) + '</div></div></div><div class="glass-field-body">' + body + "</div></div>"; }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + attrs + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function post(url, p, then) { mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); then(r); }); }
+    function latin(s) { return String(s == null ? "" : s).replace(/[۰-۹]/g, function (c) { return c.charCodeAt(0) - 1776; }).replace(/[٠-٩]/g, function (c) { return c.charCodeAt(0) - 1632; }); }
+    function lvOpts(sel, from) { var o = ""; for (var i = from; i <= 5; i++) o += '<option value="' + i + '"' + (i === sel ? " selected" : "") + ">" + i + " — " + E(L.lv[i]) + "</option>"; return o; }
+    function lookups() { return mdr.get(u.look).then(function (r) { if (r.success) { look = r.data; var p = $("profile"), v = p.value; p.innerHTML = '<option value="">' + E(@Html.Raw(Json.Encode(MdrText.T("skill.f.all")))) + "</option>" + look.Profiles.map(function (x) { return '<option value="' + x.Id + '">' + E(x.Name) + "</option>"; }).join(""); p.value = v; } }); }
+
+    // ---------- ماتریس ----------
+    function cellHtml(c) {
+        var cls = c.Conflict ? "glass-status-warning" : c.NoData ? "glass-status-info" : c.Gap > 0 ? "glass-status-danger" : c.Required ? "glass-status-success" : "";
+        var t = (c.Effective === null ? "—" : c.Effective) + (c.Required ? " / " + c.Required : "");
+        var tip = [c.Required ? L.cell.req + ": " + c.Required : "", c.Manager !== null ? L.cell.man + ": " + c.Manager : "", c.Self !== null ? L.cell.self + ": " + c.Self : "", c.Course !== null ? L.cell.course + ": " + c.Course : ""].filter(Boolean).join(" · ");
+        return '<span class="meeting-status ' + cls + '" title="' + E(tip) + '">' + E(t) + (c.Conflict ? " ⚠" : "") + "</span>";
+    }
+    function load() {
+        $("state").hidden = false; $("state").textContent = ""; $("matrixwrap").hidden = true; $("kpi").hidden = true;
+        mdr.get(u.matrix + "?profileId=" + encodeURIComponent($("profile").value)).then(function (r) {
+            if (!r.success) { $("state").textContent = L.error; return; }
+            M = r.data;
+            if (!M.Rows.length || !M.Skills.length) { $("state").textContent = L.empty; if (!M.Rows.length) return; }
+            else $("state").hidden = true;
+            $("kpi").hidden = false;
+            $("kpibody").innerHTML = '<span class="meeting-status glass-status-danger">' + E(L.k.gaps) + ": " + M.Gaps + '</span> <span class="meeting-status glass-status-info">' + E(L.k.nodata) + ": " + M.NoData + '</span> <span class="meeting-status glass-status-warning">' + E(L.k.conflicts) + ": " + M.Conflicts + "</span>" +
+                (M.NoData ? '<div class="mdr-ag-text" style="margin-top:.4rem">' + E(L.warnNoData) + M.NoData + "</div>" : "") + (M.Conflicts ? '<div class="mdr-ag-text">' + E(L.warnConflict) + M.Conflicts + "</div>" : "");
+            $("matrixwrap").hidden = false;
+            $("matrix").innerHTML = "<thead><tr><th>" + E(L.col.user) + "</th><th>" + E(L.col.profile) + "</th>" + M.Skills.map(function (s) { return "<th title=\"" + E(s.Category || "") + "\">" + E(s.Name) + "</th>"; }).join("") + "</tr></thead><tbody>" +
+                M.Rows.map(function (row) {
+                    return "<tr data-u=\"" + row.UserID + "\"><td>" + E(row.Name) + (isManager ? ' <button type="button" class="mdr-btn" data-prof="' + row.UserID + '">⚙</button>' : "") + "</td><td>" + E(row.Profiles.join("، ") || "—") + "</td>" +
+                        row.Cells.map(function (c) { return '<td class="mdr-clickable" data-u="' + row.UserID + '" data-s="' + c.SkillID + '">' + cellHtml(c) + "</td>"; }).join("") + "</tr>"; }).join("") + "</tbody>";
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    // ---------- ثبت سطح ----------
+    function assessForm(userId, skillId) {
+        var row = M.Rows.filter(function (r) { return r.UserID === userId; })[0], cell = row.Cells.filter(function (c) { return c.SkillID === skillId; })[0], sk = M.Skills.filter(function (s) { return s.SkillID === skillId; })[0];
+        var self = userId === myId, cur = self ? cell.Self : cell.Manager;
+        $("mtitle").textContent = L.sec.setLevel; $("msub").textContent = row.Name + " — " + sk.Name; toast("");
+        $("dbody").innerHTML = field("bi-bar-chart-steps", L.sec.setLevel, '<div style="margin-bottom:.6rem">' + cellHtml(cell) + '</div><div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.level) + '</label><select id="a-level" class="glass-select-search">' + lvOpts(cur === null ? 3 : cur, 0) +
+            '</select></div><div class="col-xl-8 col-md-6"><label class="glass-label-ag">' + E(L.f.note) + '</label><input id="a-note" class="glass-input-ag" maxlength="300"></div></div><div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.setLevel, 'id="a-go"') + "</div>");
+        $("a-go").onclick = function () { post(u.assess, { userId: userId, skillId: skillId, level: $("a-level").value, note: $("a-note").value }, function () { showModal(false); load(); }); };
+        showModal(true);
+    }
+    $("matrix").addEventListener("click", function (e) {
+        var p = e.target.closest("button[data-prof]"); if (p) return profileForm(+p.getAttribute("data-prof"));
+        var c = e.target.closest("td[data-s]"); if (!c) return;
+        var uid = +c.getAttribute("data-u"); if (uid !== myId && !isManager) return;
+        assessForm(uid, +c.getAttribute("data-s"));
+    });
+
+    // ---------- پیشنهاد آموزش ----------
+    function suggest(userId) {
+        mdr.get(u.sugg + "?userId=" + userId).then(function (r) {
+            showModal(true); $("mtitle").textContent = L.sec.suggest; $("msub").textContent = ""; toast("");
+            $("dbody").innerHTML = field("bi-lightbulb", L.sec.suggest, !r.success ? E(r.message || L.error) : r.items.length ? '<ul class="mdr-ag-list">' + r.items.map(function (s) {
+                return "<li><b>" + E(s.Skill) + "</b> (" + (s.Effective === null ? "—" : s.Effective) + " → " + s.Required + ")" + (s.Courses.length ? "<ul>" + s.Courses.map(function (c) { return '<li><a href="' + E(u.course) + "#c=" + c.CourseID + '">' + E(c.Code + " — " + c.Title) + "</a> <small>" + E(c.StartAt) + "</small></li>"; }).join("") + "</ul>" : "") + "</li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.none) + "</div>");
+        });
+    }
+    $("mysuggest").onclick = function () { suggest(myId); };
+
+    // ---------- مدیریت (مدیر) ----------
+    function manage() {
+        lookups().then(function () {
+            $("mtitle").textContent = L.sec.manage; $("msub").textContent = ""; toast("");
+            var sk = look.Skills.map(function (s) { return '<option value="' + s.SkillID + '">' + E(s.Name) + "</option>"; }).join(""), pr = look.Profiles.map(function (p) { return '<option value="' + p.Id + '">' + E(p.Name) + "</option>"; }).join("");
+            $("dbody").innerHTML =
+                field("bi-plus-circle", L.act.newSkill, '<div class="row row-input-AG"><div class="col-xl-5 col-md-6"><label class="glass-label-ag">' + E(L.f.name) + '</label><input id="n-skill" class="glass-input-ag" maxlength="150"></div><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.category) + '</label><input id="n-cat" class="glass-input-ag" maxlength="60"></div></div><div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="n-skill-go"') + "</div>") +
+                field("bi-person-lines-fill", L.act.newProfile, '<div class="row row-input-AG"><div class="col-xl-6 col-md-6"><label class="glass-label-ag">' + E(L.f.name) + '</label><input id="n-prof" class="glass-input-ag" maxlength="150"></div></div><div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="n-prof-go"') + "</div>") +
+                field("bi-list-check", L.f.required, '<div class="row row-input-AG"><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.profile) + '</label><select id="r-prof" class="glass-select-search">' + pr + '</select></div><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.skill) + '</label><select id="r-skill" class="glass-select-search">' + sk + '</select></div><div class="col-xl-4 col-md-6"><label class="glass-label-ag">' + E(L.f.level) + '</label><select id="r-level" class="glass-select-search">' + lvOpts(3, 0) + '</select></div></div><div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.act.save, 'id="r-go"') + "</div>");
+            $("n-skill-go").onclick = function () { post(u.createSkill, { name: $("n-skill").value, category: $("n-cat").value }, function () { manage(); }); };
+            $("n-prof-go").onclick = function () { post(u.createProfile, { name: $("n-prof").value }, function () { manage(); load(); }); };
+            $("r-go").onclick = function () { post(u.setProfileSkill, { profileId: $("r-prof").value, skillId: $("r-skill").value, level: $("r-level").value }, function () { toast(E(L.act.save + " ✓")); load(); }); };
+            showModal(true);
+        });
+    }
+    $("manage") && ($("manage").onclick = manage);
+
+    // نسبت‌دادن/برداشتن پروفایل برای یک کاربر
+    function profileForm(userId) {
+        lookups().then(function () {
+            var row = M.Rows.filter(function (r) { return r.UserID === userId; })[0];
+            $("mtitle").textContent = L.act.assign; $("msub").textContent = row.Name; toast("");
+            $("dbody").innerHTML = field("bi-person-lines-fill", L.act.assign, '<div class="row row-input-AG"><div class="col-xl-6 col-md-6"><label class="glass-label-ag">' + E(L.f.profile) + '</label><select id="p-prof" class="glass-select-search">' + look.Profiles.map(function (p) { return '<option value="' + p.Id + '">' + E(p.Name) + "</option>"; }).join("") + '</select></div></div><div class="row row-btn-AG row-ltr-AG">' +
+                btn("glass-btn-ag-primary", "bi-plus-lg", L.act.assign, 'id="p-add"') + btn("glass-btn-text-reject", "bi-dash-lg", "−", 'id="p-del"') + btn("", "bi-lightbulb", @Html.Raw(Json.Encode(MdrText.T("skill.act.suggest"))), 'id="p-sug"') + "</div>");
+            $("p-add").onclick = function () { post(u.assign, { userId: userId, profileId: $("p-prof").value }, function () { showModal(false); load(); }); };
+            $("p-del").onclick = function () { post(u.unassign, { userId: userId, profileId: $("p-prof").value }, function () { showModal(false); load(); }); };
+            $("p-sug").onclick = function () { suggest(userId); };
+            showModal(true);
+        });
+    }
+
+    $("profile").onchange = load;
+    $("dclose").onclick = function () { showModal(false); }; $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) showModal(false); });
+    lookups().then(load);
+})();
+</script>
+}

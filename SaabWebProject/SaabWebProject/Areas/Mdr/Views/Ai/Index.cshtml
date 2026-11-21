@@ -1,0 +1,133 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("ai.title");
+    bool canTasks = ViewBag.CanTasks == true;
+    bool canContext = ViewBag.CanContext == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-stars", MdrText.T("ai.title"), MdrText.T("ai.hdr.sub") })
+
+    <div class="glass-field-ag"><div class="glass-field-body">
+        <div class="row row-input-AG">
+            <div class="col-12"><label class="glass-label-ag">@MdrText.T("ai.f.question")</label><textarea id="q" class="glass-textarea-ag" rows="2" maxlength="500" style="height:4.2rem" placeholder="@MdrText.T("ai.f.placeholder")"></textarea></div>
+        </div>
+        <div class="row row-btn-AG row-ltr-AG">
+            <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Home", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("ai.act.back")</p></a></div>
+            @if (canContext) { <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Context", "Ai", new { area = "Mdr" })"><i class="bi bi-file-earmark-text"></i><p>@MdrText.T("ai.act.context")</p></a></div> }
+            <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="pending"><i class="bi bi-check2-square"></i><p>@MdrText.T("ai.act.pending")</p></button></div>
+            <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag" id="clear"><i class="bi bi-trash"></i><p>@MdrText.T("ai.act.clear")</p></button></div>
+            <div class="col-xl-2 col-md-4"><button type="button" class="glass-btn-ag glass-btn-ag-primary" id="ask"><i class="bi bi-send"></i><p>@MdrText.T("ai.act.ask")</p></button></div>
+        </div>
+        <div class="mdr-ai-warn">@MdrText.T("ai.note.scope")</div>
+    </div></div>
+
+    <div id="result" class="glass-field-ag" hidden><div class="glass-field-body" id="resultbody"></div></div>
+
+    <div class="glass-field-ag">
+        <div class="glass-field-header"><div class="glass-field-icon"><i class="bi bi-clock-history"></i></div><div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("ai.sec.history")</div></div></div>
+        <div class="glass-field-body"><div id="state" class="mdr-ag-state">@MdrText.T("wf.loading")</div><ul id="history" class="mdr-ag-list"></ul></div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-stars", MdrText.T("ai.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canTasks = @(canTasks ? "true" : "false");
+    var L = @Html.Raw(Json.Encode(new {
+        error = MdrText.T("wf.error"), empty = MdrText.T("ai.hist.empty"), thinking = MdrText.T("ai.thinking"),
+        outcome = new { Answered = MdrText.T("ai.out.Answered"), LowConf = MdrText.T("ai.out.LowConf"), NoSource = MdrText.T("ai.out.NoSource"), NoAccess = MdrText.T("ai.out.NoAccess"), Refused = MdrText.T("ai.out.Refused") },
+        src = new { req = MdrText.T("ai.src.req"), tsk = MdrText.T("ai.src.tsk"), ltr = MdrText.T("ai.src.ltr"), doc = MdrText.T("ai.src.doc"), wf = MdrText.T("ai.src.wf"), ctr = MdrText.T("ai.src.ctr") },
+        confidence = MdrText.T("ai.confidence"), provider = MdrText.T("ai.provider"), sources = MdrText.T("ai.sources"), open = MdrText.T("ai.act.open"), helpful = MdrText.T("ai.act.helpful"), notHelpful = MdrText.T("ai.act.nothelpful"),
+        propose = MdrText.T("ai.act.propose"), del = MdrText.T("ai.act.delete"), confirmClear = MdrText.T("ai.confirm.clear"), thanks = MdrText.T("ai.thanks"),
+        accept = MdrText.T("ai.act.accept"), reject = MdrText.T("ai.act.reject"), previewTitle = MdrText.T("ai.preview.title"), previewNote = MdrText.T("ai.preview.note"), fTitle = MdrText.T("ai.f.tasktitle"), fDue = MdrText.T("ai.f.due"),
+        pendingTitle = MdrText.T("ai.pending.title"), noPending = MdrText.T("ai.pending.empty"), created = MdrText.T("ai.created") }));
+    var u = @Html.Raw(Json.Encode(new {
+        ask = Url.Action("Ask", "Ai", new { area = "Mdr" }), history = Url.Action("GetHistory", "Ai", new { area = "Mdr" }), rate = Url.Action("Rate", "Ai", new { area = "Mdr" }), del = Url.Action("DeleteQuery", "Ai", new { area = "Mdr" }),
+        clear = Url.Action("ClearHistory", "Ai", new { area = "Mdr" }), propose = Url.Action("Propose", "Ai", new { area = "Mdr" }), sugg = Url.Action("GetSuggestions", "Ai", new { area = "Mdr" }), decide = Url.Action("Decide", "Ai", new { area = "Mdr" }),
+        tasks = Url.Action("Index", "Tasks", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc, lastQuery = 0;
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function field(icon, title, body) { return '<div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi ' + icon + '"></i></div><div class="glass-field-heading"><div class="glass-field-title">' + E(title) + '</div></div></div><div class="glass-field-body">' + body + "</div></div>"; }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + attrs + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function post(url, p, then) { mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); then(r); }); }
+
+    // ---------- پاسخ ----------
+    function show(r) {
+        var cls = r.confidence >= 50 ? "" : r.confidence > 0 ? "is-low" : "is-none";
+        var h = '<div class="mdr-ai-q">' + E($("q").value) + "</div>";
+        h += '<div><span class="mdr-ag-badge">' + E(L.outcome[r.outcome] || r.outcome) + "</span></div>";
+        if (r.answer) h += '<div class="mdr-ai-answer">' + E(r.answer) + "</div>";
+        h += '<div class="mdr-ai-conf"><span>' + E(L.confidence) + ': ' + r.confidence + '%</span><span class="mdr-ai-conf-track"><span class="mdr-ai-conf-fill ' + cls + '" style="width:' + r.confidence + '%"></span></span><small>' + E(L.provider) + ": " + E(r.provider) + "</small></div>";
+        h += r.warnings.map(function (w) { return '<div class="mdr-ai-warn">' + E(w.text) + "</div>"; }).join("");
+        if (r.sources.length) {
+            h += "<div><b>" + E(L.sources) + '</b></div><div class="mdr-ai-sources">' + r.sources.map(function (s) {
+                return '<div class="mdr-ai-source"><b>[' + s.N + "]</b> " + E(L.src[s.Key] || s.Key) + (s.Status ? " · " + E(s.Status) : "") + '<a href="' + E(s.Url) + '">' + E(s.Title) + "</a>" + (s.Snippet ? "<small>" + E(s.Snippet) + "</small>" : "") +
+                    (canTasks ? '<button type="button" class="mdr-btn" data-propose="' + s.Key + ":" + s.Id + '">' + E(L.propose) + "</button>" : "") + "</div>"; }).join("") + "</div>";
+        }
+        h += '<div style="margin-top:.5rem"><button type="button" class="mdr-btn" data-rate="1">👍 ' + E(L.helpful) + '</button> <button type="button" class="mdr-btn" data-rate="-1">👎 ' + E(L.notHelpful) + "</button> <span id=\"thx\"></span></div>";
+        $("resultbody").innerHTML = h; $("result").hidden = false;
+    }
+    function ask() {
+        var q = $("q").value.trim(); if (!q) return;
+        $("ask").disabled = true; $("result").hidden = false; $("resultbody").innerHTML = '<div class="mdr-ag-state">' + E(L.thinking) + "</div>";
+        mdr.post(u.ask, { question: q }).then(function (r) {
+            $("ask").disabled = false;
+            if (!r.success) { $("resultbody").innerHTML = '<div class="mdr-ai-warn">' + E(r.message || L.error) + "</div>"; return; }
+            lastQuery = r.queryId; show(r); loadHistory();
+        }).catch(function () { $("ask").disabled = false; $("resultbody").innerHTML = '<div class="mdr-ai-warn">' + E(L.error) + "</div>"; });
+    }
+    $("ask").onclick = ask; $("q").addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) ask(); });
+    $("resultbody").addEventListener("click", function (e) {
+        var r = e.target.closest("[data-rate]");
+        if (r) return post(u.rate, { queryId: lastQuery, rating: r.getAttribute("data-rate"), note: "" }, function () { $("thx").textContent = L.thanks; loadHistory(); });
+        var p = e.target.closest("[data-propose]");
+        if (p) { var a = p.getAttribute("data-propose").split(":"); post(u.propose, { queryId: lastQuery, key: a[0], entityId: a[1] }, function (x) { preview(x.id); }); }
+    });
+
+    // ---------- پیش‌نمایش پیشنهاد اقدام ----------
+    function preview(id) {
+        mdr.get(u.sugg).then(function (r) {
+            var s = (r.items || []).filter(function (x) { return x.SuggestionID === id; })[0]; if (!s) return;
+            showModal(true); $("mtitle").textContent = L.previewTitle; $("msub").textContent = ""; toast("");
+            $("dbody").innerHTML = field("bi-eye", L.previewTitle, '<div class="mdr-ai-warn">' + E(L.previewNote) + '</div><div class="row row-input-AG"><div class="col-xl-8 col-md-8"><label class="glass-label-ag">' + E(L.fTitle) + '</label><input id="s-title" class="glass-input-ag" maxlength="200" value="' + E(s.Title) + '"></div><div class="col-xl-4 col-md-4"><label class="glass-label-ag">' + E(L.fDue) + '</label>' + mdr.jd.html("s-due", s.Due) + '</div></div><div class="row row-btn-AG row-ltr-AG">' +
+                btn("glass-btn-ag-primary", "bi-check2", L.accept, 'id="s-ok"') + btn("glass-btn-text-reject", "bi-x", L.reject, 'id="s-no"') + "</div>");
+            $("s-ok").onclick = function () { post(u.decide, { suggestionId: id, accept: true, title: $("s-title").value, due: mdr.jd.get("s-due") }, function (x) { toast(E(L.created) + ' <a href="' + E(u.tasks) + '#id=' + x.id + '">#' + x.id + "</a>"); $("s-ok").disabled = true; $("s-no").disabled = true; }); };
+            $("s-no").onclick = function () { post(u.decide, { suggestionId: id, accept: false, title: "", due: "" }, function () { showModal(false); }); };
+        });
+    }
+    $("pending").onclick = function () {
+        mdr.get(u.sugg).then(function (r) {
+            showModal(true); $("mtitle").textContent = L.pendingTitle; $("msub").textContent = ""; toast("");
+            $("dbody").innerHTML = (r.items || []).length ? '<ul class="mdr-ag-list">' + r.items.map(function (s) { return '<li class="mdr-clickable" data-sid="' + s.SuggestionID + '">' + E(s.Title) + (s.Due ? " <small>" + E(s.Due) + "</small>" : "") + "</li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.noPending) + "</div>";
+        });
+    };
+    $("dbody").addEventListener("click", function (e) { var li = e.target.closest("[data-sid]"); if (li) preview(+li.getAttribute("data-sid")); });
+
+    // ---------- تاریخچه ----------
+    function loadHistory() {
+        mdr.get(u.history).then(function (r) {
+            var h = r.items || [];
+            $("state").hidden = h.length > 0; $("state").textContent = L.empty;
+            $("history").innerHTML = h.map(function (q) {
+                return '<li><b>' + E(q.Question) + "</b> <small>" + E(q.CreatedAt) + "</small> " + '<span class="mdr-ag-badge">' + E(L.outcome[q.Outcome] || q.Outcome) + " · " + q.Confidence + "%</span>" + (q.Rating === 1 ? " 👍" : q.Rating === -1 ? " 👎" : "") +
+                    q.Sources.map(function (s) { return ' <a href="' + E(s.Url) + '">' + E(s.Title) + "</a>"; }).join(" ·") + ' <button type="button" class="mdr-btn" data-del="' + q.QueryId + '">' + E(L.del) + "</button></li>"; }).join("");
+        }).catch(function () { $("state").hidden = false; $("state").textContent = L.error; });
+    }
+    $("history").addEventListener("click", function (e) { var d = e.target.closest("[data-del]"); if (d) post(u.del, { queryId: d.getAttribute("data-del") }, loadHistory); });
+    $("clear").onclick = function () { if (confirm(L.confirmClear)) post(u.clear, {}, function () { $("result").hidden = true; loadHistory(); }); };
+    $("dclose").onclick = function () { showModal(false); }; $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) showModal(false); });
+    loadHistory();
+})();
+</script>
+}

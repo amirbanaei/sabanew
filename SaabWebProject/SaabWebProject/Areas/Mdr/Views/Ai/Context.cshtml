@@ -1,0 +1,106 @@
+﻿@using SaabWebProject.Areas.Mdr.Infrastructure
+@{
+    ViewBag.Title = MdrText.T("aic.title");
+    bool canTasks = ViewBag.CanTasks == true;
+    Layout = "~/Views/Shared/_Layout.cshtml";   // لایه‌ی فعلی سامانه + AG STYLE
+}
+@section Styles {
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedStyles.cshtml")
+}
+
+<div class="tab-content tab-AG mdr-scope mdr-ag" dir="rtl">
+    @Html.AntiForgeryToken()
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgHeader.cshtml", new[] { "bi-file-earmark-text", MdrText.T("aic.title"), MdrText.T("aic.hdr.sub") })
+
+    <div class="glass-field-ag"><div class="glass-field-body">
+        <div class="row row-input-AG">
+            <div class="col-xl-3 col-md-4"><label class="glass-label-ag">@MdrText.T("aic.f.type")</label>
+                <select id="key" class="glass-select-search"><option value="ltr">@MdrText.T("ai.src.ltr")</option><option value="tsk">@MdrText.T("ai.src.tsk")</option><option value="doc">@MdrText.T("ai.src.doc")</option></select></div>
+            <div class="col-xl-6 col-md-8"><label class="glass-label-ag">@MdrText.T("aic.f.search")</label><input id="q" class="glass-input-ag" autocomplete="off" placeholder="@MdrText.T("aic.f.placeholder")"><div id="picks" class="mdr-ag-picks"></div></div>
+        </div>
+        <div class="row row-btn-AG row-ltr-AG">
+            <div class="col-xl-2 col-md-4"><a class="glass-btn-ag" href="@Url.Action("Index", "Ai", new { area = "Mdr" })"><i class="bi bi-arrow-right"></i><p>@MdrText.T("ai.act.back")</p></a></div>
+        </div>
+    </div></div>
+
+    <div id="state" class="mdr-ag-state">@MdrText.T("aic.pick")</div>
+    <div id="panel" hidden>
+        <div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi bi-file-earmark-text"></i></div><div class="glass-field-heading"><div class="glass-field-title" id="ptitle"></div></div></div><div class="glass-field-body" id="pbody"></div></div>
+        <div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi bi-list-task"></i></div><div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("aic.sec.tasks")</div></div></div><div class="glass-field-body" id="tbody"></div></div>
+        <div class="glass-field-ag"><div class="glass-field-header"><div class="glass-field-icon"><i class="bi bi-files"></i></div><div class="glass-field-heading"><div class="glass-field-title">@MdrText.T("aic.sec.similar")</div></div></div><div class="glass-field-body" id="sbody"></div></div>
+    </div>
+
+    @Html.Partial("~/Areas/Mdr/Views/Shared/_MdrAgModal.cshtml", new[] { "bi-file-earmark-text", MdrText.T("aic.title") })
+</div>
+
+@section scripts {
+@Html.Partial("~/Areas/Mdr/Views/Shared/_MdrEmbedScripts.cshtml")
+<script>
+(function () {
+    var canTasks = @(canTasks ? "true" : "false");
+    var init = { key: @Html.Raw(Json.Encode((string)ViewBag.Key)), id: @Html.Raw(Json.Encode(ViewBag.Id)) };
+    var L = @Html.Raw(Json.Encode(new {
+        error = MdrText.T("wf.error"), summary = MdrText.T("aic.summary"), tooShort = MdrText.T("aic.tooshort"), gen = MdrText.T("aic.act.generate"), noTasks = MdrText.T("aic.notasks"), noSimilar = MdrText.T("aic.nosimilar"), similarNote = MdrText.T("aic.similar.note"),
+        open = MdrText.T("ai.act.open"), accept = MdrText.T("ai.act.accept"), edit = MdrText.T("aic.act.edit"), reject = MdrText.T("ai.act.reject"), created = MdrText.T("ai.created"), rejected = MdrText.T("aic.rejected"),
+        previewTitle = MdrText.T("ai.preview.title"), previewNote = MdrText.T("ai.preview.note"), fTitle = MdrText.T("ai.f.tasktitle"), fDue = MdrText.T("ai.f.due"), noTasksPerm = MdrText.T("aic.notaskperm") }));
+    var u = @Html.Raw(Json.Encode(new {
+        pick = Url.Action("PickEntity", "Ai", new { area = "Mdr" }), summary = Url.Action("ContextSummary", "Ai", new { area = "Mdr" }), tasks = Url.Action("ContextTasks", "Ai", new { area = "Mdr" }),
+        similar = Url.Action("ContextSimilar", "Ai", new { area = "Mdr" }), decide = Url.Action("Decide", "Ai", new { area = "Mdr" }), taskPage = Url.Action("Index", "Tasks", new { area = "Mdr" }) }));
+    var $ = function (x) { return document.getElementById(x); }, E = mdr.esc, cur = null, cand = [];
+
+    function toast(m, bad) { var d = $("dmsg"); d.hidden = !m; d.innerHTML = m || ""; d.className = "mdr-ag-msg" + (bad ? " is-bad" : ""); }
+    function showModal(on) { $("drawer").hidden = !on; }
+    function btn(cls, icon, text, attrs) { return '<div class="col-xl-3 col-md-4"><button type="button" class="glass-btn-ag ' + cls + '" ' + attrs + '><i class="bi ' + icon + '"></i><p>' + E(text) + "</p></button></div>"; }
+    function post(url, p, then) { mdr.post(url, p).then(function (r) { if (!r.success) { toast(E(r.message || L.error), true); return; } toast(""); then(r); }); }
+
+    function openEntity(key, id) {
+        cur = { key: key, id: id }; $("key").value = key;
+        $("state").hidden = false; $("state").textContent = ""; $("panel").hidden = true;
+        mdr.get(u.summary + "?key=" + encodeURIComponent(key) + "&id=" + id).then(function (r) {
+            if (!r.success) { $("state").textContent = r.message || L.error; return; }
+            $("state").hidden = true; $("panel").hidden = false; $("ptitle").textContent = r.title;
+            $("pbody").innerHTML = r.warnings.map(function (w) { return '<div class="mdr-ai-warn">' + E(w.text) + "</div>"; }).join("") +
+                '<div><a class="mdr-btn" href="' + E(r.url) + '">' + E(L.open) + "</a></div><div><b>" + E(L.summary) + '</b></div><div class="mdr-ai-answer">' + E(r.summary || L.tooShort) + "</div>";
+            $("tbody").innerHTML = canTasks ? '<div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-magic", L.gen, 'id="gen"') + '</div><div id="tlist"></div>' : '<div class="mdr-ag-empty">' + E(L.noTasksPerm) + "</div>";
+            if (canTasks) $("gen").onclick = generate;
+            loadSimilar();
+        }).catch(function () { $("state").textContent = L.error; });
+    }
+
+    function generate() {
+        post(u.tasks, { key: cur.key, id: cur.id }, function (r) {
+            cand = r.items;
+            $("tlist").innerHTML = cand.length ? '<ul class="mdr-ag-list">' + cand.map(function (c) {
+                return '<li data-sid="' + c.SuggestionID + '"><span>' + E(c.Title) + "</span>" + (c.Due ? " <small>" + E(c.Due) + "</small>" : "") + ' <button type="button" class="mdr-btn" data-act="edit">' + E(L.edit) + '</button> <button type="button" class="mdr-btn" data-act="reject">' + E(L.reject) + "</button></li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(L.noTasks) + "</div>";
+        });
+    }
+    $("tbody").addEventListener("click", function (e) {
+        var b = e.target.closest("[data-act]"); if (!b) return;
+        var li = b.closest("li"), id = +li.getAttribute("data-sid"), c = cand.filter(function (x) { return x.SuggestionID === id; })[0];
+        if (b.getAttribute("data-act") === "reject") return post(u.decide, { suggestionId: id, accept: false, title: "", due: "" }, function () { li.innerHTML = "<small>" + E(L.rejected) + "</small>"; });
+        showModal(true); $("mtitle").textContent = L.previewTitle; $("msub").textContent = ""; toast("");
+        $("dbody").innerHTML = '<div class="glass-field-ag"><div class="glass-field-body"><div class="mdr-ai-warn">' + E(L.previewNote) + '</div><div class="row row-input-AG"><div class="col-xl-8 col-md-8"><label class="glass-label-ag">' + E(L.fTitle) + '</label><input id="s-title" class="glass-input-ag" maxlength="200" value="' + E(c.Title) + '"></div><div class="col-xl-4 col-md-4"><label class="glass-label-ag">' + E(L.fDue) + '</label>' + mdr.jd.html("s-due", c.Due) + '</div></div><div class="row row-btn-AG row-ltr-AG">' + btn("glass-btn-ag-primary", "bi-check2", L.accept, 'id="s-ok"') + "</div></div></div>";
+        $("s-ok").onclick = function () { post(u.decide, { suggestionId: id, accept: true, title: $("s-title").value, due: mdr.jd.get("s-due") }, function (x) { toast(E(L.created) + ' <a href="' + E(u.taskPage) + '#id=' + x.id + '">#' + x.id + "</a>"); $("s-ok").disabled = true; li.innerHTML = "<small>" + E(L.created) + " #" + x.id + "</small>"; }); };
+    });
+
+    function loadSimilar() {
+        mdr.get(u.similar + "?key=" + encodeURIComponent(cur.key) + "&id=" + cur.id).then(function (r) {
+            $("sbody").innerHTML = '<div class="mdr-ai-warn">' + E(L.similarNote) + "</div>" + (r.success && r.items.length ? '<ul class="mdr-ag-list">' + r.items.map(function (s) { return '<li><a href="' + E(s.Url) + '">' + E(s.Title) + "</a> <small>" + s.Percent + "%</small></li>"; }).join("") + "</ul>" : '<div class="mdr-ag-empty">' + E(r.success ? L.noSimilar : (r.message || L.error)) + "</div>");
+        });
+    }
+
+    var t; $("q").oninput = function () {
+        clearTimeout(t); var q = this.value.trim();
+        t = setTimeout(function () {
+            if (q.length < 2) { $("picks").innerHTML = ""; return; }
+            mdr.get(u.pick + "?key=" + encodeURIComponent($("key").value) + "&q=" + encodeURIComponent(q)).then(function (r) {
+                $("picks").innerHTML = (r.items || []).map(function (i) { return '<button type="button" class="glass-btn-ag" data-id="' + i.Id + '">' + E(i.Title) + "</button>"; }).join("");
+            });
+        }, 300);
+    };
+    $("picks").onclick = function (e) { var b = e.target.closest("button[data-id]"); if (b) { $("picks").innerHTML = ""; openEntity($("key").value, +b.getAttribute("data-id")); } };
+    $("dclose").onclick = function () { showModal(false); }; $("drawer").addEventListener("mousedown", function (e) { if (e.target === $("drawer")) showModal(false); });
+    if (init.key && init.id) openEntity(init.key, init.id);
+})();
+</script>
+}
